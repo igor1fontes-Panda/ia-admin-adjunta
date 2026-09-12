@@ -38,8 +38,8 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
 1. **Run the migration**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql` (tables + row-level security + public lead-capture policy).
    - For voice briefings (optional): create a **public** storage bucket named `briefings` (Supabase → Storage → New bucket).
 2. Set environment variables (never commit them):
-   - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-   - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+   - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work.
+   - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…`; legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
 3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Optionally add `BLACKBOX_API_KEY` (Blackbox enterprise API, OpenAI-compatible, `nvidia/nemotron-3-ultra-550b-a55b`) as a second automatic provider. Without any key, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
 4. Push to `main`. GitHub Actions takes over:
    - **CI** runs on every push (typecheck → tests → build).
