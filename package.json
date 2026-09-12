@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
-    "bot:leads": "node scripts/lead-hunter.mjs",
-    "bot:error-handler": "node scripts/error-handler.mjs",
+    "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
+    "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",
     "bot:insight": "python3 ai_engine.py"
   },
   "dependencies": {
