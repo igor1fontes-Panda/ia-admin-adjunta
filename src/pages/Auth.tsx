@@ -23,8 +23,14 @@ export function Auth() {
     try {
       if (isLive && supabase) {
         if (mode === "signup") {
-          const { error } = await supabase.auth.signUp({ email, password });
+          const { data, error } = await supabase.auth.signUp({ email, password });
           if (error) throw error;
+          // With "Confirm email" disabled, signUp returns a session immediately —
+          // sign the user straight in instead of telling them to re-sign-in.
+          if (data.session) {
+            navigate(from, { replace: true });
+            return;
+          }
           setNotice("Account created! Check your email to confirm, then sign in.");
         } else {
           const { error } = await supabase.auth.signInWithPassword({ email, password });

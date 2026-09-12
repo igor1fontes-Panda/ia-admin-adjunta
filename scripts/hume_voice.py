@@ -24,6 +24,26 @@ from datetime import datetime, timezone
 
 import requests
 
+
+def _load_env_file(path: str = ".env.local") -> None:
+    """Minimal stdlib dotenv loader (does not override existing vars)."""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key, value = key.strip(), value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file()
+_load_env_file(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.local"))
+
 HUME_KEY = os.environ.get("HUME_API_KEY") or ""
 HUME_BASE = os.environ.get("HUME_BASE_URL") or "https://api.hume.ai"
 VOICE_NAME = os.environ.get("HUME_VOICE_NAME") or "David Hume"

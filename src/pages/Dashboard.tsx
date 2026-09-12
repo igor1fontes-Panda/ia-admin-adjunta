@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity as ActivityIcon,
+  AlertTriangle,
   Bot,
   CheckCircle2,
   CircleDollarSign,
@@ -14,13 +15,14 @@ import {
 } from "lucide-react";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { createClient, createOrder, fetchActivity, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
-import { formatKz, PLAN_PRICES, scoreLead, timeAgo } from "../lib/engine";
+import { computeMetrics, formatKz, PLAN_PRICES, scoreLead, timeAgo } from "../lib/engine";
 
 type Tab = "overview" | "leads" | "clients" | "orders";
 
 export function Dashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Metric | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -30,29 +32,24 @@ export function Dashboard() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [leads, clients, orders, activity] = await Promise.all([
-      fetchLeads(),
-      fetchClients(),
-      fetchOrders(),
-      fetchActivity(),
-    ]);
-    setLeads(leads);
-    setClients(clients);
-    setOrders(orders);
-    setActivity(activity);
-    setMetrics({
-      leads: leads.length,
-      qualifiedLeads: leads.filter((l) => l.status === "qualified" || l.status === "won").length,
-      activeClients: clients.filter((c) => c.status !== "churned").length,
-      mrr: clients.filter((c) => c.status !== "churned").reduce((s, c) => s + c.mrr, 0),
-      revenue30d: orders
-        .filter((o) => o.status === "paid" && Date.now() - +new Date(o.created_at) < 30 * 86400000)
-        .reduce((s, o) => s + o.amount, 0),
-      winRate: leads.length
-        ? Math.round((leads.filter((l) => l.status === "won").length / leads.length) * 100)
-        : 0,
-    });
-    setLoading(false);
+    setError(null);
+    try {
+      const [leads, clients, orders, activity] = await Promise.all([
+        fetchLeads(),
+        fetchClients(),
+        fetchOrders(),
+        fetchActivity(),
+      ]);
+      setLeads(leads);
+      setClients(clients);
+      setOrders(orders);
+      setActivity(activity);
+      setMetrics(computeMetrics(leads, clients, orders));
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load data from Supabase");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -74,35 +71,64 @@ export function Dashboard() {
     };
   }, [load]);
 
-  async function handleLeadStatus(id: string, status: Lead["status"]) {
+  async function run(fn: () => Promise<void>) {
+    setError(null);
+    try {
+      await fn();
+    } catch (e: any) {
+      setError(e?.message ?? "Operation failed");
+    }
+  }
+
+  function handleLeadStatus(id: string, status: Lead["status"]) {
+    const prev = leads.find((l) => l.id === id)?.status;
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
-    await updateLeadStatus(id, status);
-  }
-
-  async function handleNewClient(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const client = await createClient({
-      name: String(fd.get("name") || ""),
-      email: String(fd.get("email") || ""),
-      plan: String(fd.get("plan") || "starter") as Client["plan"],
+    updateLeadStatus(id, status).catch((e: any) => {
+      // Revert the optimistic update on failure
+      if (prev) setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status: prev } : l)));
+      setError(e?.message ?? "Could not update lead status");
     });
-    setClients((cs) => [client, ...cs]);
-    setShowNewClient(false);
   }
 
-  async function handleNewOrder(e: React.FormEvent<HTMLFormElement>) {
+  function handleNewClient(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    run(async () => {
+      const client = await createClient({
+        name: String(fd.get("name") || ""),
+        email: String(fd.get("email") || ""),
+        plan: String(fd.get("plan") || "starter") as Client["plan"],
+      });
+      setClients((cs) => [client, ...cs]);
+      setShowNewClient(false);
+      form.reset();
+    });
+  }
+
+  function handleNewOrder(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const clientId = String(fd.get("client_id") || "");
     const client = clients.find((c) => c.id === clientId);
-    const order = await createOrder({
-      client_id: clientId || null,
-      client_name: client?.name ?? String(fd.get("client_name") || "Walk-in"),
-      amount: Number(fd.get("amount") || 0),
-      method: String(fd.get("method") || "multicaixa"),
+    run(async () => {
+      const order = await createOrder({
+        client_id: clientId || null,
+        client_name: client?.name ?? String(fd.get("client_name") || "Walk-in"),
+        amount: Number(fd.get("amount") || 0),
+        method: String(fd.get("method") || "multicaixa"),
+      });
+      setOrders((os) => [order, ...os]);
+      form.reset();
     });
-    setOrders((os) => [order, ...os]);
+  }
+
+  function handleMarkPaid(id: string) {
+    run(async () => {
+      await markOrderPaid(id);
+      setOrders((os) => os.map((o) => (o.id === id ? { ...o, status: "paid" as const } : o)));
+    });
   }
 
   if (loading) {
@@ -118,14 +144,20 @@ export function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-50 sm:text-3xl">Command Center</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Live · Supabase connected · bots run on GitHub Actions
-        </p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Live · Supabase connected · bots run on GitHub Actions
+          </p>
         </div>
         <button onClick={load} className="btn-ghost !px-4 !py-2 text-xs">
           <RefreshCcw size={14} /> Refresh
         </button>
       </div>
+
+      {error ? (
+        <p className="mt-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" /> {error}
+        </p>
+      ) : null}
 
 
       {/* Tabs */}
@@ -158,7 +190,7 @@ export function Dashboard() {
         />
       ) : null}
       {tab === "orders" ? (
-        <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={markOrderPaid} />
+        <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
       ) : null}
     </div>
   );

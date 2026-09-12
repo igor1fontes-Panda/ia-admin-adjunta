@@ -17,13 +17,13 @@ const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
 const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
 const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
 
-/** Free-tier model chain: newest first, safest fallback last. */
-const MODEL_CHAIN = [
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [...new Set([
   process.env.GEMINI_MODEL || "gemini-3.6-flash",
   "gemini-3.8-flash",
   "gemini-2.5-flash",
   "gemini-2.0-flash",
-];
+])];
 
 export const log = (...args) => console.log(`[${new Date().toISOString()}]`, ...args);
 

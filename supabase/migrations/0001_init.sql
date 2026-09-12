@@ -59,19 +59,66 @@ alter table public.clients enable row level security;
 alter table public.orders enable row level security;
 alter table public.activity_log enable row level security;
 
--- Authenticated: full control
+-- Authenticated: full control (idempotent)
+drop policy if exists "leads_admin_all" on public.leads;
 create policy "leads_admin_all" on public.leads
   for all to authenticated using (true) with check (true);
+drop policy if exists "clients_admin_all" on public.clients;
 create policy "clients_admin_all" on public.clients
   for all to authenticated using (true) with check (true);
+drop policy if exists "orders_admin_all" on public.orders;
 create policy "orders_admin_all" on public.orders
   for all to authenticated using (true) with check (true);
+drop policy if exists "activity_admin_all" on public.activity_log;
 create policy "activity_admin_all" on public.activity_log
   for all to authenticated using (true) with check (true);
 
--- Anonymous: public lead capture only (never read)
+-- Anonymous: public lead capture only (never read, never forge metrics).
+-- score/status/ai_action are forced to safe defaults server-side by triggers
+-- below, so the public form cannot poison the dashboard with fake 100-scores.
+drop policy if exists "leads_public_insert" on public.leads;
 create policy "leads_public_insert" on public.leads
   for insert to anon with check (true);
+
+-- ============ HARDENING: PUBLIC FORM CANNOT SET SCORE/STATUS ============
+
+create or replace function public.forces_default_lead_fields()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if current_role = 'anon' then
+    new.score := least(new.score, 60);          -- public form cannot self-qualify
+    new.status := 'new';
+    new.ai_action := null;
+    new.channel := 'website';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists leads_force_defaults on public.leads;
+create trigger leads_force_defaults
+  before insert on public.leads
+  for each row execute function public.forces_default_lead_fields();
+
+-- ============ REALTIME ============
+-- The dashboard subscribes to leads/orders/activity_log via Supabase Realtime.
+-- Without adding the tables to the publication, live updates silently do nothing.
+
+do $$
+begin
+  alter publication supabase_realtime add table public.leads;
+exception when duplicate_object then null; -- already a member
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.orders;
+exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.activity_log;
+exception when duplicate_object then null;
+end $$;
 
 -- ============ SERVICE-ROLE HELPER (bots use service key, bypasses RLS) ============
 -- Bots run with SUPABASE_SERVICE_ROLE_KEY and need no extra policies.

@@ -10,8 +10,6 @@ export function Header() {
   async function signOut() {
     if (isLive && supabase) {
       await supabase.auth.signOut();
-    } else {
-      localStorage.removeItem("faa_signed_in");
     }
     navigate("/");
   }

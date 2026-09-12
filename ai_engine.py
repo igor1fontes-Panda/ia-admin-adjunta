@@ -60,12 +60,12 @@ BLACKBOX_KEY = os.environ.get("BLACKBOX_API_KEY") or ""
 BLACKBOX_URL = os.environ.get("BLACKBOX_BASE_URL") or "https://enterprise.blackbox.ai/chat/completions"
 BLACKBOX_MODEL = os.environ.get("BLACKBOX_MODEL") or "nvidia/nemotron-3-ultra-550b-a55b"
 
-MODEL_CHAIN = [
+MODEL_CHAIN = list(dict.fromkeys([
     os.environ.get("GEMINI_MODEL") or "gemini-3.6-flash",
     "gemini-3.8-flash",
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-]
+]))
 
 def log(*args):
     print(f"[{datetime.now(timezone.utc).isoformat()}]", *args)
@@ -199,8 +199,6 @@ def generate_voice_briefing(insight_text: str) -> str | None:
     """Turn the daily insight into an expressive audio briefing (Hume AI).
     Creates the persistent custom voice on first run (Voice Creation API via
     generation_id, per the user-provided curl), then synthesizes with it."""
-    if not GEMINI_KEY and not BLACKBOX_KEY:
-        pass  # insight text already exists; voice layer is independent
     if not HUME_KEY:
         log("hume: HUME_API_KEY not set — voice briefing skipped (no simulation)")
         return None

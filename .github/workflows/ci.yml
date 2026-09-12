@@ -24,6 +24,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Python bots syntax check
+        run: |
+          python3 -m py_compile ai_engine.py scripts/hume_voice.py
+          echo "✅ Python bots compile"
+
       - name: Typecheck
         run: npm run typecheck
 

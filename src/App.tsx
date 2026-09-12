@@ -22,14 +22,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/dashboard"
-              element={
-                <RequireAuth>
-                  {!isLive ? <SetupRequired /> : <Dashboard />}
-                </RequireAuth>
-              }
-            />
+            <Route path="/dashboard" element={<DashboardGate />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -39,8 +32,21 @@ export default function App() {
 }
 
 /**
- * Auth gate — real Supabase sessions only. When the database is not connected
- * the dashboard renders the setup checklist, so there is no demo auth bypass.
+ * Dashboard gate. When the database is not connected we must show the setup
+ * checklist WITHOUT requiring sign-in — there are no accounts to sign into
+ * yet, so gating this page behind auth would make the checklist unreachable.
+ */
+function DashboardGate() {
+  if (!isLive) return <SetupRequired />;
+  return (
+    <RequireAuth>
+      <Dashboard />
+    </RequireAuth>
+  );
+}
+
+/**
+ * Auth gate — real Supabase sessions only.
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();

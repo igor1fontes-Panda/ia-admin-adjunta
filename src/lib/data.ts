@@ -16,7 +16,9 @@ export const supabase: SupabaseClient | null =
 
 export const isLive = supabase !== null;
 
-async function mapError<T>(p: PromiseLike<{ data: T | null; error: { message: string } | null }>): Promise<T> {
+async function mapError<T>(
+  p: PromiseLike<{ data: T | null; error: { message: string } | null }>,
+): Promise<T> {
   const { data, error } = await p;
   if (error) throw new Error(error.message);
   return data as T;
@@ -25,9 +27,9 @@ async function mapError<T>(p: PromiseLike<{ data: T | null; error: { message: st
 // ---- Leads ----
 
 export async function fetchLeads(): Promise<Lead[]> {
-  const rows = await mapError<any[]>(
+  const rows = await mapError(
     supabase!.from("leads").select("*").order("created_at", { ascending: false }).limit(200),
-  );
+  ) as any[];
   return (rows ?? []).map((r) => ({
     id: r.id,
     company: r.company,
@@ -50,10 +52,12 @@ export async function updateLeadStatus(id: string, status: Lead["status"]): Prom
 
 const PLAN_MRR: Record<Client["plan"], number> = { starter: 1250, professional: 2916, enterprise: 8333 };
 
+type DbRow = Record<string, any>;
+
 export async function fetchClients(): Promise<Client[]> {
-  const rows = await mapError<any[]>(
+  const rows = await mapError(
     supabase!.from("clients").select("*").order("created_at", { ascending: false }).limit(200),
-  );
+  ) as DbRow[];
   return (rows ?? []).map((r) => ({
     id: r.id,
     name: r.name,
@@ -70,22 +74,30 @@ export async function createClient(input: {
   email: string;
   plan: Client["plan"];
 }): Promise<Client> {
-  const row = await mapError<any>(
+  const row = await mapError(
     supabase!
       .from("clients")
       .insert({ name: input.name, email: input.email, plan: input.plan, mrr: PLAN_MRR[input.plan], status: "active" })
       .select()
       .single(),
-  );
-  return row;
+  ) as DbRow;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    plan: row.plan,
+    mrr: Number(row.mrr),
+    status: row.status,
+    created_at: row.created_at,
+  };
 }
 
 // ---- Orders ----
 
 export async function fetchOrders(): Promise<Order[]> {
-  const rows = await mapError<any[]>(
+  const rows = await mapError(
     supabase!.from("orders").select("*").order("created_at", { ascending: false }).limit(200),
-  );
+  ) as DbRow[];
   return (rows ?? []).map((r) => ({
     id: r.id,
     client_id: r.client_id,
@@ -106,7 +118,7 @@ export async function createOrder(input: {
   method: string;
 }): Promise<Order> {
   const reference = String(923012293 + Math.floor(Math.random() * 999999));
-  const row = await mapError<any>(
+  const row = await mapError(
     supabase!
       .from("orders")
       .insert({
@@ -119,8 +131,18 @@ export async function createOrder(input: {
       })
       .select()
       .single(),
-  );
-  return row;
+  ) as DbRow;
+  return {
+    id: row.id,
+    client_id: row.client_id,
+    client_name: row.client_name,
+    amount: Number(row.amount),
+    currency: row.currency ?? "AOA",
+    method: row.method,
+    status: row.status,
+    reference: row.reference,
+    created_at: row.created_at,
+  };
 }
 
 export async function markOrderPaid(id: string): Promise<void> {
@@ -150,9 +172,9 @@ export async function submitLead(input: {
 // ---- Activity feed ----
 
 export async function fetchActivity(): Promise<Activity[]> {
-  const rows = await mapError<any[]>(
+  const rows = await mapError(
     supabase!.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50),
-  );
+  ) as DbRow[];
   return (rows ?? []).map((r) => ({ id: r.id, kind: r.kind, message: r.message, created_at: r.created_at }));
 }
 
