@@ -1,0 +1,70 @@
+name: Autonomous AI Bots
+
+# The ecosystem's autonomy layer: hunts leads daily and triages errors hourly.
+on:
+  schedule:
+    - cron: "0 6 * * *"      # lead hunter — daily 06:00 UTC
+    - cron: "0 * * * *"      # error handler — hourly
+  workflow_dispatch:
+    inputs:
+      bot:
+        description: "Which bot to run"
+        type: choice
+        options: [lead-hunter, error-handler, both]
+        default: both
+
+concurrency:
+  group: ai-bots
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  lead-hunter:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'lead-hunter' || inputs.bot == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run lead hunter
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LEAD_BOT_MIN_SCORE: "70"
+          LEAD_BOT_MAX_PER_RUN: "5"
+        run: node scripts/lead-hunter.mjs
+
+  error-handler:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '0 * * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'error-handler' || inputs.bot == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run error handler
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/error-handler.mjs
