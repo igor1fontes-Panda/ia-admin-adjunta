@@ -26,6 +26,8 @@ import sys
 import json
 from datetime import datetime, timedelta, timezone
 
+HUME_KEY = os.environ.get("HUME_API_KEY") or ""
+
 try:
     from google import genai
     HAS_GENAI = True
@@ -176,6 +178,65 @@ def compute_stats(leads: list, clients: list, orders: list) -> dict:
         "win_rate_pct": round(100 * len(won) / len(leads)) if leads else 0,
     }
 
+def generate_voice_briefing(insight_text: str) -> str | None:
+    """Turn the daily insight into an expressive audio briefing (Hume AI).
+    Creates the persistent custom voice on first run (Voice Creation API via
+    generation_id, per the user-provided curl), then synthesizes with it."""
+    if not GEMINI_KEY and not BLACKBOX_KEY:
+        pass  # insight text already exists; voice layer is independent
+    if not HUME_KEY:
+        log("hume: HUME_API_KEY not set — voice briefing skipped (no simulation)")
+        return None
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"))
+        from hume_voice import (
+            VOICE_NAME,
+            create_voice,
+            generate_sample,
+            synth_with_custom_voice,
+            upload_to_storage,
+            voice_exists,
+        )
+
+        if not voice_exists(VOICE_NAME):
+            log(f"hume: creating persistent voice '{VOICE_NAME}' (Voice Creation API)")
+            gen_id = generate_sample(
+                description=(
+                    "Confident, warm male voice. Calm authority of an executive "
+                    "briefing, with a spark of punk energy. Clear diction, medium "
+                    "pace, positive and motivating tone."
+                ),
+                text=(
+                    "Welcome to Fontes AI Admin Adjunta. I am your autonomous "
+                    "business analyst. Every morning I read your real numbers "
+                    "and deliver one clear insight, with one clear action. "
+                    "Let us grow."
+                ),
+            )
+            if not gen_id:
+                log("hume: could not generate sample — voice briefing skipped")
+                return None
+            created = create_voice(gen_id, VOICE_NAME)
+            if created is None:
+                log("hume: voice creation failed — briefing skipped")
+                return None
+
+        audio_b64 = synth_with_custom_voice(insight_text, VOICE_NAME)
+        if not audio_b64:
+            log("hume: synthesis failed — briefing skipped")
+            return None
+
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+        url = upload_to_storage(audio_b64, f"briefing-{stamp}.wav")
+        if url:
+            log(f"hume: briefing uploaded: {url}")
+        return url
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        log(f"hume voice briefing failed: {e}")
+        traceback.print_exc()
+        return None
+
 def main() -> int:
     log("🧠 insight engine starting", {"supabase": bool(SUPABASE_URL and SERVICE_KEY), "gemini": bool(GEMINI_KEY)})
 
@@ -225,12 +286,19 @@ def main() -> int:
     else:
         insight = insight.strip()
 
+    voice_url = generate_voice_briefing(insight)
+
+    message = f"Insight engine: {insight}"
+    if voice_url:
+        message += f" ||| AUDIO_BRIEFING_URL={voice_url}"
     supabase_insert(
         "activity_log",
-        {"kind": "bot", "message": f"Insight engine: {insight}"},
+        {"kind": "bot", "message": message},
     )
-    log("✅ insight stored to activity_log")
+    log("✅ insight stored to activity_log" + (" (com briefing de voz)" if voice_url else ""))
     print("\n=== INSIGHT ===\n" + insight)
+    if voice_url:
+        print(f"=== VOICE BRIEFING === {voice_url}")
     return 0
 
 if __name__ == "__main__":

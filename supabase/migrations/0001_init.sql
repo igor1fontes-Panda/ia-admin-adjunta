@@ -81,3 +81,12 @@ create policy "leads_public_insert" on public.leads
 insert into public.activity_log (kind, message) values
   ('system', 'Database initialized — Fontes AI Admin Adjunta production schema v1.0')
 on conflict do nothing;
+
+-- ============ VOICE BRIEFINGS (optional, Hume AI) ============
+-- Create a public storage bucket for daily voice briefings (David Hume).
+-- Run once in the SQL Editor if you plan to use HUME_API_KEY:
+
+-- insert into storage.buckets (id, name, public) values ('briefings', 'briefings', true)
+--   on conflict (id) do nothing;
+--
+-- Or create it in Dashboard → Storage → New bucket → name: briefings, Public: yes.

@@ -19,6 +19,7 @@
 | **Error Handler bot** (hourly triage) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
 | **Insight Engine** (Python GenAI SDK, daily analyst) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
 | **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
+| **Voice briefings** (Hume AI TTS, optional) | ✅ Wired | `scripts/hume_voice.py` + `ai_engine.py` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
 | Site health monitoring | ✅ Every 6h | `.github/workflows/deploy-status.yml` |
 
@@ -35,6 +36,7 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
 ## Going live with real data
 
 1. **Run the migration**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql` (tables + row-level security + public lead-capture policy).
+   - For voice briefings (optional): create a **public** storage bucket named `briefings` (Supabase → Storage → New bucket).
 2. Set environment variables (never commit them):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`

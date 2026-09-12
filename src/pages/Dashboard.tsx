@@ -197,7 +197,10 @@ function Overview({ metrics, activity, orders }: { metrics: Metric; activity: Ac
             <Bot size={18} className="text-gold-400" /> Autonomous activity
           </h3>
           <ul className="mt-4 space-y-3">
-            {activity.map((a) => (
+            {activity.map((a) => {
+              const audioMatch = a.message.match(/AUDIO_BRIEFING_URL=(\S+)/);
+              const displayMsg = a.message.replace(/ ?\|\|\| AUDIO_BRIEFING_URL=\S+/, "");
+              return (
               <li key={a.id} className="flex items-start gap-3 text-sm">
                 <span
                   className={`badge mt-0.5 ${
@@ -212,10 +215,16 @@ function Overview({ metrics, activity, orders }: { metrics: Metric; activity: Ac
                 >
                   {a.kind}
                 </span>
-                <span className="flex-1 text-zinc-300">{a.message}</span>
+                <div className="flex-1">
+                  <span className="text-zinc-300">{displayMsg}</span>
+                  {audioMatch ? (
+                    <audio controls preload="none" src={audioMatch[1]} className="mt-2 w-full max-w-md" />
+                  ) : null}
+                </div>
                 <span className="shrink-0 text-xs text-zinc-500">{timeAgo(a.created_at)}</span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
 
