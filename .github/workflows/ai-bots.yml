@@ -1,17 +1,20 @@
 name: Autonomous AI Bots
 
-# The ecosystem's autonomy layer: hunts leads daily and triages errors hourly.
+# The ecosystem's autonomy layer — REAL DATA ONLY:
+#  - lead qualifier: scores real inbound leads daily (Gemini Interactions API)
+#  - error handler: triages real incidents hourly
+#  - insight engine: daily data-grounded growth insight (Python GenAI SDK)
 on:
   schedule:
-    - cron: "0 6 * * *"      # lead hunter — daily 06:00 UTC
+    - cron: "0 6 * * *"      # lead qualifier + insight — daily 06:00 UTC
     - cron: "0 * * * *"      # error handler — hourly
   workflow_dispatch:
     inputs:
       bot:
         description: "Which bot to run"
         type: choice
-        options: [lead-hunter, error-handler, both]
-        default: both
+        options: [lead-hunter, error-handler, insight, all]
+        default: all
 
 concurrency:
   group: ai-bots
@@ -24,7 +27,7 @@ jobs:
   lead-hunter:
     if: >-
       github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' ||
-      github.event_name == 'workflow_dispatch' && (inputs.bot == 'lead-hunter' || inputs.bot == 'both')
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'lead-hunter' || inputs.bot == 'all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,19 +40,18 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run lead hunter
+      - name: Qualify real leads
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LEAD_BOT_MIN_SCORE: "70"
-          LEAD_BOT_MAX_PER_RUN: "5"
         run: node scripts/lead-hunter.mjs
 
   error-handler:
     if: >-
       github.event_name == 'schedule' && github.event.schedule == '0 * * * *' ||
-      github.event_name == 'workflow_dispatch' && (inputs.bot == 'error-handler' || inputs.bot == 'both')
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'error-handler' || inputs.bot == 'all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,9 +64,31 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run error handler
+      - name: Triage real incidents
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/error-handler.mjs
+
+  insight:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'insight' || inputs.bot == 'all')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Generate daily insight from real data
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python ai_engine.py

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bot, Mail, Lock } from "lucide-react";
+import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
 import { isLive, supabase } from "../lib/data";
 
 export function Auth() {
@@ -32,12 +32,9 @@ export function Auth() {
           navigate(from, { replace: true });
         }
       } else {
-        // Demo mode: accept any email/password locally
-        if (!email.includes("@") || password.length < 4) {
-          throw new Error("Enter a valid email and a password with 4+ characters.");
-        }
-        localStorage.setItem("faa_signed_in", email);
-        navigate(from, { replace: true });
+        throw new Error(
+          "Accounts are disabled until the database is connected (see dashboard setup steps).",
+        );
       }
     } catch (err: any) {
       setError(err.message ?? "Something went wrong");
@@ -64,8 +61,9 @@ export function Auth() {
         </p>
 
         {!isLive ? (
-          <p className="mt-4 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 text-center text-xs text-sky-300">
-            Demo mode — any valid email works. Connect Supabase keys to enable real accounts.
+          <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+            <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+            Real accounts require the database connection. Follow the setup steps on the dashboard.
           </p>
         ) : null}
 

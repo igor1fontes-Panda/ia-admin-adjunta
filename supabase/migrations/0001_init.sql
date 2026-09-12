@@ -12,6 +12,7 @@ create table if not exists public.leads (
   channel text not null default 'website',
   score int not null default 50 check (score between 0 and 100),
   status text not null default 'new' check (status in ('new','contacted','qualified','won','lost')),
+  ai_action text,
   created_at timestamptz not null default now()
 );
 

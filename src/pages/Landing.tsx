@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { Footer } from "../components/Footer";
+import { LeadForm } from "../components/LeadForm";
 
 const FEATURES = [
   {
@@ -257,7 +258,7 @@ export function Landing() {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold text-zinc-50 sm:text-4xl">Pricing</h2>
           <p className="mt-3 text-zinc-400">
-            Start free in demo mode. Upgrade when the bots are already paying for themselves.
+            Connect your database and start winning. The bots are already waiting to work for you.
           </p>
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
@@ -303,6 +304,11 @@ export function Landing() {
         </div>
       </section>
 
+      {/* Public lead capture — writes REAL leads to Supabase */}
+      <section id="lead-form" className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
+        <LeadForm />
+      </section>
+
       {/* Final CTA */}
       <section className="px-4 pb-24 pt-8 sm:px-6">
         <div className="card mx-auto max-w-4xl p-10 text-center glow-gold">
@@ -312,9 +318,9 @@ export function Landing() {
           <p className="mx-auto mt-3 max-w-xl text-zinc-400">
             30-day money-back guarantee. Multicaixa Express & PayPay accepted.
           </p>
-          <Link to="/auth" className="btn-primary mt-8 text-base">
-            Create your account
-          </Link>
+          <a href="#lead-form" className="btn-primary mt-8 text-base">
+            Request your demo
+          </a>
         </div>
       </section>
 

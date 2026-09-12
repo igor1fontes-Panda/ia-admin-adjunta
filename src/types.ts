@@ -7,6 +7,7 @@ export type Lead = {
   channel: string;
   score: number;
   status: "new" | "contacted" | "qualified" | "won" | "lost";
+  ai_action: string | null;
   created_at: string;
 };
 

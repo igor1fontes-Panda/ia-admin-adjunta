@@ -11,6 +11,7 @@ const lead = (over: Partial<Lead>): Lead => ({
   channel: "linkedin",
   score: 80,
   status: "new",
+  ai_action: null,
   created_at: new Date().toISOString(),
   ...over,
 });

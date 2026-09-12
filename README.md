@@ -2,7 +2,7 @@
 
 **A working AI admin dashboard** with autonomous lead-hunting bots, real data persistence (Supabase) and legitimate sales/client/order tracking.
 
-> v1.1 — This repository now contains a **real, running application** (Vite + React + TypeScript), a production database schema, and **autonomous AI bots on GitHub Actions**.
+> v1.2 — A **real, running application** (Vite + React + TypeScript), a production database schema, and **autonomous AI bots on GitHub Actions**. Real data only — no demo mode, no simulations.
 
 ---
 
@@ -10,13 +10,14 @@
 
 | Piece | Status | Where |
 |---|---|---|
-| Landing page + pricing (AOA) | ✅ Working | `src/pages/Landing.tsx` |
-| Auth (Supabase live / demo fallback) | ✅ Working | `src/pages/Auth.tsx` |
+| Landing page + pricing (AOA) + **public lead-capture form** | ✅ Working | `src/pages/Landing.tsx`, `src/components/LeadForm.tsx` |
+| Auth (real Supabase sessions) | ✅ Working | `src/pages/Auth.tsx` |
 | Admin dashboard (leads, clients, orders, activity) | ✅ Working | `src/pages/Dashboard.tsx` |
 | Business engine (metrics, lead scoring) | ✅ Unit-tested | `src/lib/engine.ts` |
 | Production DB schema + RLS | ✅ Ready | `supabase/migrations/0001_init.sql` |
-| **Lead Hunter bot** (Gemini, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
+| **Lead Qualifier bot** (Gemini Interactions API, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
 | **Error Handler bot** (hourly triage) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
+| **Insight Engine** (Python GenAI SDK, daily analyst) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
 | Site health monitoring | ✅ Every 6h | `.github/workflows/deploy-status.yml` |
 
@@ -24,25 +25,24 @@
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 (demo mode — works with zero config)
+npm run dev        # http://localhost:5173
 ```
 
-The app **always works**: with no env vars it runs on deterministic demo data
-(signed-in flag stored locally). Add the keys below to switch to live
-production data with real accounts, real leads and real orders.
+**Real data only.** The app requires a connected Supabase project. Without
+keys, every screen shows a step-by-step setup checklist instead of fake data.
 
 ## Going live with real data
 
-1. **Create a Supabase project** → Project Settings → API → copy the URL + anon key.
-2. Run the migration: paste `supabase/migrations/0001_init.sql` into the Supabase SQL Editor and run it (tables + row-level security included).
-3. Set environment variables (never commit them):
+1. **Run the migration**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql` (tables + row-level security + public lead-capture policy).
+2. Set environment variables (never commit them):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-4. **Create a Gemini API key** at [Google AI Studio](https://aistudio.google.com) → add as GitHub repo secret `GEMINI_API_KEY` (and `GEMINI_API_KEY` locally to test bots).
-5. Push to `main`. GitHub Actions takes over:
+3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Without it, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
+4. Push to `main`. GitHub Actions takes over:
    - **CI** runs on every push (typecheck → tests → build).
-   - **Lead Hunter** runs daily at 06:00 UTC: Gemini proposes prospects → scores them → qualified leads land in Supabase → dashboard updates in real time.
-   - **Error Handler** runs hourly: scans for incidents, triages (Gemini analysis when configured), logs the verdict.
+   - **Lead Qualifier** runs daily at 06:00 UTC: reads real inbound leads (from the public form) → Gemini scores them 0-100 and assigns the next best action → results are written back to Supabase → dashboard updates in real time.
+   - **Error Handler** runs hourly: scans real incidents, triages with Gemini when configured, logs the verdict.
+   - **Insight Engine** runs daily: reads real metrics and posts a data-grounded growth insight to the activity feed.
    - **Health check** pings your production URL every 6 hours (set repo variable `SITE_URL`).
 
 ## Pricing (live in the app)
@@ -58,19 +58,35 @@ Payments: Multicaixa Express & PayPay (reference generated per order), 30-day mo
 ## Commands
 
 ```bash
-npm run dev              # dev server (demo or live mode)
-npm run build            # production build → dist/
-npm test                 # unit tests (engine)
-npm run typecheck        # tsc --noEmit
-npm run bot:leads        # run lead hunter locally
-npm run bot:error-handler # run error handler locally
+npm run dev               # dev server
+npm run build             # production build → dist/
+npm test                  # unit tests (engine)
+npm run typecheck         # tsc --noEmit
+npm run bot:leads         # qualify real leads locally (needs Supabase secrets)
+npm run bot:error-handler # triage incidents locally
+npm run bot:insight       # daily AI insight (needs python3 -m pip install -r requirements.txt)
 ```
+
+The AI layer uses the official Google GenAI SDKs. Python (`ai_engine.py`):
+
+```python
+from google import genai
+client = genai.Client()
+interaction = client.interactions.create(
+    model="gemini-3.6-flash",
+    input="Explain how AI works in a few words"
+)
+print(interaction.output_text)
+```
+
+JavaScript (`scripts/bot-lib.mjs`) uses the same Interactions API via `@google/genai`:
+`await ai.interactions.create({ model, input })` → `interaction.output_text`.
 
 ## Security model
 
 - **RLS everywhere**: authenticated users = full business access; anonymous users can *only* insert leads (public lead capture), never read.
-- **Service-role key lives only in GitHub secrets** — bots bypass RLS server-side; it never reaches the browser.
-- Anon key in the browser is safe *because* RLS is enforced — do not skip step 2.
+- **Service-role key lives only in GitHub secrets / server env** — bots bypass RLS server-side; it never reaches the browser.
+- Anon key in the browser is safe *because* RLS is enforced — do not skip step 1.
 
 ## Support
 

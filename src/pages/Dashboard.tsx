@@ -5,7 +5,6 @@ import {
   Bot,
   CheckCircle2,
   CircleDollarSign,
-  Database,
   Loader2,
   Plus,
   RefreshCcw,
@@ -14,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
-import { createClient, createOrder, fetchActivity, fetchClients, fetchLeads, fetchOrders, isLive, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
+import { createClient, createOrder, fetchActivity, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
 import { formatKz, PLAN_PRICES, scoreLead, timeAgo } from "../lib/engine";
 
 type Tab = "overview" | "leads" | "clients" | "orders";
@@ -27,7 +26,6 @@ export function Dashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
-  const [demoNote, setDemoNote] = useState<string | null>(null);
   const [showNewClient, setShowNewClient] = useState(false);
 
   const load = useCallback(async () => {
@@ -54,7 +52,6 @@ export function Dashboard() {
         ? Math.round((leads.filter((l) => l.status === "won").length / leads.length) * 100)
         : 0,
     });
-    setDemoNote(isLive ? null : "Demo data — connect Supabase keys in Settings → Environment to go live.");
     setLoading(false);
   }, []);
 
@@ -62,9 +59,9 @@ export function Dashboard() {
     load();
   }, [load]);
 
-  // Live updates in Supabase mode
+  // Live updates from Supabase realtime
   useEffect(() => {
-    if (!isLive || !supabase) return;
+    if (!supabase) return;
     const sb = supabase;
     const channel = sb
       .channel("dashboard-live")
@@ -121,20 +118,15 @@ export function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-zinc-50 sm:text-3xl">Command Center</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            {isLive ? "Live · Supabase connected" : "Demo mode · connect Supabase to go live"} · bots run on GitHub Actions
-          </p>
+        <p className="mt-1 text-sm text-zinc-400">
+          Live · Supabase connected · bots run on GitHub Actions
+        </p>
         </div>
         <button onClick={load} className="btn-ghost !px-4 !py-2 text-xs">
           <RefreshCcw size={14} /> Refresh
         </button>
       </div>
 
-      {demoNote ? (
-        <p className="mt-4 flex items-start gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
-          <Database size={16} className="mt-0.5 shrink-0" /> {demoNote}
-        </p>
-      ) : null}
 
       {/* Tabs */}
       <div className="mt-8 flex gap-1 rounded-2xl border border-white/10 bg-ink-900/80 p-1">
@@ -281,6 +273,7 @@ function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: string, s
           <tbody>
             {leads.map((l) => {
               const { tier, action } = scoreLead(l);
+              const nextAction = l.ai_action ?? action;
               return (
                 <tr key={l.id} className="border-b border-white/5 transition hover:bg-white/5">
                   <td className="px-5 py-4">
@@ -305,7 +298,12 @@ function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: string, s
                       </span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-xs text-zinc-400">{action}</td>
+                  <td className="px-5 py-4 text-xs text-zinc-400">
+                    {nextAction}
+                    {l.ai_action ? (
+                      <span className="ml-1.5 rounded bg-gold-500/15 px-1.5 py-0.5 font-mono text-[10px] text-gold-300">AI</span>
+                    ) : null}
+                  </td>
                   <td className="px-5 py-4">
                     <select
                       value={l.status}

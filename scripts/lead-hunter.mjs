@@ -1,106 +1,108 @@
 #!/usr/bin/env node
 /**
- * Autonomous Lead Hunter Bot
+ * Autonomous Lead Qualifier Bot — REAL DATA ONLY.
  * Runs daily via GitHub Actions (or manually: npm run bot:leads).
  *
- * Flow:
- *  1. Ask Gemini for fresh, realistic B2B prospect hypotheses for our niches.
- *  2. Score each lead (Gemini judgment + deterministic channel bonus).
- *  3. Persist qualified leads to Supabase (or local fallback).
- *  4. Log an activity entry so the dashboard feed updates autonomously.
+ * What it actually does (no simulations):
+ *  1. Reads REAL leads from the Supabase `leads` table (public form + imports).
+ *  2. Asks Gemini (Interactions API, free-tier model chain) to score each real
+ *     lead 0-100 and define the next best action.
+ *  3. Writes the AI scores/actions back to Supabase so the dashboard updates
+ *     with genuine, persisted intelligence.
+ *  4. Logs a real activity entry. Without a key it does nothing destructive —
+ *     it reports and exits; it never invents leads.
  */
-import { dbInsertActivity, dbInsertLeads, gemini, log, saveLocalFallback } from "./bot-lib.mjs";
+import { dbInsertActivity, dbUpdateLead, gemini, geminiReady, log, parseJsonArray, supabase, supabaseReady } from "./bot-lib.mjs";
 
-const NICHES = ["SaaS", "Fintech", "Healthcare", "E-commerce", "Logistics", "Agencies"];
-const CHANNELS = ["linkedin", "x-community", "reddit", "website", "referral"];
 const MIN_SCORE = Number(process.env.LEAD_BOT_MIN_SCORE || 70);
-const MAX_PER_RUN = Number(process.env.LEAD_BOT_MAX_PER_RUN || 5);
-
-const PROMPT = `You are the lead-generation engine of Fontes AI Admin Adjunta, an AI admin automation service for small and mid-size businesses in Angola and Portugal (pricing 12,500–83,330 AOA/month).
-Generate ${MAX_PER_RUN} realistic B2B prospect hypotheses for today.
-Rules:
-- Vary niches across: ${NICHES.join(", ")}.
-- Channels: ${CHANNELS.join(", ")}.
-- company: plausible company name; contact_name: plausible person; email: plausible format (do NOT invent real personal data).
-- score: 0-100 buying-signal estimate. Be honest: most leads are 55-90.
-Return STRICT JSON array, each item:
-{"company":"","contact_name":"","email":"","niche":"","channel":"","score":0,"rationale":""}`;
-
-function heuristicLeads() {
-  const companies = [
-    "Kudissanga Tech", "Mulemba Systems", "Kwanza Analytics", "Benguela Cloud",
-    "Terra Firme Logistics", "Ilha Digital", "Cuanza Health", "Namibe Retail",
-  ];
-  const people = ["Adriana Mendes", "Beto Kiala", "Carla Domingos", "Dilson Nascimento", "Elisa Tavares", "Fábio Cruz", "Gilda Paiva", "Hélder Muteka"];
-  const out = [];
-  for (let i = 0; i < MAX_PER_RUN; i++) {
-    const score = Math.round(58 + ((Date.now() / 86400000 + i * 7) % 38));
-    out.push({
-      company: companies[(Math.floor(Date.now() / 86400000) + i) % companies.length],
-      contact_name: people[(Math.floor(Date.now() / 86400000) + i) % people.length],
-      email: `contact${i + 1}@${companies[(Math.floor(Date.now() / 86400000) + i) % companies.length].toLowerCase().replace(/[^a-z]/g, "")}.com`,
-      niche: NICHES[(Math.floor(Date.now() / 86400000) + i) % NICHES.length],
-      channel: CHANNELS[(Math.floor(Date.now() / 86400000) + i * 3) % CHANNELS.length],
-      score,
-      rationale: "heuristic mode (no GEMINI_API_KEY): rotating prospect pool with day-seeded scores",
-    });
-  }
-  return out;
-}
 
 const started = Date.now();
 try {
-  log("🤖 lead-hunter starting", { gemini: !!process.env.GEMINI_API_KEY, supabase: !!process.env.SUPABASE_URL });
+  log("🤖 lead-qualifier starting", { supabase: supabaseReady, gemini: geminiReady });
 
-  let raw = null;
-  if (process.env.GEMINI_API_KEY) {
-    raw = await gemini(PROMPT, { json: true });
+  if (!supabaseReady) {
+    log("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — nothing to qualify. Add repo secrets to enable real runs.");
+    process.exit(0);
   }
-  let candidates;
-  if (raw) {
+
+  // 1) Real, unscored leads (no AI action assigned yet)
+  const { data: leads, error } = await supabase
+    .from("leads")
+    .select("id, company, contact_name, email, niche, channel, score, status, created_at")
+    .is("ai_action", null)
+    .order("created_at", { ascending: true })
+    .limit(25);
+  if (error) throw new Error(`fetch leads: ${error.message}`);
+
+  if (!leads || leads.length === 0) {
+    log("No unscored real leads found — nothing to do.");
+    await dbInsertActivity("bot", "Lead qualifier: no pending leads (queue clear).").catch(() => {});
+    process.exit(0);
+  }
+  log(`loaded ${leads.length} real lead(s) to qualify`);
+
+  // 2) AI scoring of the REAL leads
+  let scored = null;
+  if (geminiReady) {
+    const prompt = `You are the revenue-operations engine of Fontes AI Admin Adjunta (AI admin automation for SMBs in Angola/Portugal, plans 12,500–83,330 AOA/month).
+Score these REAL inbound leads. For each: score 0-100 buying intent, and one concrete next action.
+Be honest and conservative. Return STRICT JSON array:
+[{"id":"<lead id>","score":0,"ai_action":"","priority":"high|medium|low"}]
+
+REAL LEADS:
+${JSON.stringify(leads.map((l) => ({ id: l.id, company: l.company, contact_name: l.contact_name, niche: l.niche, channel: l.channel, created_at: l.created_at })), null, 2)}`;
+    const raw = await gemini(prompt, { json: true });
+    const parsed = parseJsonArray(raw);
+    if (parsed && parsed.length) scored = parsed;
+  }
+
+  if (!scored) {
+    // Deterministic ranking on real data (a scoring rule, not fabricated data)
+    const base = (l) => {
+      let s = typeof l.score === "number" ? l.score : 55;
+      if (l.channel === "referral") s += 10;
+      if (l.channel === "linkedin") s += 5;
+      if (["SaaS", "Fintech"].includes(l.niche)) s += 6;
+      return Math.max(0, Math.min(100, s));
+    };
+    scored = leads.map((l) => {
+      const s = base(l);
+      return {
+        id: l.id,
+        score: s,
+        ai_action: s >= 80 ? "Contact today — high intent (rule-scored)" : s >= 60 ? "Schedule demo this week (rule-scored)" : "Add to nurture sequence (rule-scored)",
+        priority: s >= 80 ? "high" : s >= 60 ? "medium" : "low",
+      };
+    });
+    log("AI unavailable — applied deterministic rule-scoring to real leads");
+  }
+
+  // 3) Persist back to the real database
+  let updated = 0;
+  for (const s of scored) {
+    if (!s || typeof s.id !== "string") continue;
+    const patch = {
+      score: Math.max(0, Math.min(100, Math.round(Number(s.score) || 0))),
+      ai_action: String(s.ai_action ?? "").slice(0, 300) || null,
+    };
     try {
-      candidates = JSON.parse(raw);
-    } catch {
-      const m = raw.match(/\[[\s\S]*\]/);
-      candidates = m ? JSON.parse(m[0]) : null;
+      await dbUpdateLead(s.id, patch);
+      updated++;
+    } catch (e) {
+      log(`update failed for ${s.id}: ${e.message}`);
     }
   }
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    log("gemini unavailable/empty — using heuristic pool");
-    candidates = heuristicLeads();
-  }
 
-  // Normalize + enforce score bounds
-  candidates = candidates.slice(0, MAX_PER_RUN).map((c, i) => ({
-    company: String(c.company ?? `Prospect ${i + 1}`).slice(0, 120),
-    contact_name: String(c.contact_name ?? "Unknown").slice(0, 120),
-    email: String(c.email ?? `lead${i + 1}@example.com`).slice(0, 160),
-    niche: NICHES.includes(c.niche) ? c.niche : "SaaS",
-    channel: CHANNELS.includes(c.channel) ? c.channel : "website",
-    score: Math.max(0, Math.min(100, Math.round(Number(c.score) || 60))),
-  }));
+  const hot = scored.filter((s) => (Number(s.score) || 0) >= MIN_SCORE).length;
+  await dbInsertActivity(
+    "bot",
+    `Lead qualifier processed ${updated} real lead(s) — ${hot} above threshold ${MIN_SCORE}.`,
+  ).catch(() => {});
 
-  const qualified = candidates.filter((c) => c.score >= MIN_SCORE);
-  log(`candidates: ${candidates.length}, qualified (>= ${MIN_SCORE}): ${qualified.length}`);
-
-  if (qualified.length > 0) {
-    const persisted = await dbInsertLeads(qualified).catch((e) => {
-      log(`persist failed: ${e.message}`);
-      return false;
-    });
-    if (!persisted) saveLocalFallback(qualified, "leads.json");
-    await dbInsertActivity(
-      "bot",
-      `Lead hunter captured ${qualified.length} qualified lead(s): ${qualified.map((l) => `${l.company} (${l.score})`).join(", ")}`,
-    ).catch(() => {});
-  } else {
-    await dbInsertActivity("bot", "Lead hunter run complete — no leads crossed the quality threshold today.").catch(() => {});
-  }
-
-  log(`✅ done in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  log(`✅ qualified ${updated} lead(s) (${hot} hot) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
   process.exit(0);
 } catch (e) {
   log("❌ fatal:", e.message);
-  await dbInsertActivity("system", `Lead hunter error: ${e.message}`).catch(() => {});
+  await dbInsertActivity("system", `Lead qualifier error: ${e.message}`).catch(() => {});
   process.exit(0); // never break the workflow
 }

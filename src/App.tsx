@@ -10,6 +10,7 @@ import { Header } from "./components/Header";
 import { Landing } from "./pages/Landing";
 import { Auth } from "./pages/Auth";
 import { Dashboard } from "./pages/Dashboard";
+import { SetupRequired } from "./components/SetupRequired";
 import { isLive, supabase } from "./lib/data";
 
 export default function App() {
@@ -25,7 +26,7 @@ export default function App() {
               path="/dashboard"
               element={
                 <RequireAuth>
-                  <Dashboard />
+                  {!isLive ? <SetupRequired /> : <Dashboard />}
                 </RequireAuth>
               }
             />
@@ -38,9 +39,8 @@ export default function App() {
 }
 
 /**
- * Auth gate. Two modes:
- * - Supabase live mode: real sign-in; session persisted by Supabase.
- * - Demo mode: signed-in flag in localStorage so the product flow works offline.
+ * Auth gate — real Supabase sessions only. When the database is not connected
+ * the dashboard renders the setup checklist, so there is no demo auth bypass.
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -62,7 +62,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       };
     }
 
-    setSession(localStorage.getItem("faa_signed_in") ? "yes" : "no");
+    setSession("no");
     return () => {
       mounted = false;
     };
