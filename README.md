@@ -18,6 +18,7 @@
 | **Lead Qualifier bot** (Gemini Interactions API, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
 | **Error Handler bot** (hourly triage) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
 | **Insight Engine** (Python GenAI SDK, daily analyst) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
+| **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
 | Site health monitoring | ✅ Every 6h | `.github/workflows/deploy-status.yml` |
 
@@ -37,7 +38,7 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
 2. Set environment variables (never commit them):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Without it, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
+3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Optionally add `BLACKBOX_API_KEY` (Blackbox enterprise API, OpenAI-compatible, `nvidia/nemotron-3-ultra-550b-a55b`) as a second automatic provider. Without any key, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
 4. Push to `main`. GitHub Actions takes over:
    - **CI** runs on every push (typecheck → tests → build).
    - **Lead Qualifier** runs daily at 06:00 UTC: reads real inbound leads (from the public form) → Gemini scores them 0-100 and assigns the next best action → results are written back to Supabase → dashboard updates in real time.

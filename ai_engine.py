@@ -37,6 +37,9 @@ import requests
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or ""
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY") or ""
+BLACKBOX_KEY = os.environ.get("BLACKBOX_API_KEY") or ""
+BLACKBOX_URL = os.environ.get("BLACKBOX_BASE_URL") or "https://enterprise.blackbox.ai/chat/completions"
+BLACKBOX_MODEL = os.environ.get("BLACKBOX_MODEL") or "nvidia/nemotron-3-ultra-550b-a55b"
 
 MODEL_CHAIN = [
     os.environ.get("GEMINI_MODEL") or "gemini-3.6-flash",
@@ -122,6 +125,37 @@ def ask_gemini(prompt: str) -> str | None:
             log(f"ai(rest): model={model} failed: {e}")
     return None
 
+def ask_blackbox(prompt: str) -> str | None:
+    """Blackbox AI (OpenAI-compatible) — fallback when Gemini is unavailable."""
+    if not BLACKBOX_KEY:
+        return None
+    try:
+        r = requests.post(
+            BLACKBOX_URL,
+            headers={
+                "Authorization": f"Bearer {BLACKBOX_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": BLACKBOX_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+            },
+            timeout=60,
+        )
+        if r.status_code != 200:
+            log(f"ai(blackbox): HTTP {r.status_code}")
+            return None
+        text = (r.json().get("choices") or [{}])[0].get("message", {}).get("content")
+        if text:
+            log(f"ai(blackbox): model={BLACKBOX_MODEL} chars={len(text)}")
+            return text
+        log("ai(blackbox): empty output")
+        return None
+    except Exception as e:  # noqa: BLE001
+        log(f"ai(blackbox) failed: {e}")
+        return None
+
 def compute_stats(leads: list, clients: list, orders: list) -> dict:
     active = [c for c in clients if c.get("status") in ("active", "trialing")]
     mrr = sum(float(c.get("mrr") or 0) for c in active)
@@ -174,7 +208,7 @@ def main() -> int:
         "growth step (e.g., drive traffic to the public lead form)."
     )
 
-    insight = ask_gemini(prompt)
+    insight = ask_gemini(prompt) or ask_blackbox(prompt)
     if not insight:
         # Rule-based insight derived from real numbers (no AI needed, no fabrication)
         insight = (

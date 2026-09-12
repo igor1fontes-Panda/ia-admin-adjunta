@@ -6,12 +6,12 @@
  * (Gemini analysis when GEMINI_API_KEY is set; rule-based otherwise — that is
  * triage logic, not simulated data).
  */
-import { dbInsertActivity, gemini, geminiReady, log, supabase, supabaseReady } from "./bot-lib.mjs";
+import { askAI, blackboxReady, dbInsertActivity, geminiReady, log, supabase, supabaseReady } from "./bot-lib.mjs";
 
 const WINDOW_HOURS = 24;
 
 try {
-  log("🩺 error-handler starting", { supabase: supabaseReady, gemini: geminiReady });
+  log("🩺 error-handler starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
 
   if (!supabaseReady) {
     log("⚠️  Supabase not configured — nothing to monitor. Add repo secrets to enable real runs.");
@@ -36,8 +36,8 @@ try {
       ? "All systems nominal. No action required."
       : `${list.length} incident(s). Rule-based triage: check Supabase connectivity and table constraints.`;
 
-  if (list.length && geminiReady) {
-    const aiText = await gemini(
+  if (list.length && (geminiReady || blackboxReady)) {
+    const aiText = await askAI(
       `You are the autonomous error handler for a SaaS admin platform. Analyze these REAL incidents from the last ${WINDOW_HOURS}h. Output: likely root cause, severity (low/medium/high), one concrete fix.\n\n${signature}`,
     );
     if (aiText) analysis = aiText.trim();

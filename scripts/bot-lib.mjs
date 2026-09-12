@@ -13,6 +13,9 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
 
 /** Free-tier model chain: newest first, safest fallback last. */
 const MODEL_CHAIN = [
@@ -28,13 +31,57 @@ export const supabaseReady = Boolean(SUPABASE_URL && SERVICE_KEY);
 export const supabase = supabaseReady ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
 
 export const geminiReady = Boolean(GEMINI_KEY);
+export const blackboxReady = Boolean(BLACKBOX_KEY);
 const ai = geminiReady ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
 /**
- * Generate text via the official Interactions API.
- * Tries each model in the chain until one responds; returns null if none do
- * (callers must treat null as "AI unavailable" and act on real data only).
+ * Blackbox AI — OpenAI-compatible chat/completions endpoint.
+ * Default model: nvidia/nemotron-3-ultra-550b-a55b. Non-streaming for
+ * deterministic bot runs (same API, stream:false).
  */
+export async function blackbox(prompt) {
+  if (!BLACKBOX_KEY) return null;
+  try {
+    const res = await fetch(BLACKBOX_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${BLACKBOX_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: BLACKBOX_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        stream: false,
+      }),
+    });
+    if (!res.ok) {
+      log(`blackbox: HTTP ${res.status}`);
+      return null;
+    }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (typeof text === "string" && text.length > 0) {
+      log(`ai: provider=blackbox model=${BLACKBOX_MODEL} chars=${text.length}`);
+      return text;
+    }
+    log("blackbox: empty output");
+    return null;
+  } catch (e) {
+    log(`blackbox failed: ${e?.message ?? e}`);
+    return null;
+  }
+}
+
+/**
+ * Unified AI entry point with full provider chain:
+ * Gemini (Interactions API, model chain) → Blackbox AI → null.
+ * Callers treat null as "AI unavailable" and act on real data only.
+ */
+export async function askAI(prompt, { json = false } = {}) {
+  const viaGemini = await gemini(prompt, { json });
+  if (viaGemini) return viaGemini;
+  return blackbox(prompt);
+}
 export async function gemini(prompt, { json = false } = {}) {
   if (!ai) return null;
   for (const model of MODEL_CHAIN) {

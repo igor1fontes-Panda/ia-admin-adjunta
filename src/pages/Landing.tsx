@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Footer } from "../components/Footer";
 import { LeadForm } from "../components/LeadForm";
+import { PunkTicker } from "../components/PunkTicker";
 
 const FEATURES = [
   {
@@ -108,6 +109,9 @@ const fadeUp = {
 export function Landing() {
   return (
     <div>
+      {/* Anime punk breaking-news ticker */}
+      <PunkTicker />
+
       {/* Hero */}
       <section className="grid-bg relative overflow-hidden">
         <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[52rem] -translate-x-1/2 rounded-full bg-gold-500/15 blur-[120px]" />
@@ -119,12 +123,15 @@ export function Landing() {
             custom={0}
             className="mx-auto max-w-3xl text-center"
           >
-            <span className="badge mb-6 border border-gold-500/30 bg-gold-500/10 text-gold-300">
-              <Rocket size={13} /> Autonomous AI admin · v1.0 production
+            <span className="punk-sticker mb-6">
+              <Rocket size={13} className="mr-1.5 inline" /> Autonomous AI admin · v1.2 production
             </span>
             <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
               Your business, running{" "}
-              <span className="bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent">
+              <span
+                className="punk-glitch bg-gradient-to-r from-gold-300 via-gold-400 to-gold-500 bg-clip-text text-transparent"
+                data-text="itself"
+              >
                 itself
               </span>
               .
@@ -138,7 +145,7 @@ export function Landing() {
               <Link to="/auth" className="btn-primary glow-gold text-base">
                 Get started free
               </Link>
-              <Link to="/dashboard" className="btn-ghost text-base">
+              <Link to="/dashboard" className="btn-ghost punk-neon text-base">
                 <Gauge size={18} /> See live dashboard
               </Link>
             </div>
@@ -311,7 +318,7 @@ export function Landing() {
 
       {/* Final CTA */}
       <section className="px-4 pb-24 pt-8 sm:px-6">
-        <div className="card mx-auto max-w-4xl p-10 text-center glow-gold">
+        <div className="card mx-auto max-w-4xl p-10 text-center glow-punk">
           <h2 className="text-3xl font-bold text-zinc-50">
             Let the bots work while you sleep
           </h2>

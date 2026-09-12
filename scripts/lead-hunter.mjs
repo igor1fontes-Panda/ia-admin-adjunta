@@ -12,13 +12,13 @@
  *  4. Logs a real activity entry. Without a key it does nothing destructive —
  *     it reports and exits; it never invents leads.
  */
-import { dbInsertActivity, dbUpdateLead, gemini, geminiReady, log, parseJsonArray, supabase, supabaseReady } from "./bot-lib.mjs";
+import { askAI, blackboxReady, dbInsertActivity, dbUpdateLead, geminiReady, log, parseJsonArray, supabase, supabaseReady } from "./bot-lib.mjs";
 
 const MIN_SCORE = Number(process.env.LEAD_BOT_MIN_SCORE || 70);
 
 const started = Date.now();
 try {
-  log("🤖 lead-qualifier starting", { supabase: supabaseReady, gemini: geminiReady });
+  log("🤖 lead-qualifier starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
 
   if (!supabaseReady) {
     log("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — nothing to qualify. Add repo secrets to enable real runs.");
@@ -41,9 +41,9 @@ try {
   }
   log(`loaded ${leads.length} real lead(s) to qualify`);
 
-  // 2) AI scoring of the REAL leads
+  // 2) AI scoring of the REAL leads (Gemini → Blackbox fallback chain)
   let scored = null;
-  if (geminiReady) {
+  if (geminiReady || blackboxReady) {
     const prompt = `You are the revenue-operations engine of Fontes AI Admin Adjunta (AI admin automation for SMBs in Angola/Portugal, plans 12,500–83,330 AOA/month).
 Score these REAL inbound leads. For each: score 0-100 buying intent, and one concrete next action.
 Be honest and conservative. Return STRICT JSON array:
@@ -51,7 +51,7 @@ Be honest and conservative. Return STRICT JSON array:
 
 REAL LEADS:
 ${JSON.stringify(leads.map((l) => ({ id: l.id, company: l.company, contact_name: l.contact_name, niche: l.niche, channel: l.channel, created_at: l.created_at })), null, 2)}`;
-    const raw = await gemini(prompt, { json: true });
+    const raw = await askAI(prompt, { json: true });
     const parsed = parseJsonArray(raw);
     if (parsed && parsed.length) scored = parsed;
   }

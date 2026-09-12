@@ -35,6 +35,63 @@ body {
   border-radius: 9999px;
 }
 
+/* ============================================================
+   ANIME PUNK BACKGROUND SYSTEM
+   Dark ink base + gold circuit grid + halftone + speedlines
+   + neon magenta/cyan punk accents. Pure CSS, GPU-friendly.
+   ============================================================ */
+
+.grid-bg {
+  position: relative;
+  background-color: #08080c;
+  background-image:
+    linear-gradient(rgba(245, 158, 11, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.07) 1px, transparent 1px),
+    radial-gradient(circle at 20% 25%, rgba(236, 72, 153, 0.10), transparent 42%),
+    radial-gradient(circle at 80% 15%, rgba(34, 211, 238, 0.10), transparent 42%),
+    radial-gradient(circle at 55% 85%, rgba(245, 158, 11, 0.09), transparent 46%);
+  background-size:
+    48px 48px,
+    48px 48px,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+}
+
+/* Halftone dots overlay — manga print texture */
+.grid-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.6px);
+  background-size: 14px 14px;
+  mask-image: radial-gradient(ellipse at 30% 20%, black 0%, transparent 65%);
+  -webkit-mask-image: radial-gradient(ellipse at 30% 20%, black 0%, transparent 65%);
+  z-index: 0;
+}
+
+/* Punk speedlines — subtle diagonal anime action lines */
+.grid-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    115deg,
+    transparent 0px,
+    transparent 90px,
+    rgba(236, 72, 153, 0.045) 90px,
+    rgba(236, 72, 153, 0.045) 92px,
+    transparent 92px,
+    transparent 180px,
+    rgba(34, 211, 238, 0.04) 180px,
+    rgba(34, 211, 238, 0.04) 182px,
+    transparent 182px
+  );
+  z-index: 0;
+}
+
 @layer components {
   .card {
     @apply rounded-2xl border border-white/10 bg-ink-900/80 backdrop-blur-sm;
@@ -59,11 +116,90 @@ body {
       0 0 0 1px rgba(245, 158, 11, 0.25),
       0 8px 40px -8px rgba(245, 158, 11, 0.45);
   }
+  .glow-punk {
+    box-shadow:
+      0 0 0 1px rgba(236, 72, 153, 0.35),
+      0 0 24px -4px rgba(236, 72, 153, 0.35),
+      0 0 40px -10px rgba(34, 211, 238, 0.3);
+  }
+
+  /* Neon punk outline for selected elements */
+  .punk-neon {
+    position: relative;
+  }
+  .punk-neon::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.6), rgba(34, 211, 238, 0.5), rgba(245, 158, 11, 0.55));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Glitched headline — anime opening title card */
+  .punk-glitch {
+    position: relative;
+    display: inline-block;
+  }
+  .punk-glitch::before,
+  .punk-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    opacity: 0.75;
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .punk-glitch::before {
+    color: #ec4899;
+    transform: translate(2px, -1px);
+    clip-path: polygon(0 0, 100% 0, 100% 38%, 0 38%);
+    animation: punk-shift 3.4s infinite steps(2, end);
+  }
+  .punk-glitch::after {
+    color: #22d3ee;
+    transform: translate(-2px, 1px);
+    clip-path: polygon(0 62%, 100% 62%, 100% 100%, 0 100%);
+    animation: punk-shift 2.7s infinite steps(2, end) reverse;
+  }
+
+  /* Sticker — ripped punk zine label */
+  .punk-sticker {
+    @apply inline-block rounded-lg border-2 border-dashed border-gold-500/60 bg-ink-900/90 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-gold-300;
+    transform: rotate(-2deg);
+    box-shadow: 2px 3px 0 rgba(236, 72, 153, 0.4);
+  }
 }
 
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 44px 44px;
+@keyframes punk-shift {
+  0%, 86%, 100% { transform: translate(2px, -1px); }
+  88% { transform: translate(-3px, 1px); }
+  90% { transform: translate(3px, -2px); }
+  92% { transform: translate(-2px, 2px); }
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.punk-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 32s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .punk-glitch::before,
+  .punk-glitch::after {
+    animation: none;
+  }
+  .punk-ticker {
+    animation: none;
+  }
 }

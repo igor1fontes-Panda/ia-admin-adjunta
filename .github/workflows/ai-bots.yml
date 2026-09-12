@@ -43,6 +43,7 @@ jobs:
       - name: Qualify real leads
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LEAD_BOT_MIN_SCORE: "70"
@@ -67,6 +68,7 @@ jobs:
       - name: Triage real incidents
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/error-handler.mjs
@@ -89,6 +91,7 @@ jobs:
       - name: Generate daily insight from real data
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python ai_engine.py
