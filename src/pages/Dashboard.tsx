@@ -30,7 +30,8 @@ import {
   Users,
 } from "lucide-react";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
-import { createClient, createOrder, fetchActivity, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
+import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
+import type { AgentMemoryRow } from "../lib/data";
 import {
   agentStatus,
   computeMetrics,
@@ -59,21 +60,24 @@ export function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [showNewClient, setShowNewClient] = useState(false);
+  const [memory, setMemory] = useState<AgentMemoryRow[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [leads, clients, orders, activity] = await Promise.all([
+      const [leads, clients, orders, activity, mem] = await Promise.all([
         fetchLeads(),
         fetchClients(),
         fetchOrders(),
         fetchActivity(),
+        fetchAgentMemory().catch(() => [] as AgentMemoryRow[]),
       ]);
       setLeads(leads);
       setClients(clients);
       setOrders(orders);
       setActivity(activity);
+      setMemory(mem);
       setMetrics(computeMetrics(leads, clients, orders));
     } catch (e: any) {
       setError(e?.message ?? "Failed to load data from Supabase");
@@ -232,7 +236,7 @@ export function Dashboard() {
       {tab === "orders" ? (
         <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
       ) : null}
-      {tab === "agents" ? <AgentsTab activity={activity} /> : null}
+      {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
     </div>
   );
 }
@@ -589,8 +593,17 @@ function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: Order[];
 
 // ---------- AI Agents ----------
 
-function AgentsTab({ activity }: { activity: Activity[] }) {
+const AGENT_SLUGS: Record<string, string> = {
+  "Lead Qualifier": "lead_qualifier",
+  "Insight Engine": "insight_engine",
+  "Error Handler": "error_handler",
+};
+const slug = (name: string): string => AGENT_SLUGS[name] ?? name.toLowerCase().replace(/\s+/g, "_");
+
+function AgentsTab({ activity, memory }: { activity: Activity[]; memory: AgentMemoryRow[] }) {
   const agents = useMemo(() => agentStatus(activity), [activity]);
+  const memoryFor = (agentSlug: string): AgentMemoryRow[] =>
+    memory.filter((m) => m.agent === agentSlug);
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
@@ -626,12 +639,20 @@ function AgentsTab({ activity }: { activity: Activity[] }) {
                 </div>
               </div>
               <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-zinc-400">{a.lastMessage}</p>
+              {memoryFor(slug(a.name)).map((m) => (
+                <div key={m.key} className="mt-3 rounded-xl border border-gold-500/20 bg-gold-500/5 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gold-400">Learned: {m.key.replace(/_/g, " ")}</p>
+                  <pre className="mt-1 max-h-28 overflow-y-auto whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-zinc-300">
+                    {JSON.stringify(m.value, null, 1)}
+                  </pre>
+                </div>
+              ))}
             </div>
           );
         })}
       </div>
       <p className="text-center text-xs text-zinc-500">
-        Runs are counted from real activity_log entries written by the GitHub Actions bots — nothing simulated. Recent bot output is also visible in the Overview feed.
+        Runs are counted from real activity_log entries; “Learned” cards show live agent memory written by the bots from real won/lost deals and incident fixes. Cold start = no decided outcomes yet, so agents use neutral priors and adapt as real sales happen.
       </p>
     </motion.div>
   );

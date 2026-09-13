@@ -83,6 +83,21 @@ def supabase_get(table: str, params: dict | None = None) -> list:
     r.raise_for_status()
     return r.json() or []
 
+
+def recall_learning() -> dict:
+    """Read what the agents have learned so far (agent_memory, real rows).
+    Returns {} when empty or when the table does not exist yet — the engine
+    simply works memory-less and says so."""
+    try:
+        rows = supabase_get("agent_memory", {"select": "agent,key,value"})
+    except Exception as e:  # noqa: BLE001 — missing migration is not fatal
+        log(f"agent_memory unavailable (continuing memory-less): {e}")
+        return {}
+    out: dict = {}
+    for r in rows or []:
+        out.setdefault(r.get("agent"), {})[r.get("key")] = r.get("value")
+    return out
+
 def supabase_insert(table: str, row: dict) -> None:
     if not (SUPABASE_URL and SERVICE_KEY):
         return
@@ -270,6 +285,9 @@ def main() -> int:
     stats = compute_stats(leads, clients, orders)
     log("real stats:", json.dumps(stats, ensure_ascii=False))
 
+    learning = recall_learning()
+    log("agent learning:", json.dumps(learning, ensure_ascii=False) if learning else "none yet (cold start)")
+
     if stats["total_leads"] == 0 and stats["active_clients"] == 0:
         log("Database has no real business data yet — insight will note that factually.")
 
@@ -278,10 +296,17 @@ def main() -> int:
         "(AI admin automation for SMBs in Angola/Portugal, plans 12,500–83,330 AOA/month). "
         "These are the REAL current business metrics from the production database:\n"
         f"{json.dumps(stats, ensure_ascii=False, indent=2)}\n\n"
-        "Write ONE concrete, data-grounded growth insight (max 120 words). "
-        "Reference the actual numbers. End with a single clear recommended action. "
-        "If the dataset is empty, state that factually and recommend the first "
-        "growth step (e.g., drive traffic to the public lead form)."
+        + (
+            "What the autonomous agents have LEARNED so far from real outcomes "
+            f"(channel conversion, incident fixes):\n{json.dumps(learning, ensure_ascii=False, indent=2)}\n\n"
+            if learning
+            else "The agents have not learned anything yet (no decided deals or incidents) — say so factually.\n\n"
+        )
+        + "Write ONE concrete, data-grounded growth insight (max 120 words). "
+        "Reference the actual numbers and any agent learning. End with a single "
+        "clear recommended action. If the dataset is empty, state that factually "
+        "and recommend the first growth step (e.g., drive traffic to the public "
+        "lead form)."
     )
 
     insight = ask_gemini(prompt) or ask_blackbox(prompt)

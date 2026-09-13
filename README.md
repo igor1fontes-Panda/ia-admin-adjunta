@@ -15,9 +15,10 @@
 | Admin dashboard (leads, clients, orders, activity) | ✅ Working | `src/pages/Dashboard.tsx` |
 | Business engine (metrics, lead scoring) | ✅ Unit-tested | `src/lib/engine.ts` |
 | Production DB schema + RLS | ✅ Ready | `supabase/migrations/0001_init.sql` |
-| **Lead Qualifier bot** (Gemini Interactions API, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
-| **Error Handler bot** (hourly triage) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
-| **Insight Engine** (Python GenAI SDK, daily analyst) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
+| **Agent learning memory** (`agent_memory` table) | ✅ Ready | `supabase/migrations/0002_agent_memory.sql` |
+| **Lead Qualifier bot** (self-learning, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
+| **Error Handler bot** (self-learning, hourly) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
+| **Insight Engine** (memory-aware analyst, daily) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
 | **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
 | **Voice briefings** (Hume AI TTS, optional) | ✅ Wired | `scripts/hume_voice.py` + `ai_engine.py` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
@@ -35,7 +36,7 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
 
 ## Going live with real data
 
-1. **Run the migration**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql` (tables + row-level security + public lead-capture policy).
+1. **Run the migrations**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql`, then `supabase/migrations/0002_agent_memory.sql` (tables + row-level security + public lead-capture policy + agent learning memory).
    - For voice briefings (optional): create a **public** storage bucket named `briefings` (Supabase → Storage → New bucket).
 2. Set environment variables (never commit them):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work.
@@ -47,6 +48,23 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
    - **Error Handler** runs hourly: scans real incidents, triages with Gemini when configured, logs the verdict.
    - **Insight Engine** runs daily: reads real metrics and posts a data-grounded growth insight to the activity feed.
    - **Health check** pings your production URL every 6 hours (set repo variable `SITE_URL`).
+
+## How the agents learn (cold start → real growth)
+
+The system is designed for a brand-new business with zero data:
+
+1. **Cold start** — empty database. The dashboard shows honest empty states
+   ("income appears the moment real sales are recorded"); agents use neutral
+   priors and state factually that they have nothing to learn from yet.
+2. **First real signals** — the public lead form and your first orders create
+   real rows. Realtime pushes them into the dashboard and charts immediately.
+3. **Learning loop** — after leads get decided (won/lost), the Lead Qualifier
+   measures **real per-channel conversion** and persists a channel bias to the
+   `agent_memory` table. The Error Handler accumulates incident signatures and
+   their real fixes. The Insight Engine reads both and adapts its daily advice.
+4. **Visible learning** — the dashboard **AI Agents** tab shows each agent's
+   live memory ("Learned: channel bias", "Learned: known fixes") exactly as
+   the bots wrote it. Nothing simulated, ever.
 
 ## Pricing (live in the app)
 

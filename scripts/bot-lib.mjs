@@ -145,3 +145,37 @@ export async function dbInsertActivity(kind, message) {
   if (error) throw new Error(`supabase insert activity: ${error.message}`);
   return true;
 }
+
+// ---------- Agent learning memory (real outcomes, persisted) ----------
+
+/**
+ * Persist what an agent LEARNED from real data. Upsert on (agent, key).
+ * Silently no-ops when Supabase is not configured (caller reports it).
+ */
+export async function dbRemember(agent, key, value) {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from("agent_memory")
+    .upsert({ agent, key, value, updated_at: new Date().toISOString() });
+  if (error) throw new Error(`supabase upsert agent_memory: ${error.message}`);
+  return true;
+}
+
+/**
+ * Read everything an agent has previously learned (or all agents when
+ * agent is omitted). Returns {} on missing table/permission — callers
+ * must work without memory, never crash.
+ */
+export async function dbRecall(agent) {
+  if (!supabase) return {};
+  let q = supabase.from("agent_memory").select("agent, key, value");
+  if (agent) q = q.eq("agent", agent);
+  const { data, error } = await q;
+  if (error) return {}; // missing migration etc. — operate memory-less
+  const out = {};
+  for (const row of data ?? []) {
+    out[row.agent] = out[row.agent] || {};
+    out[row.agent][row.key] = row.value;
+  }
+  return out;
+}

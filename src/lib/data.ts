@@ -178,6 +178,22 @@ export async function fetchActivity(): Promise<Activity[]> {
   return (rows ?? []).map((r) => ({ id: r.id, kind: r.kind, message: r.message, created_at: r.created_at }));
 }
 
+// ---- Agent learning memory (public read via RLS) ----
+
+export type AgentMemoryRow = { agent: string; key: string; value: unknown; updated_at: string };
+
+export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
+  const rows = await mapError(
+    supabase!.from("agent_memory").select("*").order("updated_at", { ascending: false }),
+  ) as DbRow[];
+  return (rows ?? []).map((r) => ({
+    agent: r.agent,
+    key: r.key,
+    value: r.value,
+    updated_at: r.updated_at,
+  }));
+}
+
 // ---- Aggregated snapshot ----
 
 export type Snapshot = {
