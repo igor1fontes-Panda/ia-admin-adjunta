@@ -1,8 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   Activity as ActivityIcon,
   AlertTriangle,
+  BarChart3,
   Bot,
   CheckCircle2,
   CircleDollarSign,
@@ -15,9 +31,23 @@ import {
 } from "lucide-react";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { createClient, createOrder, fetchActivity, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
-import { computeMetrics, formatKz, PLAN_PRICES, scoreLead, timeAgo } from "../lib/engine";
+import {
+  agentStatus,
+  computeMetrics,
+  formatKz,
+  incomeByClient,
+  incomeByMethod,
+  leadsPerDay,
+  mrrByPlan,
+  pipelineFunnel,
+  PLAN_PRICES,
+  revenuePerDay,
+  scoreLead,
+  timeAgo,
+  type IncomeRow,
+} from "../lib/engine";
 
-type Tab = "overview" | "leads" | "clients" | "orders";
+type Tab = "overview" | "leads" | "charts" | "clients" | "orders" | "agents";
 
 export function Dashboard() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -161,25 +191,35 @@ export function Dashboard() {
 
 
       {/* Tabs */}
-      <div className="mt-8 flex gap-1 rounded-2xl border border-white/10 bg-ink-900/80 p-1">
-        {(["overview", "leads", "clients", "orders"] as Tab[]).map((t) => (
+      <div className="mt-8 flex flex-wrap gap-1 rounded-2xl border border-white/10 bg-ink-900/80 p-1">
+        {([
+          ["overview", "Overview"],
+          ["leads", "Leads"],
+          ["charts", "Analytics"],
+          ["clients", "Clients"],
+          ["orders", "Orders"],
+          ["agents", "AI Agents"],
+        ] as Array<[Tab, string]>).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold capitalize transition ${
+            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
               tab === t ? "bg-gold-500 text-ink-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            {t}
+            {label}
           </button>
         ))}
       </div>
 
       {tab === "overview" ? (
-        <Overview metrics={metrics!} activity={activity} orders={orders.slice(0, 5)} />
+        <Overview metrics={metrics!} activity={activity} orders={orders.slice(0, 5)} leads={leads} />
       ) : null}
       {tab === "leads" ? (
         <LeadsTab leads={leads} onStatus={handleLeadStatus} />
+      ) : null}
+      {tab === "charts" ? (
+        <ChartsTab leads={leads} orders={orders} clients={clients} />
       ) : null}
       {tab === "clients" ? (
         <ClientsTab
@@ -192,13 +232,14 @@ export function Dashboard() {
       {tab === "orders" ? (
         <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
       ) : null}
+      {tab === "agents" ? <AgentsTab activity={activity} /> : null}
     </div>
   );
 }
 
 // ---------- Overview ----------
 
-function Overview({ metrics, activity, orders }: { metrics: Metric; activity: Activity[]; orders: Order[] }) {
+function Overview({ metrics, activity, orders, leads }: { metrics: Metric; activity: Activity[]; orders: Order[]; leads: Lead[] }) {
   const cards = [
     { label: "Leads captured", value: String(metrics.leads), icon: Target, tone: "text-emerald-400" },
     { label: "Qualified leads", value: String(metrics.qualifiedLeads), icon: TrendingUp, tone: "text-gold-400" },
@@ -221,6 +262,32 @@ function Overview({ metrics, activity, orders }: { metrics: Metric; activity: Ac
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card p-6">
+        <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
+          <BarChart3 size={18} className="text-gold-400" /> Leads — last 14 days (real captures)
+        </h3>
+        <div className="mt-4 h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={leadsPerDay(leads, 14)} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+              <defs>
+                <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#eab308" stopOpacity={0.55} />
+                  <stop offset="100%" stopColor="#eab308" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis allowDecimals={false} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} width={28} />
+              <Tooltip
+                contentStyle={{ background: "#131316", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#fafafa" }}
+                labelStyle={{ color: "#fafafa" }}
+              />
+              <Area type="monotone" dataKey="value" name="Leads" stroke="#eab308" strokeWidth={2} fill="url(#leadFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -363,6 +430,210 @@ function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: string, s
         </table>
       </div>
     </div>
+  );
+}
+
+// ---------- Analytics (charts, funnel, income) ----------
+
+const FUNNEL_COLORS = ["#eab308", "#a1a1aa", "#38bdf8", "#34d399"];
+
+function ChartTooltipStyle() {
+  return {
+    contentStyle: {
+      background: "#131316",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 12,
+      color: "#fafafa",
+      fontSize: 12,
+    },
+    labelStyle: { color: "#fafafa" },
+  };
+}
+
+function IncomeTable({ rows, title }: { rows: IncomeRow[]; title: string }) {
+  return (
+    <div className="card overflow-x-auto">
+      <div className="border-b border-white/10 px-5 py-4">
+        <h3 className="font-semibold text-zinc-50">{title}</h3>
+      </div>
+      <table className="w-full min-w-[560px] text-left text-sm">
+        <thead>
+          <tr className="text-xs uppercase tracking-wider text-zinc-500">
+            <th className="px-5 py-3">Source</th>
+            <th className="px-5 py-3">Collected (paid)</th>
+            <th className="px-5 py-3">Awaiting (pending)</th>
+            <th className="px-5 py-3">Orders</th>
+            <th className="px-5 py-3">Share of income</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="px-5 py-6 text-center text-sm text-zinc-500">
+                No orders yet — income appears here the moment real sales are recorded.
+              </td>
+            </tr>
+          ) : (
+            rows.map((r) => (
+              <tr key={r.source} className="border-t border-white/5 transition hover:bg-white/5">
+                <td className="px-5 py-3.5 font-medium text-zinc-100 capitalize">{r.source}</td>
+                <td className="px-5 py-3.5 font-semibold text-emerald-300">{formatKz(r.paid)}</td>
+                <td className="px-5 py-3.5 text-amber-300">{formatKz(r.pending)}</td>
+                <td className="px-5 py-3.5 text-zinc-300">{r.orders}</td>
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-gold-500" style={{ width: `${Math.min(100, r.sharePct)}%` }} />
+                    </div>
+                    <span className="font-mono text-xs text-zinc-400">{r.sharePct}%</span>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: Order[]; clients: Client[] }) {
+  const income = useMemo(() => incomeByMethod(orders), [orders]);
+  const byClient = useMemo(() => incomeByClient(orders), [orders]);
+  const funnel = useMemo(() => pipelineFunnel(leads), [leads]);
+  const revenue = useMemo(() => revenuePerDay(orders, 14), [orders]);
+  const plans = useMemo(() => mrrByPlan(clients).filter((p) => p.value > 0), [clients]);
+  const totalPaid = income.reduce((s, r) => s + r.paid, 0);
+  const totalPending = income.reduce((s, r) => s + r.pending, 0);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
+      {/* Revenue per day */}
+      <div className="card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-semibold text-zinc-50">Sales volume — last 14 days</h3>
+          <div className="flex gap-4 text-xs text-zinc-400">
+            <span>Collected: <b className="text-emerald-300">{formatKz(totalPaid)}</b></span>
+            <span>Awaiting: <b className="text-amber-300">{formatKz(totalPending)}</b></span>
+          </div>
+        </div>
+        <div className="mt-4 h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={revenue} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} width={70} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} />
+              <Tooltip {...ChartTooltipStyle()} formatter={(value) => formatKz(Number(value))} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="paid" name="Collected" stackId="rev" fill="#34d399" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="pending" name="Awaiting payment" stackId="rev" fill="#eab308" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Pipeline funnel */}
+        <div className="card p-6">
+          <h3 className="font-semibold text-zinc-50">Marketing & sales funnel (real leads)</h3>
+          <div className="mt-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={funnel} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="stage" tick={{ fill: "#e4e4e7", fontSize: 12 }} tickLine={false} axisLine={false} width={86} />
+                <Tooltip {...ChartTooltipStyle()} />
+                <Bar dataKey="count" name="Leads" radius={[0, 6, 6, 0]}>
+                  {funnel.map((_, i) => (
+                    <Cell key={i} fill={FUNNEL_COLORS[i % FUNNEL_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* MRR by plan */}
+        <div className="card p-6">
+          <h3 className="font-semibold text-zinc-50">Recurring revenue by plan (active clients)</h3>
+          {plans.length === 0 ? (
+            <p className="mt-8 text-center text-sm text-zinc-500">
+              No active clients yet — the split by plan appears as soon as real subscriptions exist.
+            </p>
+          ) : (
+            <div className="mt-4 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={plans} dataKey="value" nameKey="label" innerRadius={58} outerRadius={90} paddingAngle={3}>
+                    {plans.map((_, i) => (
+                      <Cell key={i} fill={FUNNEL_COLORS[i % FUNNEL_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip {...ChartTooltipStyle()} formatter={(value) => formatKz(Number(value))} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Income tables — where the money actually comes from and goes */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <IncomeTable rows={income} title="Income by payment method" />
+        <IncomeTable rows={byClient} title="Income by client" />
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------- AI Agents ----------
+
+function AgentsTab({ activity }: { activity: Activity[] }) {
+  const agents = useMemo(() => agentStatus(activity), [activity]);
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {agents.map((a) => {
+          const stale = a.lastRun === null || Date.now() - +new Date(a.lastRun) > 36 * 3600000;
+          return (
+            <div key={a.name} className="card p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-zinc-50">{a.name}</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">{a.schedule} · GitHub Actions</p>
+                </div>
+                <span
+                  className={`badge ${
+                    a.runs > 0 && !stale
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : a.runs > 0
+                        ? "bg-amber-500/15 text-amber-300"
+                        : "bg-white/10 text-zinc-400"
+                  }`}
+                >
+                  {a.runs > 0 ? (stale ? "idle" : "active") : "waiting"}
+                </span>
+              </div>
+              <div className="mt-4 flex items-center gap-4 text-sm">
+                <div>
+                  <p className="text-xs text-zinc-500">Recorded runs</p>
+                  <p className="font-bold text-zinc-100">{a.runs}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-zinc-500">Last run</p>
+                  <p className="text-zinc-300">{a.lastRun ? timeAgo(a.lastRun) : "—"}</p>
+                </div>
+              </div>
+              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-zinc-400">{a.lastMessage}</p>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-center text-xs text-zinc-500">
+        Runs are counted from real activity_log entries written by the GitHub Actions bots — nothing simulated. Recent bot output is also visible in the Overview feed.
+      </p>
+    </motion.div>
   );
 }
 
