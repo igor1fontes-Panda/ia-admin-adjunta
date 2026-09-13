@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Area,
@@ -50,10 +50,13 @@ import {
 
 type Tab = "overview" | "leads" | "charts" | "clients" | "orders" | "agents";
 
+type ConnState = "connecting" | "live" | "offline";
+
 export function Dashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [realtime, setRealtime] = useState<ConnState>("connecting");
   const [metrics, setMetrics] = useState<Metric | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -90,16 +93,36 @@ export function Dashboard() {
     load();
   }, [load]);
 
-  // Live updates from Supabase realtime
+  // Auto-refresh when the browser regains connectivity after being offline
+  const wasOffline = useRef(false);
   useEffect(() => {
-    if (!supabase) return;
+    if (realtime === "offline") {
+      wasOffline.current = true;
+    } else if (realtime === "live" && wasOffline.current) {
+      wasOffline.current = false;
+      load();
+    }
+  }, [realtime, load]);
+
+  // Live updates from Supabase realtime — with visible connection status
+  // and auto-recovery: the channel rejoins automatically after outages.
+  useEffect(() => {
+    if (!supabase) {
+      setRealtime("offline");
+      return;
+    }
     const sb = supabase;
     const channel = sb
       .channel("dashboard-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_log" }, () => load())
-      .subscribe();
+      .on("postgres_changes", { event: "*", schema: "public", table: "agent_memory" }, () => load())
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setRealtime("live");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setRealtime("offline");
+        else if (status === "CLOSED") setRealtime("connecting");
+      });
     return () => {
       sb.removeChannel(channel);
     };
@@ -182,9 +205,38 @@ export function Dashboard() {
             Live · Supabase connected · bots run on GitHub Actions
           </p>
         </div>
-        <button onClick={load} className="btn-ghost !px-4 !py-2 text-xs">
-          <RefreshCcw size={14} /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
+              realtime === "live"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                : realtime === "connecting"
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                  : "border-red-500/30 bg-red-500/10 text-red-300"
+            }`}
+            title={
+              realtime === "live"
+                ? "Realtime connected — updates arrive instantly"
+                : realtime === "connecting"
+                  ? "Connecting to realtime…"
+                  : "Realtime disconnected — showing last data; will rejoin automatically"
+            }
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                realtime === "live"
+                  ? "animate-pulse bg-emerald-400"
+                  : realtime === "connecting"
+                    ? "animate-pulse bg-amber-400"
+                    : "bg-red-400"
+              }`}
+            />
+            {realtime === "live" ? "Live" : realtime === "connecting" ? "Connecting…" : "Offline"}
+          </span>
+          <button onClick={load} className="btn-ghost !px-4 !py-2 text-xs">
+            <RefreshCcw size={14} /> Refresh
+          </button>
+        </div>
       </div>
 
       {error ? (
