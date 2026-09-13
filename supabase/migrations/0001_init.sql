@@ -1,5 +1,9 @@
 -- Fontes AI Admin Adjunta — production schema
 -- Run in Supabase SQL Editor (or `supabase db push`).
+-- Safe to re-run any number of times.
+
+-- If the SQL Editor ever errors on a policy/table created "in the same statement"
+-- right after you re-ran this file, run:  notify pgrst, 'reload schema';
 
 -- ============ TABLES ============
 
@@ -15,6 +19,10 @@ create table if not exists public.leads (
   ai_action text,
   created_at timestamptz not null default now()
 );
+
+-- Upgrade path: if an older version of this file created `leads` before
+-- `ai_action` existed, `create table if not exists` would have skipped it.
+alter table public.leads add column if not exists ai_action text;
 
 create table if not exists public.clients (
   id uuid primary key default gen_random_uuid(),
@@ -104,20 +112,29 @@ create trigger leads_force_defaults
 -- The dashboard subscribes to leads/orders/activity_log via Supabase Realtime.
 -- Without adding the tables to the publication, live updates silently do nothing.
 
+-- If your SQL Editor role cannot alter the publication ("must be owner of
+-- publication supabase_realtime"), the error is swallowed as non-fatal:
+-- toggle the tables in Dashboard → Database → Replication instead.
 do $$
 begin
   alter publication supabase_realtime add table public.leads;
-exception when duplicate_object then null; -- already a member
+exception
+  when duplicate_object then null;       -- already a member
+  when insufficient_privilege then null; -- toggle in Dashboard → Database → Replication
 end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.orders;
-exception when duplicate_object then null;
+exception
+  when duplicate_object then null;
+  when insufficient_privilege then null;
 end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.activity_log;
-exception when duplicate_object then null;
+exception
+  when duplicate_object then null;
+  when insufficient_privilege then null;
 end $$;
 
 -- ============ SERVICE-ROLE HELPER (bots use service key, bypasses RLS) ============
@@ -125,9 +142,11 @@ end $$;
 
 -- ============ SEED ============
 
-insert into public.activity_log (kind, message) values
-  ('system', 'Database initialized — Fontes AI Admin Adjunta production schema v1.0')
-on conflict do nothing;
+insert into public.activity_log (kind, message)
+select 'system', 'Database initialized — Fontes AI Admin Adjunta production schema v1.0'
+where not exists (
+  select 1 from public.activity_log where message like 'Database initialized%'
+);
 
 -- ============ VOICE BRIEFINGS (optional, Hume AI) ============
 -- Create a public storage bucket for daily voice briefings (David Hume).
