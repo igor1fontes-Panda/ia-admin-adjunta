@@ -22,6 +22,7 @@ import {
   dbRecall,
   dbRemember,
   dbUpdateLead,
+  diagnoseSupabaseError,
   geminiReady,
   log,
   parseJsonArray,
@@ -58,7 +59,10 @@ try {
 
   if (!leads || leads.length === 0) {
     log("No unscored real leads found — nothing to do.");
-    await dbInsertActivity("bot", "Lead qualifier: no pending leads (queue clear).").catch(() => {});
+    await dbInsertActivity("bot", "Lead qualifier: no pending leads (queue clear).").catch((e) => {
+      const diag = diagnoseSupabaseError(e?.message);
+      log(diag ?? `could not log activity: ${e?.message}`);
+    });
     process.exit(0);
   }
   log(`loaded ${leads.length} real lead(s) to qualify`);
@@ -187,6 +191,8 @@ ${JSON.stringify(leads.map((l) => ({ id: l.id, company: l.company, contact_name:
   process.exit(0);
 } catch (e) {
   log("❌ fatal:", e.message);
+  const diag = diagnoseSupabaseError(e.message);
+  if (diag) log("💡", diag);
   await dbInsertActivity("system", `Lead qualifier error: ${e.message}`).catch(() => {});
   process.exit(0); // never break the workflow
 }

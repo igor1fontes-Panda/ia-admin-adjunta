@@ -13,6 +13,7 @@ import {
   dbInsertActivity,
   dbRecall,
   dbRemember,
+  diagnoseSupabaseError,
   geminiReady,
   log,
   supabase,
@@ -35,12 +36,18 @@ try {
   if (knownFixes) log("recalled known fixes:", JSON.stringify(knownFixes));
 
   const since = new Date(Date.now() - WINDOW_HOURS * 3600_000).toISOString();
+  // Scan ANY failure, not just messages containing "error" — recurring
+  // failures like "Unregistered API key" or "fetch failed" never contained
+  // that word, so the learning loop never saw its own outages.
   const { data: incidents, error } = await supabase
     .from("activity_log")
     .select("message, created_at")
     .gte("created_at", since)
-    .ilike("message", "%error%");
-  if (error) throw new Error(`query failed: ${error.message}`);
+    .or("message.ilike.%error%,message.ilike.%fail%,message.ilike.%fatal%,message.ilike.%unregistered%,message.ilike.%denied%,message.ilike.%timeout%");
+  if (error) {
+    const diag = diagnoseSupabaseError(error.message);
+    throw new Error(`query failed: ${error.message}${diag ? ` | ${diag}` : ""}`);
+  }
 
   const list = incidents ?? [];
 
@@ -102,5 +109,7 @@ try {
   process.exit(0);
 } catch (e) {
   log("❌ fatal:", e.message);
+  const diag = diagnoseSupabaseError(e.message);
+  if (diag) log("💡", diag);
   process.exit(0); // never break the workflow
 }

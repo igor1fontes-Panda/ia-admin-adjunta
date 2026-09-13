@@ -125,6 +125,27 @@ export function parseJsonArray(raw) {
   return null;
 }
 
+/**
+ * Turn a recurring Supabase failure into an actionable diagnosis.
+ * Returns null when the error is not a recognized recurring pattern.
+ */
+export function diagnoseSupabaseError(message) {
+  const msg = String(message ?? "");
+  if (/unregistered api key|invalid api key/i.test(msg)) {
+    return "Recurring incident: Supabase rejected the service key (HTTP 401). Fix: Supabase Dashboard → Project Settings → API → copy the FULL sb_secret_ key → update the SUPABASE_SERVICE_ROLE_KEY secret. The stored key is truncated or was rotated.";
+  }
+  if (/relation .* does not exist|could not find the table/i.test(msg)) {
+    return "Recurring incident: a required table is missing. Fix: run supabase/migrations/0001_init.sql and 0002_agent_memory.sql in the Supabase SQL Editor.";
+  }
+  if (/jwt|invalid signature/i.test(msg)) {
+    return "Recurring incident: Supabase key signature mismatch — the stored key does not belong to this project. Re-copy the correct key.";
+  }
+  if (/failed to parse url|fetch failed|ENOTFOUND|ECONNREFUSED/i.test(msg)) {
+    return "Recurring incident: network/URL failure reaching Supabase. Check SUPABASE_URL and outbound connectivity.";
+  }
+  return null;
+}
+
 export async function dbInsertLeads(leads) {
   if (!supabase) return false;
   const { error } = await supabase.from("leads").insert(leads);
@@ -142,7 +163,11 @@ export async function dbUpdateLead(id, patch) {
 export async function dbInsertActivity(kind, message) {
   if (!supabase) return false;
   const { error } = await supabase.from("activity_log").insert({ kind, message });
-  if (error) throw new Error(`supabase insert activity: ${error.message}`);
+  if (error) {
+    const diag = diagnoseSupabaseError(error.message);
+    log(`activity insert failed: ${error.message}${diag ? ` — ${diag}` : ""}`);
+    throw new Error(`supabase insert activity: ${error.message}`);
+  }
   return true;
 }
 
