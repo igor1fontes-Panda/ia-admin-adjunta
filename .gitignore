@@ -11,3 +11,7 @@ data/
 # OS / editor
 .DS_Store
 *.log
+
+# Python bytecode
+__pycache__/
+*.pyc
