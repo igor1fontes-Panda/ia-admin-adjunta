@@ -111,12 +111,16 @@ JavaScript (`scripts/bot-lib.mjs`) uses the same Interactions API via `@google/g
 
 ## Hosting
 
-**Primary:** Freebuff-managed hosting (Deploy button) — configured via `freebuff-preview` commands, builds with `npm ci --include=dev` + `node node_modules/vite/bin/vite.js build` into `dist/`.
+**Production (live):** Vercel — **https://project-orgt3.vercel.app**
 
-**Alternate (automatic):** Vercel — `vercel.json` (SPA rewrites + immutable asset caching) and `.github/workflows/deploy.yml` deploy every push to `main`. One-time setup:
-1. Create the project at [vercel.com/import](https://vercel.com/import) (framework preset: **Vite**, output dir `dist`).
-2. Add three GitHub repo secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (from Vercel → Project Settings → General).
-3. Push to `main` — the workflow builds and deploys automatically.
+- Connected via Vercel's native GitHub integration: every push to `main` builds and deploys automatically (no CI secrets needed for this path).
+- Production URL is public; branch/preview deployments are SSO-protected by default (Vercel behavior — sign in with the Vercel account to view them).
+- Real-visitor performance analytics are collected with Vercel **Speed Insights** (`<SpeedInsights />` in `App.tsx`).
+- SPA routing + asset caching configured in `vercel.json`.
+
+**Secondary:** Freebuff-managed hosting (Deploy button) — builds with `npm ci --include=dev` + `node node_modules/vite/bin/vite.js build` into `dist/`.
+
+**Optional (CI-driven):** `.github/workflows/deploy.yml` can also deploy to Vercel from GitHub Actions; activate it by adding the repo secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. It skips cleanly until those exist.
 
 The app is a static SPA: the public Supabase config (URL + publishable key, safe under RLS) is baked into `src/lib/data.ts`, so it works identically on any static host with zero env configuration.
 
