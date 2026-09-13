@@ -3,6 +3,10 @@ dist/
 
 # Freebuff hosting build snapshot (platform-managed, changes on every deploy)
 isolate/
+
+# Incremental TS build cache (machine-local)
+tschedb*
+tsconfig.tsbuildinfo
 .env
 .env.local
 .env.*.local
