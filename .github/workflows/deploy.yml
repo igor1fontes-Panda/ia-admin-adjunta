@@ -1,52 +1,77 @@
 name: Deploy to Vercel
 
+# OPTIONAL CI-driven deployment. The primary production path is Vercel's
+# native GitHub integration (push to main → Vercel builds). This workflow is
+# for teams that prefer GitHub Actions to own the deploy step.
+#
+# It skips cleanly (no failure) until these repo SECRETS exist:
+#   VERCEL_TOKEN        — Vercel → Settings → Tokens
+#   VERCEL_ORG_ID       — .vercel/project.json → orgId (or Vercel dashboard)
+#   VERCEL_PROJECT_ID   — .vercel/project.json → projectId
+#
+# When they exist, every push to main deploys production from CI.
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# Only one deploy at a time; new pushes cancel older queued deploys.
 concurrency:
-  group: vercel-deploy
-  cancel-in-progress: true
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  deploy:
+  vercel:
     runs-on: ubuntu-latest
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - name: Check for Vercel credentials
+        id: creds
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Vercel credentials present — deploying."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Vercel deploy skipped — add repo secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID to enable. (Vercel's native GitHub integration may already be deploying your pushes.)"
+          fi
+
+      - uses: actions/setup-node@v7
+        if: steps.creds.outputs.ready == 'true'
         with:
           node-version: 22
           cache: npm
 
-      # Hosting installs with production semantics; build-time tools live in
-      # dependencies (see package.json), so this is sufficient for vite build.
-      - name: Install
-        run: npm ci --include=dev
+      - name: Install deps
+        if: steps.creds.outputs.ready == 'true'
+        run: npm ci
 
-      - name: Build
-        run: node node_modules/vite/bin/vite.js build
+      - name: Pull Vercel environment (production)
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
 
-      - name: Deploy to Vercel
-        # Skips cleanly until Vercel is connected (secrets set); activates
-        # automatically the moment they exist. No red noise on main.
-        if: ${{ env.VERCEL_TOKEN != '' && env.VERCEL_ORG_ID != '' && env.VERCEL_PROJECT_ID != '' }}
+      - name: Build (prebuilt output)
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel build --prod --token "$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          npx --yes vercel@latest deploy dist --prebuilt --prod \
-            --token "$VERCEL_TOKEN" \
-            --scope "$VERCEL_ORG_ID" \
-            --yes
-
-      - name: Vercel not configured — setup required
-        if: ${{ env.VERCEL_TOKEN == '' || env.VERCEL_ORG_ID == '' || env.VERCEL_PROJECT_ID == '' }}
-        run: |
-          echo "Vercel secrets not set — skipping (primary host remains Freebuff)."
-          echo "To enable automatic Vercel deploys:"
-          echo "  1. Import the repo at https://vercel.com/import (preset: Vite, output: dist)"
-          echo "  2. Add GitHub repo secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID"
+          url=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          echo "Deployed: $url"

@@ -1,400 +1,136 @@
-# IA Admin Adjunta - CI/CD & AI Bot Ecosystem Setup Guide
+# Workflows & AI Bot Setup — Fontes AI Admin Adjunta
 
-## 🚀 Project Overview
-
-**ia-admin-adjunta** is a production-ready Admin Dashboard with:
-- Supabase Edge Functions
-- Rate Limiting
-- Real-time Monitoring
-- AI-powered Automation
-- Gemini AI Integration
-- Chrome Extension Support
+This repository ships **four GitHub Actions workflows** (`.github/workflows/`).
+Everything runs on real data only — no simulations, no demo mode.
 
 ---
 
-## 📋 Workflow Files Created
+## 1. CI — `ci.yml`
 
-### 1. **CI Pipeline** (`.github/workflows/ci-pipeline.yml`)
-Automated testing, code quality checks, and building:
-- ✅ ESLint code quality scanning
-- ✅ Prettier formatting checks
-- ✅ Security audits (npm audit)
-- ✅ Unit tests (Node 16, 18, 20)
-- ✅ Integration tests
-- ✅ Docker image building
-- ✅ AI-powered code analysis on PRs
+**Triggers:** every push to `main`, pull requests, manual dispatch.
 
-**Triggers:** Push, Pull Request, Manual
+Pipeline: Python bots syntax check (`py_compile`) → TypeScript typecheck → unit
+tests (Vitest) → production build (Vite).
 
----
+No secrets required. Build works with or without Supabase env vars because the
+public config is baked into `src/lib/data.ts`.
 
-### 2. **Deployment Pipeline** (`.github/workflows/deployment.yml`)
-Automated deployments to staging and production:
-- ✅ Environment detection (staging/production)
-- ✅ Docker image building and pushing
-- ✅ Staging deployment with smoke tests
-- ✅ Production deployment with validation tests
-- ✅ GitHub release creation
-- ✅ Post-deployment health checks
+## 2. Autonomous AI Bots — `ai-bots.yml`
 
-**Triggers:** Push to main, Version tags, Manual
+**Triggers:**
+- `0 6 * * *` daily 06:00 UTC → Lead Qualifier + Insight Engine
+- `0 * * * *` hourly → Error Handler
+- Manual dispatch (choose `lead-hunter`, `error-handler`, `insight`, or `all`)
 
----
+| Bot | Script | What it does |
+|---|---|---|
+| **Lead Qualifier** | `scripts/lead-hunter.mjs` | Reads real unscored leads, measures real won/lost conversion per channel, persists a channel bias to `agent_memory`, scores each lead 0-100 (AI when configured, adaptive rules otherwise) and writes the next best action back to Supabase. |
+| **Error Handler** | `scripts/error-handler.mjs` | Scans real incident messages from the last 24h, triages them (AI when configured), and accumulates incident signatures → known fixes in `agent_memory`. |
+| **Insight Engine** | `ai_engine.py` | Reads real leads/clients/orders + agent memory, posts one data-grounded growth insight to `activity_log`. Optionally generates a Hume AI voice briefing stored in the `briefings` bucket. |
 
-### 3. **AI Bot Error Handler** (`.github/workflows/ai-bot-error-handler.yml`)
-Autonomous error detection and correction:
-- ✅ Workflow failure analysis
-- ✅ Error pattern recognition
-- ✅ Automatic fix suggestions
-- ✅ Knowledge base updates
-- ✅ Recurring error detection
+Without AI keys the bots still run — they use deterministic rule-scoring on
+real data and never fabricate anything.
 
-**Triggers:** Issues, Workflow runs, Scheduled (hourly)
+## 3. Site Health — `deploy-status.yml`
 
----
+**Triggers:** every 6 hours (`30 */6 * * *`), manual dispatch.
 
-### 4. **Gemini AI Integration** (`.github/workflows/gemini-ai-integration.yml`)
-Google Gemini AI + Chrome Extension support:
-- ✅ Gemini API synchronization
-- ✅ AI documentation generation
-- ✅ Chrome Extension building
-- ✅ Extension manifest validation
-- ✅ Content moderation with Gemini
-- ✅ Chrome Web Store integration
+Pings the production URL (repo **variable** `SITE_URL`, not a secret) and fails
+loudly on HTTP ≥ 500. Skips cleanly when `SITE_URL` is not set.
 
-**Triggers:** Schedule (6 hours), Manual, Path changes
+## 4. Deploy to Vercel — `deploy.yml` (optional)
+
+**Triggers:** push to `main`, manual dispatch. **Skips cleanly** until the repo
+secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` exist.
+
+The primary production path is Vercel's native GitHub integration (push →
+Vercel builds automatically); this workflow is for CI-owned deploys. It uses
+`vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`.
 
 ---
 
-### 5. **AI Bot Ecosystem** (`.github/workflows/ai-bot-ecosystem.yml`)
-Sales, lead generation, and business intelligence:
-- ✅ Market analysis and lead scoring
-- ✅ Sales content generation
-- ✅ Target market identification
-- ✅ Error event response
-- ✅ Performance monitoring
-- ✅ Automatic GitHub issue creation for sales opportunities
+## Required secrets
 
-**Triggers:** Scheduled (weekdays 9 AM), Manual
+Add in **GitHub → Settings → Secrets and variables → Actions**
+(the Freebuff credential cannot manage repo secrets):
 
----
+### Bots (required for autonomous runs)
 
-### 6. **Supabase Integration** (`.github/workflows/supabase-integration.yml`)
-Database and real-time monitoring:
-- ✅ Database migrations
-- ✅ Supabase function testing
-- ✅ Real-time subscription testing
-- ✅ Edge function testing
-- ✅ Production deployment
+| Secret | Where to get it |
+|---|---|
+| `SUPABASE_URL` | Supabase → Project Settings → API (the `https://…supabase.co` URL) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Same page — `sb_secret_…` (new projects) or the `service_role` JWT (legacy). **Server-side only — never in the browser.** |
 
-**Triggers:** Push, Pull Request, Manual
+Without these, bot jobs exit 0 with a clear "not configured" message — they
+never fabricate data.
 
----
+### AI layer (optional but recommended)
 
-## 🔐 Required Secrets
+| Secret | Where to get it |
+|---|---|
+| `GEMINI_API_KEY` | Free key: https://aistudio.google.com → Get API key |
+| `BLACKBOX_API_KEY` | Optional 2nd provider (OpenAI-compatible): https://app.blackbox.ai |
+| `HUME_API_KEY` | Optional voice briefings: https://app.hume.ai/keys |
 
-Add these to your GitHub repository secrets (`Settings > Secrets and variables > Actions`):
+Gemini model fallback chain (newest first): `gemini-3.6-flash` →
+`gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`. Override with
+the `GEMINI_MODEL` env var.
 
-### Core Secrets:
-```
-GITHUB_TOKEN              # Auto-generated, no action needed
-AWS_ROLE_ARN_STAGING      # AWS IAM role for staging deployment
-AWS_ROLE_ARN_PRODUCTION   # AWS IAM role for production deployment
-```
+### Optional deploy/monitoring
 
-### Gemini & AI Secrets:
-```
-GEMINI_API_KEY            # Google Gemini AI API key
-CHROME_EXTENSION_ID       # Chrome Web Store extension ID
-CHROME_CLIENT_ID          # Chrome Web Store client ID
-CHROME_CLIENT_SECRET      # Chrome Web Store client secret
-CHROME_REFRESH_TOKEN      # Chrome Web Store refresh token
-```
+| Name | Type | Purpose |
+|---|---|---|
+| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | secrets | Enable `deploy.yml` |
+| `SITE_URL` | **repo variable** | Enable the 6-hour health check |
 
-### Supabase Secrets:
-```
-SUPABASE_ACCESS_TOKEN     # Supabase project access token
-SUPABASE_PROJECT_ID       # Your Supabase project ID
-```
+### Dashboard env (Vite — repo variables are enough, values are public-by-design)
 
-### Optional Integrations:
-```
-SLACK_WEBHOOK             # Slack notifications for deployments
-```
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — the anon/publishable key is
+safe in the browser because row-level security is enforced by the schema in
+`supabase/migrations/0001_init.sql`. Run both migrations (0001, then
+0002_agent_memory) in the Supabase SQL Editor first.
 
 ---
 
-## 📊 Workflow Features
+## One-time database setup
 
-### Code Quality & Testing
-```yaml
-- Linting with ESLint
-- Format checking with Prettier
-- Security audits
-- Multi-version Node testing (16, 18, 20)
-- Coverage reporting
-- Docker image building
-```
+1. Supabase SQL Editor → run `supabase/migrations/0001_init.sql`
+2. Supabase SQL Editor → run `supabase/migrations/0002_agent_memory.sql`
+3. For voice briefings (optional): create a **public** storage bucket named
+   `briefings` (Supabase → Storage → New bucket)
 
-### Deployment Strategy
-```yaml
-Environment Detection:
-  - Tags (v*.*.*)  → Production
-  - Main branch    → Staging
-  - Manual trigger → Configurable (staging/production)
-
-Deployment Flow:
-  1. Pre-deployment checks
-  2. Build & push Docker image
-  3. Deploy to environment
-  4. Run validation tests
-  5. Health checks & monitoring
-```
-
-### AI Bot Capabilities
-
-#### Error Handling
-- Detects workflow failures automatically
-- Analyzes error patterns
-- Generates auto-fix suggestions
-- Learns from recurring errors
-- Creates fix PRs automatically
-
-#### Lead Generation
-- Analyzes target markets
-- Identifies key decision makers
-- Generates sales content
-- Creates GitHub issues for opportunities
-- Scores leads by potential
-
-#### Chrome Extension Integration
-- Builds extension automatically
-- Validates manifests
-- Deploys to Chrome Web Store
-- Generates documentation
-- Supports Gemini AI features
+Both migration files are idempotent — safe to run multiple times.
 
 ---
 
-## 🔗 Integration Points
+## Verifying a bot run locally
 
-### Gemini AI Integration
-```javascript
-// Automatically syncs with Google Gemini API
-// Generates documentation
-// Powers content moderation
-// Provides intelligent code analysis
-
-Configuration:
-- Model: gemini-2.0-flash
-- Context: ia-admin-adjunta-production
-- Key: GEMINI_API_KEY (environment variable)
+```bash
+npm run bot:leads          # qualify real leads (needs Supabase env)
+npm run bot:error-handler  # triage real incidents
+npm run bot:insight        # daily insight (python3 -m pip install -r requirements.txt first)
 ```
 
-### Chrome Extension Features
-```javascript
-- Seamless browser integration
-- Gemini AI-powered features
-- Admin dashboard shortcuts
-- Real-time notifications
-- Rate limiting indicator
-- System monitoring display
-```
+Environment is read from `.env.local` when present (see `env.example`).
+Never commit `.env.local`.
 
-### Supabase Integration
-```javascript
-- Automatic migrations
-- Edge function testing
-- Real-time subscription validation
-- Database health checks
-- Automatic production deployment
-```
+After the first scheduled run, the dashboard **AI Agents** tab shows recorded
+runs and each agent's live memory ("Learned: channel bias", "Learned: known
+fixes") exactly as the bots wrote it to `agent_memory`.
 
 ---
 
-## 🎯 Business Features
+## How the agents learn
 
-### Sales & Lead Generation
-Automated workflow for:
-1. **Market Analysis**: AI identifies high-value segments
-2. **Lead Scoring**: Prioritizes by potential ROI
-3. **Content Generation**: Creates targeted sales materials
-4. **Issue Creation**: Auto-creates actionable tasks
-5. **Performance Tracking**: Weekly metrics reports
-
-### Target Markets
-1. **Small-Mid SaaS Companies**
-   - Deal size: $15K-$50K
-   - Pain point: Admin overhead
-   - Decision maker: CTO/VP Engineering
-
-2. **Enterprise Companies**
-   - Deal size: $100K+
-   - Pain point: Complex workflows
-   - Decision maker: CIO/Enterprise Architect
-
-3. **Agencies**
-   - Deal size: $10K-$30K
-   - Pain point: Client management
-   - Decision maker: Operations Director
+1. **Cold start** — empty `agent_memory`; agents state factually that they
+   have nothing to learn from and use neutral priors.
+2. **Real outcomes** — leads decided (won/lost) give per-channel conversion;
+   incidents with triage verdicts give known fixes.
+3. **Persisted learning** — every run upserts `agent_memory`; the next run
+   scores/triages/analyzes using everything learned so far.
+4. **Visible learning** — the AI Agents tab renders the memory rows verbatim.
+   Nothing simulated, ever.
 
 ---
 
-## 📈 Monitoring & Observability
-
-### Health Checks
-- Application endpoint validation
-- Deployment status notifications
-- Performance metrics collection
-- Error rate tracking
-- Uptime monitoring
-
-### Reporting
-- Weekly performance reports
-- Error pattern analysis
-- Deployment metrics
-- AI bot effectiveness
-- Sales pipeline updates
-
----
-
-## 🚦 Getting Started
-
-### Step 1: Setup GitHub Secrets
-1. Go to: `Repository → Settings → Secrets and variables → Actions`
-2. Add all required secrets (see above)
-3. Verify each secret is properly configured
-
-### Step 2: Enable Workflows
-1. Go to: `Actions` tab
-2. Enable workflow runs if needed
-3. Workflows will trigger on:
-   - Push events
-   - Pull requests
-   - Scheduled times
-   - Manual dispatch
-
-### Step 3: Configure Branch Protection
-```yaml
-Branch: main
-Rules:
-  - Require status checks to pass
-  - Require code reviews
-  - Allow auto-merge
-  - Dismiss stale reviews
-```
-
-### Step 4: Setup Environments
-```yaml
-Environments:
-  - staging
-    - URL: https://staging.ia-admin-adjunta.com
-    - Required reviewers: Optional
-  
-  - production
-    - URL: https://ia-admin-adjunta.com
-    - Required reviewers: Required (1+)
-```
-
----
-
-## 🔍 Monitoring & Debugging
-
-### View Workflow Runs
-1. Go to: `Actions` tab
-2. Select workflow
-3. View detailed logs
-4. Check artifact uploads
-
-### Common Issues & Solutions
-
-**Issue**: Workflows not triggering
-- **Solution**: Check branch protection rules, verify secrets exist
-
-**Issue**: Deployment failing
-- **Solution**: Verify AWS credentials, check Docker registry access
-
-**Issue**: Tests failing
-- **Solution**: Check Node version compatibility, verify dependencies
-
-**Issue**: AI features not working
-- **Solution**: Verify GEMINI_API_KEY is set, check API quota
-
----
-
-## 📚 Documentation
-
-### Workflow Documentation
-- Each workflow has detailed comments
-- Job descriptions explain purpose
-- Step names are self-documenting
-
-### Chrome Extension Docs
-- Generated at: `docs/CHROME_EXTENSION.md`
-- Auto-updated on each build
-- Includes feature list and installation steps
-
-### API Documentation
-- Generated via Gemini AI
-- Located at: `docs/generated/`
-- Auto-updated on schedule
-
----
-
-## 🎓 Advanced Usage
-
-### Custom Triggers
-```yaml
-# Manual workflow dispatch
-workflow_dispatch:
-  inputs:
-    environment:
-      description: 'Target environment'
-      type: choice
-      options:
-        - staging
-        - production
-```
-
-### Matrix Testing
-```yaml
-# Test across multiple Node versions
-matrix:
-  node-version: [16.x, 18.x, 20.x]
-```
-
-### Conditional Jobs
-```yaml
-# Only run on main branch
-if: github.ref == 'refs/heads/main'
-
-# Only run on failure
-if: github.event.workflow_run.conclusion == 'failure'
-```
-
----
-
-## 📝 Notes
-
-- All workflows run in isolation
-- Artifacts retained for 7-30 days depending on type
-- AI bot learns from patterns over time
-- Gemini API has rate limits (check quota)
-- Chrome extension uploads require credentials
-- Supabase deployments are automatic on main branch
-
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check workflow logs in Actions tab
-2. Review error artifacts
-3. Check GitHub Issues for similar problems
-4. Refer to official GitHub Actions documentation
-
----
-
-**Last Updated**: September 2026
-**Version**: 1.0.0
-**Status**: Production Ready ✅
+**Support:** 📧 support@ia-admin-adjunta.com · 💬 WhatsApp +244 923 012 293

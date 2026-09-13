@@ -28,7 +28,7 @@ export function PunkTicker() {
               </span>
             ))}
           </div>
-           ))}
+        ))}
       </div>
     </div>
   );

@@ -785,7 +785,7 @@ function AgentsTab({ activity, memory }: { activity: Activity[]; memory: AgentMe
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
         {agents.map((a) => {
-          const stale = a.lastRun === null || Date.now() - +new Date(a.lastRun) > 36 * 3600000;
+          const stale = a.stale;
           return (
             <div key={a.name} className="card p-5">
               <div className="flex items-start justify-between gap-3">

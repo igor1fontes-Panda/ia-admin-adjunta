@@ -6,7 +6,7 @@ export type SeriesPoint = { label: string; value: number };
 export type RevenuePoint = { label: string; paid: number; pending: number };
 export type FunnelStage = { stage: string; count: number };
 export type IncomeRow = { source: string; paid: number; pending: number; orders: number; sharePct: number };
-export type AgentRow = { name: string; schedule: string; runs: number; lastRun: string | null; lastMessage: string };
+export type AgentRow = { name: string; schedule: string; runs: number; lastRun: string | null; lastMessage: string; stale: boolean };
 export type Pulse = { leadsToday: number; ordersToday: number; collectedToday: number; botRunsToday: number };
 export type OnboardingStep = { id: string; label: string; description: string; done: boolean };
 
@@ -113,7 +113,8 @@ export function mrrByPlan(clients: Client[]): SeriesPoint[] {
 
 /**
  * AI agent managers, derived from REAL activity_log rows. No fabricated runs:
- * if a bot never ran, its row says so honestly.
+ * if a bot never ran, its row says so honestly. `stale` is true when the last
+ * recorded run is missing or older than 36h (slack above the daily cadence).
  */
 export function agentStatus(activity: Activity[]): AgentRow[] {
   const defs: Array<{ name: string; schedule: string; match: (m: string) => boolean }> = [
@@ -123,18 +124,16 @@ export function agentStatus(activity: Activity[]): AgentRow[] {
   ];
   const now = Date.now();
   return defs.map(({ name, schedule, match }) => {
-    const rows = activity.filter((a) => a.kind === "bot" && match(a.message));
-    const last = rows[0];
-    const stale = last ? now - +new Date(last.created_at) > 36 * 3600000 : true;
+    const last = activity.find((a) => a.kind === "bot" && match(a.message));
     return {
       name,
       schedule,
-      runs: rows.length,
+      runs: activity.filter((a) => a.kind === "bot" && match(a.message)).length,
       lastRun: last?.created_at ?? null,
       lastMessage: last ? last.message.replace(/ ?\|\|\| AUDIO_BRIEFING_URL=\S+/, "") : "No runs recorded yet — waiting for the scheduled GitHub Actions job",
-      ...(last && !stale ? {} : {}),
-    } as AgentRow & { stale?: boolean };
-  }).map((r) => r as AgentRow);
+      stale: last === undefined || now - +new Date(last.created_at) > 36 * 3600000,
+    };
+  });
 }
 
 // ---------- Core metrics ----------
