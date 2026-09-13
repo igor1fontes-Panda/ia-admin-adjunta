@@ -36,6 +36,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { PaymentDetails } from "../components/PaymentDetails";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
 import type { AgentMemoryRow } from "../lib/data";
@@ -956,6 +957,8 @@ function OrdersTab({
             <option value="multicaixa">Multicaixa Express</option>
             <option value="paypay">PayPay</option>
             <option value="card">Card</option>
+            <option value="wire_usd">International wire — USD (Lead Bank)</option>
+            <option value="wire_eur">International transfer — EUR (Banking Circle)</option>
           </select>
         </div>
         <div className="sm:col-span-4">
@@ -964,6 +967,11 @@ function OrdersTab({
           </button>
         </div>
       </form>
+
+      {/* Official receiving accounts for invoicing / customer support */}
+      <div className="card p-6">
+        <PaymentDetails detailed />
+      </div>
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">

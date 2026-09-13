@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Bot } from "lucide-react";
 
 export function Footer() {
@@ -20,7 +21,7 @@ export function Footer() {
           <p className="mb-2 font-semibold text-zinc-200">Contact</p>
           <p>📧 support@ia-admin-adjunta.com</p>
           <p className="mt-1">💬 WhatsApp: +244 923 012 293</p>
-          <p className="mt-1">Payments: Multicaixa Express · PayPay</p>
+          <p className="mt-1">Payments: Multicaixa Express · PayPay · <Link to="/#payments" className="hover:text-gold-400">USD/EUR accounts</Link></p>
         </div>
         <div className="text-sm text-zinc-400">
           <p className="mb-2 font-semibold text-zinc-200">Company</p>

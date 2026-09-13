@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { Footer } from "../components/Footer";
+import { PaymentDetails } from "../components/PaymentDetails";
 import { LeadForm } from "../components/LeadForm";
 import { PunkTicker } from "../components/PunkTicker";
 
@@ -311,6 +312,13 @@ export function Landing() {
         </div>
       </section>
 
+      {/* Official receiving accounts — where payments for our products go */}
+      <section id="payments" className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
+        <div className="card p-8">
+          <PaymentDetails />
+        </div>
+      </section>
+
       {/* Public lead capture — writes REAL leads to Supabase */}
       <section id="lead-form" className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
         <LeadForm />
@@ -323,7 +331,7 @@ export function Landing() {
             Let the bots work while you sleep
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-zinc-400">
-            30-day money-back guarantee. Multicaixa Express & PayPay accepted.
+            30-day money-back guarantee. Multicaixa Express, PayPay & international USD/EUR transfers accepted.
           </p>
           <a href="#lead-form" className="btn-primary mt-8 text-base">
             Request your demo
