@@ -94,7 +94,15 @@ export function Dashboard() {
       setMemory(mem);
       setMetrics(computeMetrics(leads, clients, orders));
     } catch (e: any) {
-      setError(e?.message ?? "Failed to load data from Supabase");
+      const msg = String(e?.message ?? "Failed to load data from Supabase");
+      // Tables not created yet (migration pending) — guide instead of a raw error
+      if (/could not find the table|pgrst205|schema cache|does not exist/i.test(msg)) {
+        setError(
+          "Database tables are not created yet. One-time setup: open your Supabase project → SQL Editor → run supabase/migrations/0001_init.sql, then 0002_agent_memory.sql. The command center fills with your real data immediately after.",
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
