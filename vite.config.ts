@@ -13,5 +13,15 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    // Single-file index chunk: the public Supabase config lives in
+    // src/lib/data.ts and MUST stay in the lazily-shared core chunk the
+    // platform builder deploys. Route-level code splitting is disabled so
+    // every host (Freebuff static, Vercel, any CDN) serves a working app
+    // from index.html alone.
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
 });

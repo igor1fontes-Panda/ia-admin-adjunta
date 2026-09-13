@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -8,24 +8,10 @@ import {
 } from "react-router-dom";
 import { Header } from "./components/Header";
 import { Landing } from "./pages/Landing";
+import { Auth } from "./pages/Auth";
+import { Dashboard } from "./pages/Dashboard";
 import { SetupRequired } from "./components/SetupRequired";
 import { isLive, supabase } from "./lib/data";
-
-// Code-split the two heavy, non-landing routes so the public landing page
-// downloads a minimal bundle. The dashboard (recharts analytics) and the
-// auth page load on demand — a permanent hot-spot fix for load performance.
-const Dashboard = lazy(() =>
-  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
-);
-const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
-
-function RouteFallback() {
-  return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
-    </div>
-  );
-}
 
 export default function App() {
   return (
@@ -33,14 +19,12 @@ export default function App() {
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1">
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<DashboardGate />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<DashboardGate />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
     </BrowserRouter>
