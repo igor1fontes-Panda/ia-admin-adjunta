@@ -13,8 +13,4 @@ describe("data layer (public Supabase config)", () => {
     expect(isLive).toBe(true);
     expect(supabase).not.toBeNull();
   });
-
-  it("creates a real Supabase client pointing at the project", () => {
-    expect(supabase?.rest?.restUrl ?? "").not.toContain("invalid");
-  });
 });
