@@ -7,6 +7,8 @@ export type RevenuePoint = { label: string; paid: number; pending: number };
 export type FunnelStage = { stage: string; count: number };
 export type IncomeRow = { source: string; paid: number; pending: number; orders: number; sharePct: number };
 export type AgentRow = { name: string; schedule: string; runs: number; lastRun: string | null; lastMessage: string };
+export type Pulse = { leadsToday: number; ordersToday: number; collectedToday: number; botRunsToday: number };
+export type OnboardingStep = { id: string; label: string; description: string; done: boolean };
 
 function dayKey(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
@@ -191,6 +193,69 @@ export function formatKz(n: number): string {
     currency: "AOA",
     maximumFractionDigits: 0,
   }).format(n);
+}
+
+/**
+ * The live pulse of the business TODAY (UTC day) — what is actually happening
+ * online right now: captures, sales created, money collected, bot runs.
+ * All from real rows; zeros are real zeros on a quiet day, never simulated.
+ */
+export function todayPulse(leads: Lead[], orders: Order[], activity: Activity[]): Pulse {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const today = startOfDay.toISOString();
+  const isToday = (iso: string) => iso >= today;
+  const botRuns = activity.filter((a) => a.kind === "bot" && isToday(a.created_at)).length;
+  return {
+    leadsToday: leads.filter((l) => isToday(l.created_at)).length,
+    ordersToday: orders.filter((o) => isToday(o.created_at)).length,
+    collectedToday: orders
+      .filter((o) => o.status === "paid" && isToday(o.created_at))
+      .reduce((s, o) => s + o.amount, 0),
+    botRunsToday: botRuns,
+  };
+}
+
+/**
+ * Real activation steps for a cold-start ecosystem: each step reflects an
+ * actual state of the database (no fake checkmarks). A step is "done" only
+ * when real data proves it. The first unfinished step is the next action.
+ */
+export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[], activity: Activity[]): OnboardingStep[] {
+  const has = (arr: unknown[]) => arr.length > 0;
+  const agents = agentStatus(activity);
+  return [
+    {
+      id: "leads",
+      label: "Capture your first lead",
+      description: "Share the public lead form — every submission lands here in real time.",
+      done: has(leads),
+    },
+    {
+      id: "clients",
+      label: "Register your first client",
+      description: "Add a real client in the Clients tab (Starter 1.250 Kz, Professional 2.916 Kz, Enterprise 8.333 Kz per month).",
+      done: has(clients),
+    },
+    {
+      id: "orders",
+      label: "Record your first sale",
+      description: "Create an order in the Orders tab — a payment reference is generated automatically.",
+      done: has(orders),
+    },
+    {
+      id: "collect",
+      label: "Collect your first payment",
+      description: "Mark an order as paid once the money arrives — revenue charts and income tables update instantly.",
+      done: has(orders.filter((o) => o.status === "paid")),
+    },
+    {
+      id: "agents",
+      label: "Agents complete their first cycle",
+      description: "The autonomous bots run on GitHub Actions (daily 06:00 UTC + hourly). Their first real runs appear here and in the AI Agents tab.",
+      done: has(agents.filter((a) => a.runs > 0)),
+    },
+  ];
 }
 
 export function timeAgo(iso: string): string {

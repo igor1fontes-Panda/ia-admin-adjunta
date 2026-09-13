@@ -7,10 +7,12 @@ import {
   incomeByMethod,
   leadsPerDay,
   mrrByPlan,
+  onboardingSteps,
   pipelineFunnel,
   revenuePerDay,
   scoreLead,
   timeAgo,
+  todayPulse,
 } from "./lib/engine";
 import type { Activity, Client, Lead, Order } from "./types";
 
@@ -201,5 +203,56 @@ describe("agentStatus", () => {
     const insight = rows.find((a) => a.name === "Insight Engine");
     expect(insight?.runs).toBe(0);
     expect(insight?.lastMessage).toMatch(/No runs recorded/);
+  });
+});
+
+describe("todayPulse", () => {
+  it("counts only today's real activity (UTC day)", () => {
+    const now = new Date();
+    const earlierToday = new Date(now.getTime() - 2 * 3600_000).toISOString();
+    const pulse = todayPulse(
+      [lead({}), lead({ id: "l2", created_at: "2020-01-01T00:00:00Z" })],
+      [
+        order({}),
+        order({ id: "o2", status: "pending" }),
+        order({ id: "o3", created_at: "2020-01-01T00:00:00Z" }),
+      ],
+      [activity({}), activity({ id: "a2", created_at: earlierToday })],
+    );
+    expect(pulse.leadsToday).toBe(1);
+    expect(pulse.ordersToday).toBe(2);
+    // only the PAID order counts towards collected money
+    expect(pulse.collectedToday).toBeGreaterThan(0);
+    expect(pulse.botRunsToday).toBe(2);
+  });
+
+  it("is all zeros on a quiet day — real zeros, never simulated", () => {
+    const pulse = todayPulse([], [], []);
+    expect(pulse).toEqual({ leadsToday: 0, ordersToday: 0, collectedToday: 0, botRunsToday: 0 });
+  });
+});
+
+describe("onboardingSteps", () => {
+  it("cold start: every step is open and the first is lead capture", () => {
+    const steps = onboardingSteps([], [], [], []);
+    expect(steps.length).toBe(5);
+    expect(steps.every((s) => !s.done)).toBe(true);
+    expect(steps[0].id).toBe("leads");
+  });
+
+  it("marks steps done only from real rows, in order", () => {
+    const steps = onboardingSteps(
+      [lead({})],
+      [client({})],
+      [order({ status: "pending" })],
+      [activity({ message: "Lead qualifier: scored 1 real lead" })],
+    );
+    expect(steps.find((s) => s.id === "leads")?.done).toBe(true);
+    expect(steps.find((s) => s.id === "clients")?.done).toBe(true);
+    expect(steps.find((s) => s.id === "orders")?.done).toBe(true);
+    // collect step requires a PAID order — pending does not count
+    expect(steps.find((s) => s.id === "collect")?.done).toBe(false);
+    // agents step needs a bot run recorded in activity
+    expect(steps.find((s) => s.id === "agents")?.done).toBe(true);
   });
 });

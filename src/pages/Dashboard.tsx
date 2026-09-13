@@ -18,16 +18,23 @@ import {
 import {
   Activity as ActivityIcon,
   AlertTriangle,
+  ArrowRight,
   BarChart3,
   Bot,
   CheckCircle2,
+  Circle,
   CircleDollarSign,
+  Cpu,
+  Database,
+  Gauge,
   Loader2,
+  Network,
   Plus,
   RefreshCcw,
   Target,
   TrendingUp,
   Users,
+  Zap,
 } from "lucide-react";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
@@ -40,15 +47,19 @@ import {
   incomeByMethod,
   leadsPerDay,
   mrrByPlan,
+  onboardingSteps,
   pipelineFunnel,
   PLAN_PRICES,
   revenuePerDay,
   scoreLead,
   timeAgo,
+  todayPulse,
   type IncomeRow,
+  type OnboardingStep,
+  type Pulse,
 } from "../lib/engine";
 
-type Tab = "overview" | "leads" | "charts" | "clients" | "orders" | "agents";
+type Tab = "overview" | "leads" | "charts" | "clients" | "orders" | "agents" | "ecosystem";
 
 type ConnState = "connecting" | "live" | "offline";
 
@@ -255,6 +266,7 @@ export function Dashboard() {
           ["clients", "Clients"],
           ["orders", "Orders"],
           ["agents", "AI Agents"],
+          ["ecosystem", "Ecosystem"],
         ] as Array<[Tab, string]>).map(([t, label]) => (
           <button
             key={t}
@@ -269,7 +281,15 @@ export function Dashboard() {
       </div>
 
       {tab === "overview" ? (
-        <Overview metrics={metrics!} activity={activity} orders={orders.slice(0, 5)} leads={leads} />
+        <Overview
+          metrics={metrics!}
+          activity={activity}
+          orders={orders.slice(0, 5)}
+          leads={leads}
+          clients={clients}
+          pulse={todayPulse(leads, orders, activity)}
+          steps={onboardingSteps(leads, clients, orders, activity)}
+        />
       ) : null}
       {tab === "leads" ? (
         <LeadsTab leads={leads} onStatus={handleLeadStatus} />
@@ -289,13 +309,39 @@ export function Dashboard() {
         <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
       ) : null}
       {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
+      {tab === "ecosystem" ? (
+        <EcosystemTab
+          metrics={metrics!}
+          leads={leads}
+          orders={orders}
+          activity={activity}
+          memory={memory}
+          realtime={realtime}
+        />
+      ) : null}
     </div>
   );
 }
 
 // ---------- Overview ----------
 
-function Overview({ metrics, activity, orders, leads }: { metrics: Metric; activity: Activity[]; orders: Order[]; leads: Lead[] }) {
+function Overview({
+  metrics,
+  activity,
+  orders,
+  leads,
+  clients,
+  pulse,
+  steps,
+}: {
+  metrics: Metric;
+  activity: Activity[];
+  orders: Order[];
+  leads: Lead[];
+  clients: Client[];
+  pulse: Pulse;
+  steps: OnboardingStep[];
+}) {
   const cards = [
     { label: "Leads captured", value: String(metrics.leads), icon: Target, tone: "text-emerald-400" },
     { label: "Qualified leads", value: String(metrics.qualifiedLeads), icon: TrendingUp, tone: "text-gold-400" },
@@ -306,6 +352,57 @@ function Overview({ metrics, activity, orders, leads }: { metrics: Metric; activ
   ];
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-8">
+      {/* Live pulse — what the business did TODAY (real rows, real zeros) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {([
+          ["Leads today", pulse.leadsToday, Target, "text-emerald-400"],
+          ["Sales today", pulse.ordersToday, CircleDollarSign, "text-gold-400"],
+          ["Collected today", formatKz(pulse.collectedToday), TrendingUp, "text-emerald-400"],
+          ["Agent runs today", pulse.botRunsToday, Bot, "text-sky-400"],
+        ] as Array<[string, string | number, typeof Target, string]>).map(([label, value, Icon, tone]) => (
+          <div key={label} className="card flex items-center gap-3 p-4">
+            <span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 ${tone}`}>
+              <Icon size={18} />
+            </span>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</p>
+              <p className="text-lg font-bold text-zinc-50">{value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Cold-start guide — real activation steps, checked against the DB */}
+      {steps.some((s) => !s.done) ? (
+        <div className="card p-6">
+          <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
+            <Zap size={18} className="text-gold-400" /> Activate your ecosystem
+          </h3>
+          <p className="mt-1 text-sm text-zinc-400">
+            The system starts empty and grows with real activity. Each step unlocks as the database proves it.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {steps.map((s, i) => (
+              <li key={s.id} className="flex items-start gap-3">
+                <span
+                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                    s.done ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-zinc-500"
+                  }`}
+                >
+                  {s.done ? <CheckCircle2 size={14} /> : <Circle size={12} />}
+                </span>
+                <div>
+                  <p className={`text-sm font-medium ${s.done ? "text-zinc-500 line-through" : "text-zinc-100"}`}>
+                    {i + 1}. {s.label}
+                  </p>
+                  {!s.done ? <p className="mt-0.5 text-xs text-zinc-400">{s.description}</p> : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <div key={c.label} className="card flex items-center gap-4 p-5">
@@ -884,5 +981,186 @@ function OrdersTab({
         </table>
       </div>
     </div>
+  );
+}
+
+// ---------- Ecosystem ----------
+
+const LOOP_STAGES = [
+  {
+    id: "capture",
+    name: "Capture",
+    icon: Target,
+    tone: "text-emerald-400",
+    what: "The public lead form and marketing channels push every prospect into the leads table — instantly visible via realtime.",
+  },
+  {
+    id: "qualify",
+    name: "Qualify",
+    icon: Zap,
+    tone: "text-gold-400",
+    what: "The Lead Qualifier bot scores every new lead 0-100 using AI plus its own learned channel-conversion bias, and writes the next best action.",
+  },
+  {
+    id: "convert",
+    name: "Convert",
+    icon: Users,
+    tone: "text-sky-400",
+    what: "Hot leads become clients (Starter / Professional / Enterprise plans), registered here with their monthly recurring revenue.",
+  },
+  {
+    id: "collect",
+    name: "Collect",
+    icon: CircleDollarSign,
+    tone: "text-emerald-400",
+    what: "Every sale creates an order with a payment reference. Marking it paid moves the money into revenue charts and income tables.",
+  },
+  {
+    id: "learn",
+    name: "Learn",
+    icon: Cpu,
+    tone: "text-gold-400",
+    what: "Bots persist what they learn (which channels convert, which fixes worked) into agent_memory — every future decision uses it.",
+  },
+] as const;
+
+function EcosystemTab({
+  metrics,
+  leads,
+  orders,
+  activity,
+  memory,
+  realtime,
+}: {
+  metrics: Metric;
+  leads: Lead[];
+  orders: Order[];
+  activity: Activity[];
+  memory: AgentMemoryRow[];
+  realtime: ConnState;
+}) {
+  const pulse = todayPulse(leads, orders, activity);
+  const stageCounts: Record<string, string> = {
+    capture: `${metrics.leads} leads · ${pulse.leadsToday} today`,
+    qualify: `${metrics.qualifiedLeads} qualified`,
+    convert: `${metrics.activeClients} active clients · ${formatKz(metrics.mrr)} MRR`,
+    collect: `${formatKz(metrics.revenue30d)} collected (30d)`,
+    learn: `${memory.length} memory entries · ${pulse.botRunsToday} runs today`,
+  };
+  const bots = agentStatus(activity);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-8">
+      {/* The autonomous loop — live stage by stage */}
+      <div className="card p-6">
+        <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
+          <Network size={18} className="text-gold-400" /> How the ecosystem works — live
+        </h3>
+        <p className="mt-1 text-sm text-zinc-400">
+          One continuous loop: every stage reads and writes the same real database. No step is simulated.
+        </p>
+        <div className="mt-6 grid gap-4 lg:grid-cols-5">
+          {LOOP_STAGES.map((s, i) => (
+            <div key={s.id} className="relative">
+              <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-gold-500/40">
+                <div className="flex items-center gap-2">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ${s.tone}`}>
+                    <s.icon size={18} />
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">{i + 1}. {s.name}</span>
+                </div>
+                <p className="mt-3 flex-1 text-xs leading-relaxed text-zinc-400">{s.what}</p>
+                <p className={`mt-3 text-sm font-bold ${s.tone}`}>{stageCounts[s.id]}</p>
+              </div>
+              {i < LOOP_STAGES.length - 1 ? (
+                <ArrowRight size={16} className="absolute -right-[26px] top-1/2 hidden -translate-y-1/2 text-zinc-600 lg:block" />
+              ) : (
+                <ArrowRight size={16} className="absolute -right-[26px] top-1/2 hidden -translate-y-1/2 text-zinc-600 lg:block" />
+              )}
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-xs text-zinc-500">
+          <RefreshCcw size={11} className="mr-1 inline" />
+          The loop closes: Learn feeds back into Qualify — each agent run scores new leads with everything learned so far.
+        </p>
+      </div>
+
+      {/* Live infrastructure status */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="card p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Database size={17} className="text-emerald-400" />
+              <p className="text-sm font-semibold text-zinc-100">Supabase realtime</p>
+            </div>
+            <span
+              className={`badge ${
+                realtime === "live"
+                  ? "bg-emerald-500/15 text-emerald-300"
+                  : realtime === "connecting"
+                    ? "bg-amber-500/15 text-amber-300"
+                    : "bg-red-500/15 text-red-300"
+              }`}
+            >
+              {realtime === "live" ? "connected" : realtime === "connecting" ? "connecting" : "offline"}
+            </span>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+            Every lead, sale, payment and bot run is pushed to this page the moment it happens — no refresh needed.
+          </p>
+        </div>
+        <div className="card p-5">
+          <div className="flex items-center gap-2">
+            <Bot size={17} className="text-sky-400" />
+            <p className="text-sm font-semibold text-zinc-100">Autonomous agents</p>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs text-zinc-400">
+            {bots.map((b) => (
+              <li key={b.name} className="flex items-center justify-between gap-2">
+                <span className="text-zinc-300">{b.name}</span>
+                <span className={b.runs > 0 ? "text-emerald-300" : "text-zinc-500"}>
+                  {b.runs > 0 ? `${b.runs} runs · ${timeAgo(b.lastRun!)}` : "awaiting first run"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="card p-5">
+          <div className="flex items-center gap-2">
+            <Gauge size={17} className="text-gold-400" />
+            <p className="text-sm font-semibold text-zinc-100">This command center</p>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+            Static app (Vite + React) reading your real Supabase project. Deployed automatically on every push — same data on every device.
+          </p>
+        </div>
+      </div>
+
+      {/* What the agents have learned so far — straight from agent_memory */}
+      <div className="card p-6">
+        <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
+          <Cpu size={18} className="text-gold-400" /> What the agents have learned
+        </h3>
+        {memory.length === 0 ? (
+          <p className="mt-3 text-sm text-zinc-400">
+            Nothing learned yet — this is expected on a cold start. The first bot runs and decided deals will populate this panel with real, earned knowledge.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {memory.map((m) => (
+              <div key={`${m.agent}-${m.key}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-sky-300">{m.agent}</p>
+                <p className="mt-1 text-sm font-medium text-zinc-200">{m.key.replace(/_/g, " ")}</p>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs text-zinc-400">
+                  {typeof m.value === "string" ? m.value : JSON.stringify(m.value, null, 2)}
+                </pre>
+                <p className="mt-2 text-[11px] text-zinc-500">updated {timeAgo(m.updated_at)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
