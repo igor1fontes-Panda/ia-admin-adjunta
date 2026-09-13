@@ -258,7 +258,7 @@ export function Dashboard() {
 
 
       {/* Tabs */}
-      <div className="mt-8 flex flex-wrap gap-1 rounded-2xl border border-white/10 bg-ink-900/80 p-1">
+      <div className="mt-8 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-ink-900/80 p-1">
         {([
           ["overview", "Overview"],
           ["leads", "Leads"],
@@ -271,7 +271,7 @@ export function Dashboard() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            className={`shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${
               tab === t ? "bg-gold-500 text-ink-950" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
@@ -448,6 +448,11 @@ function Overview({
           <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
             <Bot size={18} className="text-gold-400" /> Autonomous activity
           </h3>
+          {activity.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">
+              The autonomous agents report here the moment they run — lead scoring, daily insights and incident triage, straight from the real activity log.
+            </p>
+          ) : (
           <ul className="mt-4 space-y-3">
             {activity.map((a) => {
               const audioMatch = a.message.match(/AUDIO_BRIEFING_URL=(\S+)/);
@@ -478,10 +483,16 @@ function Overview({
               );
             })}
           </ul>
+          )}
         </div>
 
         <div className="card p-6">
           <h3 className="font-semibold text-zinc-50">Latest orders</h3>
+          {orders.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">
+              Sales appear here the moment real orders are recorded — with payment reference, method and collection status.
+            </p>
+          ) : (
           <ul className="mt-4 space-y-3">
             {orders.map((o) => (
               <li key={o.id} className="flex items-center justify-between gap-3 text-sm">
@@ -508,6 +519,7 @@ function Overview({
               </li>
             ))}
           </ul>
+          )}
         </div>
       </div>
     </motion.div>
@@ -579,6 +591,13 @@ function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: string, s
                 </tr>
               );
             })}
+            {leads.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-8 text-center text-sm text-zinc-500">
+                  No leads yet — every real submission from the public lead form lands here instantly, scored and prioritized by the agents.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -882,6 +901,13 @@ function ClientsTab({
             </div>
           </div>
         ))}
+        {clients.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center sm:col-span-2 lg:col-span-3">
+            <p className="text-sm text-zinc-500">
+              No clients yet — create the first one above and the plan cards, MRR pie and income tables come alive with real subscriptions.
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );
