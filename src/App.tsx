@@ -6,6 +6,7 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
 import { Landing } from "./pages/Landing";
 import { Auth } from "./pages/Auth";
@@ -27,6 +28,7 @@ export default function App() {
           </Routes>
         </main>
       </div>
+      <SpeedInsights />
     </BrowserRouter>
   );
 }
