@@ -8,8 +8,15 @@ import { computeMetrics } from "./engine";
  * If they are missing, components render a setup checklist instead of fake data.
  */
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Supabase project config. The URL and the PUBLISHABLE key are public by
+// design (security is enforced by row-level security server-side — see
+// supabase/migrations/0001_init.sql). They are baked in as defaults so the
+// static production build always connects, and can be overridden via env.
+const DEFAULT_SUPABASE_URL = "https://aebdqztoolszdzfbdlbp.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ObBPy7j5pmJOzhQhA-tOhw_2yaAXu24";
+
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase: SupabaseClient | null =
   url && anonKey ? createSupabaseClient(url, anonKey) : null;
