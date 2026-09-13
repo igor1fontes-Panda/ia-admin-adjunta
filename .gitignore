@@ -1,5 +1,8 @@
 node_modules/
 dist/
+
+# Freebuff hosting build snapshot (platform-managed, changes on every deploy)
+isolate/
 .env
 .env.local
 .env.*.local
