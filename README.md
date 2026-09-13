@@ -109,6 +109,17 @@ JavaScript (`scripts/bot-lib.mjs`) uses the same Interactions API via `@google/g
 - **Service-role key lives only in GitHub secrets / server env** — bots bypass RLS server-side; it never reaches the browser.
 - Anon key in the browser is safe *because* RLS is enforced — do not skip step 1.
 
+## Hosting
+
+**Primary:** Freebuff-managed hosting (Deploy button) — configured via `freebuff-preview` commands, builds with `npm ci --include=dev` + `node node_modules/vite/bin/vite.js build` into `dist/`.
+
+**Alternate (automatic):** Vercel — `vercel.json` (SPA rewrites + immutable asset caching) and `.github/workflows/deploy.yml` deploy every push to `main`. One-time setup:
+1. Create the project at [vercel.com/import](https://vercel.com/import) (framework preset: **Vite**, output dir `dist`).
+2. Add three GitHub repo secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (from Vercel → Project Settings → General).
+3. Push to `main` — the workflow builds and deploys automatically.
+
+The app is a static SPA: the public Supabase config (URL + publishable key, safe under RLS) is baked into `src/lib/data.ts`, so it works identically on any static host with zero env configuration.
+
 ## Support
 
 📧 support@ia-admin-adjunta.com · 💬 WhatsApp +244 923 012 293
