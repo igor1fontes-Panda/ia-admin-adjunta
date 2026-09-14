@@ -52,6 +52,7 @@ import {
   leadsPerDay,
   mrrByPlan,
   onboardingSteps,
+  buildAgentPromptPlan,
   pipelineFunnel,
   productPackEvidence,
   productPackRisks,
@@ -798,6 +799,7 @@ function AgentsTab({ activity, memory }: { activity: Activity[]; memory: AgentMe
   const memoryFor = (agentSlug: string): AgentMemoryRow[] =>
     memory.filter((m) => m.agent === agentSlug);
   const activeAgents = agents.filter((agent) => agent.runs > 0 && !agent.stale).length;
+  const runtimePlan = useMemo(() => buildAgentPromptPlan({ agent: "product_studio", sessionId: "dashboard-session", currentTask: "assemble evidence-driven product pack", leads: [], clients: [], orders: [], activity, memoryCount: memory.length }), [activity, memory.length]);
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-4">
       <section className="card overflow-hidden border-gold-500/20 p-6" aria-labelledby="autonomy-heading">
@@ -836,6 +838,11 @@ function AgentsTab({ activity, memory }: { activity: Activity[]; memory: AgentMe
         <p className="mt-4 text-xs text-zinc-500">
           Safety boundary: no unsolicited messages, purchases or public posts. Human approval is required for actions outside connected, consented channels.
         </p>
+        <div className="mt-5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4" aria-label="Prompt runtime status">
+          <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-semibold uppercase tracking-wider text-sky-300">Prompt runtime</p><span className="badge bg-sky-500/10 text-sky-300">Static prefix v1</span></div>
+          <p className="mt-2 text-xs leading-relaxed text-zinc-400">Stable instructions and tool contracts are separated from per-run records. Dynamic context is refreshed by hour and contains only verified account data.</p>
+          <div className="mt-3 grid gap-2 text-[11px] text-zinc-500 sm:grid-cols-3"><span>Tools: {runtimePlan.tools.length}</span><span>Cache key: {runtimePlan.cacheKey}</span><span>Context bytes: {runtimePlan.cacheableBytes}</span></div>
+        </div>
       </section>
       <div className="grid gap-4 lg:grid-cols-3">
         {agents.map((a) => {

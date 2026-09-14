@@ -1,4 +1,4 @@
-import type { Activity, Client, Lead, Metric, Order, ProductPackEvidence, ProductPackRisk } from "../types";
+import type { Activity, Client, Lead, Metric, Order, ProductPackEvidence, ProductPackRisk, AgentPromptContext, AgentPromptPlan } from "../types";
 
 // ---------- Analytics (all pure functions over REAL rows) ----------
 
@@ -281,6 +281,46 @@ export function productPackRisks(evidence: ProductPackEvidence[], hasTargetMarke
   if (evidence.some((item) => item.freshness === "stale")) risks.push({ id: "stale", label: "Stale evidence", detail: "Some records are older than 30 days and need review.", severity: "medium", blocking: true });
   risks.push({ id: "channels", label: "External channels gated", detail: "Email, Shopify and social publishing require authorization.", severity: "low", blocking: false });
   return risks;
+}
+
+const AGENT_STATIC_SYSTEM = [
+  "You are a professional, evidence-first product operations agent.",
+  "Use only verified records supplied in the dynamic context.",
+  "Never invent market demand, customers, outcomes, sources, or completed actions.",
+  "When evidence is missing, state insufficient evidence and recommend an authorized data source.",
+  "Draft before acting; publishing, outreach, purchasing, and account changes require explicit authorization.",
+  "Return concise reasoning with source IDs and freshness when making a recommendation.",
+].join("\\n");
+
+const AGENT_TOOLS = ["inspect_verified_records", "assemble_product_pack", "record_learning", "prepare_approval_request"] as const;
+
+function contextClock(date = new Date()): string {
+  return date.toISOString().slice(0, 13);
+}
+
+export function buildAgentPromptPlan(input: {
+  agent: string;
+  sessionId: string;
+  currentTask: string;
+  leads: Lead[];
+  clients: Client[];
+  orders: Order[];
+  activity: Activity[];
+  memoryCount: number;
+}): AgentPromptPlan {
+  const dynamicContext: AgentPromptContext = {
+    agent: input.agent,
+    sessionId: input.sessionId,
+    currentTask: input.currentTask,
+    facts: [
+      ...input.leads.slice(0, 20).map((lead) => ({ key: `lead:${lead.id}`, value: `${lead.company} · ${lead.niche} · ${lead.status}`, source: "leads", observedAt: lead.created_at, confidence: "medium" as const })),
+      ...input.orders.slice(0, 20).map((order) => ({ key: `order:${order.id}`, value: `${order.status} · ${order.amount} ${order.currency}`, source: "orders", observedAt: order.created_at, confidence: order.status === "paid" ? "high" as const : "medium" as const })),
+    ],
+    recordCounts: { leads: input.leads.length, clients: input.clients.length, orders: input.orders.length, activity: input.activity.length, memory: input.memoryCount },
+    contextClock: contextClock(),
+  };
+  const dynamicBytes = JSON.stringify(dynamicContext).length;
+  return { staticSystem: AGENT_STATIC_SYSTEM, dynamicContext, tools: [...AGENT_TOOLS], cacheKey: `agent:${input.agent}:static:v1`, cacheableBytes: AGENT_STATIC_SYSTEM.length + JSON.stringify(AGENT_TOOLS).length + dynamicBytes };
 }
 
 export function timeAgo(iso: string): string {
