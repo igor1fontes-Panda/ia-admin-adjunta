@@ -48,3 +48,52 @@ export type Activity = {
   message: string;
   created_at: string;
 };
+
+export type ProductPackStage = "brief" | "evidence" | "assembly" | "review" | "ready";
+
+export type ProductPackMarket = {
+  language: "English" | "Portuguese";
+  region: "Global" | "European Union" | "North America";
+  currency: "USD" | "EUR" | "BRL";
+  audience: string;
+  customerProblem: string;
+};
+
+export type ProductPackEvidence = {
+  source: "leads" | "clients" | "orders" | "activity" | "agent_memory";
+  recordCount: number;
+  recordIds: string[];
+  observedSignal: string;
+  confidence: "high" | "medium" | "low";
+  freshness: "fresh" | "aging" | "stale" | "unavailable";
+  verifiedAt: string | null;
+};
+
+export type ProductPackDeliverables = {
+  promise: string;
+  outline: string;
+  offerNotes: string;
+  landingCopy: string;
+  seoMetadata: string;
+  leadMagnet: string;
+  outreachDraft: string;
+};
+
+export type ProductPackRisk = {
+  id: string;
+  label: string;
+  detail: string;
+  severity: "high" | "medium" | "low";
+  blocking: boolean;
+};
+
+export type ProductPack = {
+  stage: ProductPackStage;
+  niche: string;
+  market: ProductPackMarket;
+  evidence: ProductPackEvidence[];
+  deliverables: ProductPackDeliverables;
+  risks: ProductPackRisk[];
+  learningOutcomes: string[];
+  createdAt: string;
+};
