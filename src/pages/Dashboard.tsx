@@ -795,8 +795,46 @@ function AgentsTab({ activity, memory }: { activity: Activity[]; memory: AgentMe
   const agents = useMemo(() => agentStatus(activity), [activity]);
   const memoryFor = (agentSlug: string): AgentMemoryRow[] =>
     memory.filter((m) => m.agent === agentSlug);
+  const activeAgents = agents.filter((agent) => agent.runs > 0 && !agent.stale).length;
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-4">
+      <section className="card overflow-hidden border-gold-500/20 p-6" aria-labelledby="autonomy-heading">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-500/15 text-gold-300">
+                <Zap size={18} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-400">Autonomy protocol</p>
+                <h2 id="autonomy-heading" className="mt-1 text-lg font-bold text-zinc-50">Agents are ready to learn and act</h2>
+              </div>
+            </div>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              Scheduled agents process real leads, outcomes, incidents and product signals. They adapt scoring from recorded wins and losses, while client-facing outreach stays limited to opted-in channels.
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+            {activeAgents > 0 ? `${activeAgents} active` : "Scheduled"}
+          </span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {[
+            ["Observe", "Reads real signals and consent state"],
+            ["Learn", "Stores evidence from won/lost outcomes"],
+            ["Act", "Qualifies, drafts and logs next actions"],
+          ].map(([title, description]) => (
+            <div key={title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm font-semibold text-zinc-100">{title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-500">{description}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs text-zinc-500">
+          Safety boundary: no unsolicited messages, purchases or public posts. Human approval is required for actions outside connected, consented channels.
+        </p>
+      </section>
       <div className="grid gap-4 lg:grid-cols-3">
         {agents.map((a) => {
           const stale = a.stale;
