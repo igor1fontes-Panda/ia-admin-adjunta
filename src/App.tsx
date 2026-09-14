@@ -17,19 +17,29 @@ import { isLive, supabase } from "./lib/data";
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<DashboardGate />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <AppFrame />
       <SpeedInsights />
     </BrowserRouter>
+  );
+}
+
+function AppFrame() {
+  const location = useLocation();
+  const pageTone = location.pathname === "/dashboard" ? "page-dashboard" : location.pathname === "/auth" ? "page-auth" : "page-landing";
+
+  return (
+    <div className={`app-shell ${pageTone} flex min-h-screen flex-col`}>
+      <div className="anime-skyline" aria-hidden="true" />
+      <Header />
+      <main className="relative z-10 flex-1">
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<DashboardGate />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
