@@ -67,6 +67,15 @@ type Tab = "overview" | "packs" | "leads" | "charts" | "clients" | "orders" | "a
 
 type ConnState = "connecting" | "live" | "offline";
 
+const EMPTY_METRICS: Metric = {
+  leads: 0,
+  qualifiedLeads: 0,
+  activeClients: 0,
+  mrr: 0,
+  revenue30d: 0,
+  winRate: 0,
+};
+
 export function Dashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
@@ -296,7 +305,7 @@ export function Dashboard() {
       {tab === "packs" ? <ProductPacksTab leads={leads} /> : null}
       {tab === "overview" ? (
         <Overview
-          metrics={metrics!}
+          metrics={metrics ?? EMPTY_METRICS}
           activity={activity}
           orders={orders.slice(0, 5)}
           leads={leads}
@@ -325,7 +334,7 @@ export function Dashboard() {
       {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
       {tab === "ecosystem" ? (
         <EcosystemTab
-          metrics={metrics!}
+          metrics={metrics ?? EMPTY_METRICS}
           leads={leads}
           orders={orders}
           activity={activity}
