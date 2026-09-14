@@ -211,7 +211,7 @@ body {
   }
   .punk-glitch::before,
   .punk-glitch::after {
-    content: attr(data-text);
+    content: "";
     position: absolute;
     inset: 0;
     opacity: 0.75;
