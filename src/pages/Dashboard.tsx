@@ -1100,7 +1100,7 @@ function ProductPacksTab({ leads }: { leads: Lead[] }) {
             <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">Autonomous product studio</span>
             <h2 className="mt-3 text-2xl font-bold text-zinc-50">Build a digital product pack</h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Create a traceable pack brief and move it through research, assembly, review and consent-based outreach. This workspace never invents prospects or sends unsolicited messages.
+              Create a traceable pack brief and move it through source verification, assembly, review and consent-based outreach. No research result is shown until an approved live source is connected. This workspace never invents prospects or sends unsolicited messages.
             </p>
           </div>
           <Package className="text-gold-400" size={32} />
