@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -201,6 +204,10 @@ body {
   .punk-glitch {
     position: relative;
     display: inline-block;
+  }
+  h1 > span.punk-glitch.bg-gradient-to-r {
+    font-family: "Oswald", sans-serif;
+    font-size: 38px;
   }
   .punk-glitch::before,
   .punk-glitch::after {
