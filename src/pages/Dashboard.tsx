@@ -40,7 +40,7 @@ import {
   Zap,
 } from "lucide-react";
 import { PaymentDetails } from "../components/PaymentDetails";
-import type { Activity, Client, Lead, Metric, Order } from "../types";
+import type { Activity, Client, Lead, Metric, Order, ProductPackStage } from "../types";
 import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
 import type { AgentMemoryRow } from "../lib/data";
 import {
@@ -53,6 +53,8 @@ import {
   mrrByPlan,
   onboardingSteps,
   pipelineFunnel,
+  productPackEvidence,
+  productPackRisks,
   PLAN_PRICES,
   revenuePerDay,
   scoreLead,
@@ -302,7 +304,7 @@ export function Dashboard() {
         ))}
       </div>
 
-      {tab === "packs" ? <ProductPacksTab leads={leads} /> : null}
+      {tab === "packs" ? <ProductPacksTab leads={leads} clients={clients} orders={orders} activity={activity} /> : null}
       {tab === "overview" ? (
         <Overview
           metrics={metrics ?? EMPTY_METRICS}
@@ -1080,64 +1082,43 @@ function OrdersTab({
 
 // ---------- Product packs ----------
 
-function ProductPacksTab({ leads }: { leads: Lead[] }) {
-  const [started, setStarted] = useState(false);
+function ProductPacksTab({ leads, clients, orders, activity }: { leads: Lead[]; clients: Client[]; orders: Order[]; activity: Activity[] }) {
+  const [stage, setStage] = useState<ProductPackStage>("brief");
   const [niche, setNiche] = useState("small business operations");
-  const qualified = leads.filter((lead) => lead.status === "qualified" || lead.status === "won").length;
-  const steps = [
-    ["Brief", "Define the buyer problem and pack promise."],
-    ["Research", "Use approved sources and record provenance."],
-    ["Assemble", "Generate copy, templates, pricing and delivery files."],
-    ["Review", "Check quality, claims and buyer fit before publication."],
-    ["Outreach", "Queue only channels with explicit buyer consent."],
+  const [audience, setAudience] = useState("");
+  const [problem, setProblem] = useState("");
+  const evidence = useMemo(() => productPackEvidence(leads, clients, orders, activity), [leads, clients, orders, activity]);
+  const risks = useMemo(() => productPackRisks(evidence, Boolean(audience.trim() && problem.trim())), [evidence, audience, problem]);
+  const stages: Array<[ProductPackStage, string, string]> = [
+    ["brief", "Brief", "Define the buyer and problem."],
+    ["evidence", "Evidence", "Verify signals and provenance."],
+    ["assembly", "Assembly", "Write the internal product artifacts."],
+    ["review", "Review", "Check claims, fit and blockers."],
+    ["ready", "Ready", "Ready internally; external channels remain gated."],
   ];
+  const currentIndex = stages.findIndex(([id]) => id === stage);
+  const canAdvance = stage === "brief" ? Boolean(niche.trim() && audience.trim() && problem.trim()) : risks.every((risk) => !risk.blocking);
+  const next = () => setStage(stages[Math.min(currentIndex + 1, stages.length - 1)][0]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
-      <div className="card overflow-hidden border-gold-500/20 p-6 sm:p-8">
+      <section className="card overflow-hidden border-gold-500/20 p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-5">
-          <div className="max-w-2xl">
-            <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">Autonomous product studio</span>
-            <h2 className="mt-3 text-2xl font-bold text-zinc-50">Build a digital product pack</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Create a traceable pack brief and move it through source verification, assembly, review and consent-based outreach. No research result is shown until an approved live source is connected. This workspace never invents prospects or sends unsolicited messages.
-            </p>
-          </div>
-          <Package className="text-gold-400" size={32} />
+          <div className="max-w-3xl"><span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">Autonomous product studio</span><h2 className="mt-3 text-2xl font-bold text-zinc-50">Create from evidence, not assumptions</h2><p className="mt-2 text-sm leading-relaxed text-zinc-400">This studio organizes real account records into a professional product pack. It never labels missing data as demand and never publishes without authorization.</p></div><Package className="text-gold-400" size={32} aria-hidden="true" />
         </div>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <label className="flex-1">
-            <span className="label">Buyer problem or niche</span>
-            <input value={niche} onChange={(event) => setNiche(event.target.value)} className="input" />
-          </label>
-          <button type="button" onClick={() => setStarted(true)} className="btn-primary self-end">
-            <Zap size={16} /> {started ? "Pack brief created" : "Start pack brief"}
-          </button>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <label><span className="label">Product niche</span><input value={niche} onChange={(event) => setNiche(event.target.value)} className="input" /></label>
+          <label><span className="label">Target audience</span><input value={audience} onChange={(event) => setAudience(event.target.value)} className="input" placeholder="Who is this for?" /></label>
+          <label><span className="label">Customer problem</span><input value={problem} onChange={(event) => setProblem(event.target.value)} className="input" placeholder="What real problem?" /></label>
         </div>
-        {started ? (
-          <p className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-            Draft ready for <strong>{niche || "your selected niche"}</strong>. {qualified} qualified records are available as existing-app context; external research and delivery remain disabled until connected.
-          </p>
-        ) : null}
+        <div className="mt-5 flex flex-wrap gap-3"><button type="button" onClick={next} disabled={!canAdvance || currentIndex === stages.length - 1} className="btn-primary disabled:cursor-not-allowed disabled:opacity-40">Advance stage <ArrowRight size={16} /></button><button type="button" onClick={() => { setStage("brief"); setAudience(""); setProblem(""); }} className="btn-ghost">Reset workspace</button></div>
+      </section>
+      <div className="grid gap-3 sm:grid-cols-5" aria-label="Product pack stages">{stages.map(([id, name, description], index) => <div key={id} className={`card p-4 ${index <= currentIndex ? "border-gold-500/40" : "opacity-60"}`}><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-gold-500/15 text-xs font-bold text-gold-300">{index + 1}</span><span className="text-sm font-semibold text-zinc-100">{name}</span></div><p className="mt-3 text-xs leading-relaxed text-zinc-400">{description}</p></div>)}</div>
+      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+        <section className="card p-6"><div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold text-zinc-50">Verified evidence</h3><p className="mt-1 text-xs text-zinc-500">Only loaded records are counted; verification time is shown for traceability.</p></div><span className="badge bg-white/10 text-zinc-300">{evidence.reduce((sum, item) => sum + item.recordCount, 0)} records</span></div><div className="mt-5 space-y-3">{evidence.map((item) => <div key={item.source} className="rounded-xl border border-white/10 bg-white/[0.03] p-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold capitalize text-zinc-100">{item.source.replace("_", " ")}</span><span className="text-xs text-zinc-500">{item.recordCount} records · {item.freshness}</span></div><p className="mt-2 text-xs leading-relaxed text-zinc-400">{item.observedSignal}</p></div>)}</div></section>
+        <section className="card p-6"><h3 className="flex items-center gap-2 font-semibold text-zinc-50"><ShieldCheck size={17} className="text-gold-400" /> Readiness gates</h3><div className="mt-4 space-y-3">{risks.map((risk) => <div key={risk.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3"><div className="flex items-center gap-2"><AlertTriangle size={15} className={risk.blocking ? "text-amber-400" : "text-zinc-500"} /><span className="text-sm font-semibold text-zinc-200">{risk.label}</span></div><p className="mt-1 text-xs leading-relaxed text-zinc-500">{risk.detail}</p></div>)}</div></section>
       </div>
-      <div className="grid gap-4 md:grid-cols-5">
-        {steps.map(([name, description], index) => (
-          <div key={name} className={`card p-4 ${started && index === 0 ? "border-gold-500/40" : ""}`}>
-            <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-gold-500/15 text-xs font-bold text-gold-300">{index + 1}</span><span className="text-sm font-semibold text-zinc-100">{name}</span></div>
-            <p className="mt-3 text-xs leading-relaxed text-zinc-400">{description}</p>
-          </div>
-        ))}
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          [Search, "Research sources", "Waiting for an approved web-research or marketplace connector."],
-          [ShieldCheck, "Consent guard", "Outreach stays queued until the buyer and channel are opted in."],
-          [Database, "Persistence", "Drafts created without integrations stay local to this session."],
-        ].map(([Icon, title, copy]) => {
-          const FeatureIcon = Icon as typeof Search;
-          return <div key={title as string} className="card p-5"><FeatureIcon size={18} className="text-sky-400" /><h3 className="mt-3 text-sm font-semibold text-zinc-100">{title as string}</h3><p className="mt-2 text-xs leading-relaxed text-zinc-400">{copy as string}</p></div>;
-        })}
-      </div>
+      <section className="card p-6"><h3 className="font-semibold text-zinc-50">Internal deliverables</h3><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{["Product promise", "Offer outline", "SEO metadata", "Lead magnet draft"].map((item) => <div key={item} className="rounded-xl border border-white/10 bg-white/[0.03] p-4"><p className="text-sm font-semibold text-zinc-200">{item}</p><p className="mt-2 text-xs text-zinc-500">Available after evidence and review gates pass.</p></div>)}</div><p className="mt-4 text-xs text-zinc-500">Publishing, Shopify, email and social actions are disabled until their official integrations are authorized.</p></section>
     </motion.div>
   );
 }

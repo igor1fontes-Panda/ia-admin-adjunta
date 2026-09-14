@@ -1,4 +1,4 @@
-import type { Activity, Client, Lead, Metric, Order } from "../types";
+import type { Activity, Client, Lead, Metric, Order, ProductPackEvidence, ProductPackRisk } from "../types";
 
 // ---------- Analytics (all pure functions over REAL rows) ----------
 
@@ -255,6 +255,32 @@ export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[
       done: has(agents.filter((a) => a.runs > 0)),
     },
   ];
+}
+
+export function productPackEvidence(leads: Lead[], clients: Client[], orders: Order[], activity: Activity[]): ProductPackEvidence[] {
+  const verifiedAt = new Date().toISOString();
+  const freshness = (dates: string[]): ProductPackEvidence["freshness"] => {
+    if (!dates.length) return "unavailable";
+    const age = Date.now() - Math.max(...dates.map((date) => +new Date(date)));
+    return age < 7 * 86400000 ? "fresh" : age < 30 * 86400000 ? "aging" : "stale";
+  };
+  const evidence: ProductPackEvidence[] = [
+    { source: "leads", recordCount: leads.length, recordIds: leads.map((lead) => lead.id), observedSignal: leads.length ? `${leads.length} real lead records are available for pattern review.` : "No lead records are available.", confidence: leads.length >= 10 ? "high" : leads.length >= 3 ? "medium" : "low", freshness: freshness(leads.map((lead) => lead.created_at)), verifiedAt },
+    { source: "clients", recordCount: clients.length, recordIds: clients.map((client) => client.id), observedSignal: clients.length ? `${clients.length} real client records can inform buyer-fit review.` : "No client records are available.", confidence: clients.length >= 5 ? "high" : clients.length ? "medium" : "low", freshness: freshness(clients.map((client) => client.created_at)), verifiedAt },
+    { source: "orders", recordCount: orders.length, recordIds: orders.map((order) => order.id), observedSignal: orders.length ? `${orders.filter((order) => order.status === "paid").length} paid order records can inform offer evidence.` : "No order records are available.", confidence: orders.length >= 5 ? "high" : orders.length ? "medium" : "low", freshness: freshness(orders.map((order) => order.created_at)), verifiedAt },
+    { source: "activity", recordCount: activity.length, recordIds: activity.map((item) => item.id), observedSignal: activity.length ? `${activity.length} activity records are available for operational context.` : "No activity records are available.", confidence: activity.length >= 10 ? "high" : activity.length ? "medium" : "low", freshness: freshness(activity.map((item) => item.created_at)), verifiedAt },
+  ];
+  return evidence;
+}
+
+export function productPackRisks(evidence: ProductPackEvidence[], hasTargetMarket: boolean): ProductPackRisk[] {
+  const risks: ProductPackRisk[] = [];
+  const totalRecords = evidence.reduce((sum, item) => sum + item.recordCount, 0);
+  if (!totalRecords) risks.push({ id: "no-evidence", label: "Insufficient evidence", detail: "Connect or load real records before claiming market demand.", severity: "high", blocking: true });
+  if (!hasTargetMarket) risks.push({ id: "market", label: "Target market incomplete", detail: "Define audience and customer problem before assembly.", severity: "medium", blocking: true });
+  if (evidence.some((item) => item.freshness === "stale")) risks.push({ id: "stale", label: "Stale evidence", detail: "Some records are older than 30 days and need review.", severity: "medium", blocking: true });
+  risks.push({ id: "channels", label: "External channels gated", detail: "Email, Shopify and social publishing require authorization.", severity: "low", blocking: false });
+  return risks;
 }
 
 export function timeAgo(iso: string): string {
