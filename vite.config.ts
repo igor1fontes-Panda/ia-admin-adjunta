@@ -9,7 +9,8 @@ export default defineConfig({
     port: Number(process.env.PORT) || 5173,
     strictPort: false,
     hmr: false,
-    allowedHosts: ["sb-2lt8thxk8y8e.vercel.run"],
+    // Vercel preview hostnames are generated per sandbox; allow the active preview host.
+    allowedHosts: true,
   },
   build: {
     outDir: "dist",

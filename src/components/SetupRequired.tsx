@@ -1,4 +1,4 @@
-import { Database, ExternalLink } from "lucide-react";
+import { Database } from "lucide-react";
 
 /** Shown instead of fake data when the database is not connected. */
 export function SetupRequired({ compact = false }: { compact?: boolean }) {
@@ -17,43 +17,12 @@ export function SetupRequired({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
 
-        <ol className="mt-6 space-y-4 text-sm">
-          <li className="rounded-xl border border-white/10 bg-ink-800 p-4">
-            <p className="font-semibold text-zinc-100">1. Create the tables</p>
-            <p className="mt-1 text-zinc-400">
-              Open your Supabase project → SQL Editor and run{" "}
-              <code className="rounded bg-black/40 px-1.5 py-0.5 font-mono text-xs text-gold-300">
-                supabase/migrations/0001_init.sql
-              </code>{" "}
-              from this repository.
-            </p>
-          </li>
-          <li className="rounded-xl border border-white/10 bg-ink-800 p-4">
-            <p className="font-semibold text-zinc-100">2. Add the keys</p>
-            <p className="mt-1 text-zinc-400">
-              From Supabase → Project Settings → API, add{" "}
-              <code className="rounded bg-black/40 px-1.5 py-0.5 font-mono text-xs text-gold-300">VITE_SUPABASE_URL</code>{" "}
-              and{" "}
-              <code className="rounded bg-black/40 px-1.5 py-0.5 font-mono text-xs text-gold-300">VITE_SUPABASE_ANON_KEY</code>{" "}
-              to the environment settings, then restart.
-            </p>
-          </li>
-          <li className="rounded-xl border border-white/10 bg-ink-800 p-4">
-            <p className="font-semibold text-zinc-100">3. Reload this page</p>
-            <p className="mt-1 text-zinc-400">
-              The dashboard, auth and lead capture go live automatically — real accounts, real leads, real orders.
-            </p>
-          </li>
-        </ol>
-
-        <a
-          href="https://supabase.com/dashboard"
-          target="_blank"
-          rel="noreferrer"
-          className="btn-primary mt-6"
-        >
-          Open Supabase Dashboard <ExternalLink size={15} />
-        </a>
+        <div className="mt-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+          The live Supabase workspace is not connected in this deployment, so authenticated data, persistence and autonomous delivery are paused. No fake leads, buyers or outreach are shown.
+        </div>
+        <div className="mt-4 rounded-xl border border-white/10 bg-ink-800 p-4 text-sm text-zinc-400">
+          You can still review the product-pack workflow from the public preview. Connect Supabase and run the repository migrations when you are ready to enable real storage, agent runs and consent-gated outreach.
+        </div>
       </div>
     </div>
   );
