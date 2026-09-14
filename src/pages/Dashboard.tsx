@@ -1257,6 +1257,38 @@ function EcosystemTab({
         </div>
       </div>
 
+      {/* Authorized growth channels — never imply access that is not connected */}
+      <div className="card p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
+              <Target size={18} className="text-gold-400" /> Global growth channels
+            </h3>
+            <p className="mt-1 text-sm text-zinc-400">
+              Organic discovery is ready to plan; sending and publishing stay disabled until each account is authorized.
+            </p>
+          </div>
+          <span className="badge bg-amber-500/15 text-amber-300">Consent-first</span>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Website + SEO", "Lead magnets, landing pages and search metadata", "Planning"],
+            ["Email", "Opted-in contacts with unsubscribe handling", "Not connected"],
+            ["Shopify", "Approved digital packs and storefront listings", "Not connected"],
+            ["Social marketplaces", "Platform-approved organic content only", "Not connected"],
+          ].map(([name, description, status]) => (
+            <div key={name} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-zinc-100">{name}</p>
+                <span className={`h-2 w-2 rounded-full ${status === "Planning" ? "bg-gold-400" : "bg-zinc-600"}`} aria-label={status} />
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">{description}</p>
+              <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${status === "Planning" ? "text-gold-300" : "text-zinc-500"}`}>{status}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* What the agents have learned so far — straight from agent_memory */}
       <div className="card p-6">
         <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
