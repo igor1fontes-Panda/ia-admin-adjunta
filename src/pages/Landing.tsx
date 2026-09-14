@@ -138,9 +138,9 @@ export function Landing() {
               .
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-              Fontes AI Admin Adjunta hunts leads, scores them, closes sales and
-              manages clients autonomously — 24/7, with real data in a real
-              database.
+              Fontes AI Admin Adjunta turns approved research into product packs,
+              qualifies buyer opportunities and keeps every action auditable — with
+              consent-gated outreach and real data when connected.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link to="/auth" className="btn-primary glow-gold text-base">
@@ -239,8 +239,8 @@ export function Landing() {
                 </span>
                 bots active
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Live activity feed
+                <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Workflow preview
               </p>
               <div className="mt-4 space-y-3 font-mono text-sm">
                 {[

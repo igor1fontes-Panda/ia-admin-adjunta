@@ -57,8 +57,10 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-500 text-ink-950 glow-gold">
-            <Bot size={20} />
+          <span className="brand-mark glow-gold" aria-label="Fontes AI Admin Adjunta">
+            <span className="brand-letter brand-letter-f">F</span>
+            <span className="brand-letter brand-letter-a">A</span>
+            <Bot size={13} aria-hidden="true" />
           </span>
           <span className="text-sm font-bold tracking-wide text-zinc-50 sm:text-base">
             Fontes AI <span className="text-gold-400">Admin Adjunta</span>

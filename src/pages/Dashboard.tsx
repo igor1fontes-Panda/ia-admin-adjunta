@@ -29,8 +29,11 @@ import {
   Gauge,
   Loader2,
   Network,
+  Package,
   Plus,
   RefreshCcw,
+  Search,
+  ShieldCheck,
   Target,
   TrendingUp,
   Users,
@@ -60,9 +63,18 @@ import {
   type Pulse,
 } from "../lib/engine";
 
-type Tab = "overview" | "leads" | "charts" | "clients" | "orders" | "agents" | "ecosystem";
+type Tab = "overview" | "packs" | "leads" | "charts" | "clients" | "orders" | "agents" | "ecosystem";
 
 type ConnState = "connecting" | "live" | "offline";
+
+const EMPTY_METRICS: Metric = {
+  leads: 0,
+  qualifiedLeads: 0,
+  activeClients: 0,
+  mrr: 0,
+  revenue30d: 0,
+  winRate: 0,
+};
 
 export function Dashboard() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -222,7 +234,7 @@ export function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-50 sm:text-3xl">Command Center</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Live · Supabase connected · bots run on GitHub Actions
+            Live data · agent runs are auditable · outreach requires consent
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -270,6 +282,7 @@ export function Dashboard() {
       <div className="mt-8 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-ink-900/80 p-1">
         {([
           ["overview", "Overview"],
+          ["packs", "Product packs"],
           ["leads", "Leads"],
           ["charts", "Analytics"],
           ["clients", "Clients"],
@@ -289,9 +302,10 @@ export function Dashboard() {
         ))}
       </div>
 
+      {tab === "packs" ? <ProductPacksTab leads={leads} /> : null}
       {tab === "overview" ? (
         <Overview
-          metrics={metrics!}
+          metrics={metrics ?? EMPTY_METRICS}
           activity={activity}
           orders={orders.slice(0, 5)}
           leads={leads}
@@ -320,7 +334,7 @@ export function Dashboard() {
       {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
       {tab === "ecosystem" ? (
         <EcosystemTab
-          metrics={metrics!}
+          metrics={metrics ?? EMPTY_METRICS}
           leads={leads}
           orders={orders}
           activity={activity}
@@ -1023,6 +1037,70 @@ function OrdersTab({
         </table>
       </div>
     </div>
+  );
+}
+
+// ---------- Product packs ----------
+
+function ProductPacksTab({ leads }: { leads: Lead[] }) {
+  const [started, setStarted] = useState(false);
+  const [niche, setNiche] = useState("small business operations");
+  const qualified = leads.filter((lead) => lead.status === "qualified" || lead.status === "won").length;
+  const steps = [
+    ["Brief", "Define the buyer problem and pack promise."],
+    ["Research", "Use approved sources and record provenance."],
+    ["Assemble", "Generate copy, templates, pricing and delivery files."],
+    ["Review", "Check quality, claims and buyer fit before publication."],
+    ["Outreach", "Queue only channels with explicit buyer consent."],
+  ];
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-6">
+      <div className="card overflow-hidden border-gold-500/20 p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-2xl">
+            <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">Autonomous product studio</span>
+            <h2 className="mt-3 text-2xl font-bold text-zinc-50">Build a digital product pack</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              Create a traceable pack brief and move it through research, assembly, review and consent-based outreach. This workspace never invents prospects or sends unsolicited messages.
+            </p>
+          </div>
+          <Package className="text-gold-400" size={32} />
+        </div>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <label className="flex-1">
+            <span className="label">Buyer problem or niche</span>
+            <input value={niche} onChange={(event) => setNiche(event.target.value)} className="input" />
+          </label>
+          <button type="button" onClick={() => setStarted(true)} className="btn-primary self-end">
+            <Zap size={16} /> {started ? "Pack brief created" : "Start pack brief"}
+          </button>
+        </div>
+        {started ? (
+          <p className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            Draft ready for <strong>{niche || "your selected niche"}</strong>. {qualified} qualified records are available as existing-app context; external research and delivery remain disabled until connected.
+          </p>
+        ) : null}
+      </div>
+      <div className="grid gap-4 md:grid-cols-5">
+        {steps.map(([name, description], index) => (
+          <div key={name} className={`card p-4 ${started && index === 0 ? "border-gold-500/40" : ""}`}>
+            <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-gold-500/15 text-xs font-bold text-gold-300">{index + 1}</span><span className="text-sm font-semibold text-zinc-100">{name}</span></div>
+            <p className="mt-3 text-xs leading-relaxed text-zinc-400">{description}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {[
+          [Search, "Research sources", "Waiting for an approved web-research or marketplace connector."],
+          [ShieldCheck, "Consent guard", "Outreach stays queued until the buyer and channel are opted in."],
+          [Database, "Persistence", "Drafts created without integrations stay local to this session."],
+        ].map(([Icon, title, copy]) => {
+          const FeatureIcon = Icon as typeof Search;
+          return <div key={title as string} className="card p-5"><FeatureIcon size={18} className="text-sky-400" /><h3 className="mt-3 text-sm font-semibold text-zinc-100">{title as string}</h3><p className="mt-2 text-xs leading-relaxed text-zinc-400">{copy as string}</p></div>;
+        })}
+      </div>
+    </motion.div>
   );
 }
 
