@@ -103,7 +103,7 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
         <div>
           <h3 className="text-lg font-bold text-zinc-50">International payments (USD / EUR)</h3>
           <p className="mt-1 text-sm text-zinc-400">
-            Estes dados só devem ser usados para uma encomenda real confirmada pela equipa. O pagamento não é processado automaticamente nesta versão; a confirmação depende de validação humana e comprovativo verificável.
+            O checkout Stripe é o canal de cobrança automática quando o produto estiver publicado e configurado. Transferências bancárias continuam sujeitas a confirmação humana e comprovativo verificável.
           </p>
         </div>
       </div>

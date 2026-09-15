@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Footer } from "../components/Footer";
 import { PaymentDetails } from "../components/PaymentDetails";
+import { CheckoutButton } from "../components/CheckoutButton";
 import { LeadForm } from "../components/LeadForm";
 import { PunkTicker } from "../components/PunkTicker";
 
@@ -275,12 +276,9 @@ live data unavailable
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/auth"
-                className={`mt-8 w-full ${p.highlight ? "btn-primary" : "btn-ghost"}`}
-              >
-                {p.cta}
-              </Link>
+              <div className="mt-8">
+                <CheckoutButton plan={p.name.toLowerCase()} label={p.cta} primary={p.highlight} />
+              </div>
             </motion.div>
           ))}
         </div>
