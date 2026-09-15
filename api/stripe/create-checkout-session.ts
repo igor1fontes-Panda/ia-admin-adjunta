@@ -18,9 +18,16 @@ export default async function handler(req: any, res: any) {
     return res.status(503).json({ error: "Stripe is not configured for live checkout." });
   }
 
-  const { plan, quantity = 1 } = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  const priceId = PRICE_IDS[String(plan || "")];
-  const parsedQuantity = Number(quantity);
+  let body: { plan?: unknown; quantity?: unknown };
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+  } catch {
+    return res.status(400).json({ error: "Invalid request body." });
+  }
+
+  const plan = typeof body.plan === "string" ? body.plan : "";
+  const priceId = PRICE_IDS[plan];
+  const parsedQuantity = Number(body.quantity ?? 1);
 
   if (!priceId) return res.status(503).json({ error: "This product is not available for purchase yet." });
   if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > 10) {
