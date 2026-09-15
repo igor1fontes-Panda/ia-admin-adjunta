@@ -91,8 +91,13 @@ export function Dashboard() {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [showNewClient, setShowNewClient] = useState(false);
   const [memory, setMemory] = useState<AgentMemoryRow[]>([]);
+  const loadingRef = useRef(false);
+  const requestRef = useRef(0);
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    const requestId = ++requestRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -103,6 +108,7 @@ export function Dashboard() {
         fetchActivity(),
         fetchAgentMemory().catch(() => [] as AgentMemoryRow[]),
       ]);
+      if (requestId !== requestRef.current) return;
       setLeads(leads);
       setClients(clients);
       setOrders(orders);
@@ -110,8 +116,8 @@ export function Dashboard() {
       setMemory(mem);
       setMetrics(computeMetrics(leads, clients, orders));
     } catch (e: any) {
+      if (requestId !== requestRef.current) return;
       const msg = String(e?.message ?? "Failed to load data from Supabase");
-      // Tables not created yet (migration pending) — guide instead of a raw error
       if (/could not find the table|pgrst205|schema cache|does not exist/i.test(msg)) {
         setError(
           "Database tables are not created yet. One-time setup: open your Supabase project → SQL Editor → run supabase/migrations/0001_init.sql, then 0002_agent_memory.sql. The command center fills with your real data immediately after.",
@@ -120,7 +126,10 @@ export function Dashboard() {
         setError(msg);
       }
     } finally {
-      setLoading(false);
+      if (requestId === requestRef.current) {
+        loadingRef.current = false;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -152,7 +161,6 @@ export function Dashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_log" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "agent_memory" }, () => load())
       .subscribe((status) => {
         if (status === "SUBSCRIBED") setRealtime("live");
         else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setRealtime("offline");
