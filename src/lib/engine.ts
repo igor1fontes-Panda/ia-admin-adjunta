@@ -239,7 +239,7 @@ export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[
     {
       id: "orders",
       label: "Record your first sale",
-      description: "Create an order in the Orders tab — a payment reference is generated automatically.",
+      description: "Create a real order in the Orders tab only after the payment provider and product availability have been verified.", 
       done: has(orders),
     },
     {
