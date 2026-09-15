@@ -46,6 +46,13 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
+      - name: Check client bundle for server secrets
+        run: |
+          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|SUPABASE_JWT_SECRET|GEMINI_API_KEY|BLACKBOX_API_KEY' src public 2>/dev/null; then
+            echo "Server-only secret name found in client-facing source."
+            exit 1
+          fi
+
       - name: Publish CI summary
         if: always()
         run: |
