@@ -21,11 +21,10 @@ drop policy if exists "agent_memory_admin_all" on public.agent_memory;
 create policy "agent_memory_admin_all" on public.agent_memory
   for all to authenticated using (true) with check (true);
 
--- Anonymous: read-only. Strategy/learning is public by design — the bots
--- write it with the service-role key (bypasses RLS).
+-- Anonymous visitors must not read internal strategy or agent memory.
+-- Bots write through the service-role key, while authenticated operators can
+-- inspect it through the dashboard.
 drop policy if exists "agent_memory_public_read" on public.agent_memory;
-create policy "agent_memory_public_read" on public.agent_memory
-  for select to anon using (true);
 
 -- ============ REALTIME ============
 
