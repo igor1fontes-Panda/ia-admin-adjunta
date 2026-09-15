@@ -47,8 +47,8 @@ jobs:
         run: |
           {
             echo "## CI summary"
-            echo "- Commit: \\`${GITHUB_SHA:0:12}\\`"
-            echo "- Node: \\`$(node --version)\\`"
-            echo "- npm: \\`$(npm --version)\\`"
-            echo "- Result: \\`${{ job.status }}\\`"
+            echo "- Commit: `${GITHUB_SHA:0:12}`"
+            echo "- Node: `$(node --version)`"
+            echo "- npm: `$(npm --version)`"
+            echo "- Result: `${{ job.status }}`"
           } >> "$GITHUB_STEP_SUMMARY"
