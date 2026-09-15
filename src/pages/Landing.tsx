@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Footer } from "../components/Footer";
 import { PaymentDetails } from "../components/PaymentDetails";
+import { CheckoutButton } from "../components/CheckoutButton";
 import { LeadForm } from "../components/LeadForm";
 import { PunkTicker } from "../components/PunkTicker";
 
@@ -21,12 +22,12 @@ const FEATURES = [
   {
     icon: Radar,
     title: "Lead Hunter Swarm",
-    desc: "Gemini-powered bots scan LinkedIn, X communities and Reddit daily, scoring every lead 0-100 and pushing only qualified prospects to your pipeline.",
+    desc: "Agentes de pesquisa só apresentam leads quando uma fonte autorizada estiver ligada e cada registo for verificável.",
   },
   {
     icon: LineChart,
     title: "Sales Automaton",
-    desc: "Detects purchase signals with 94% model accuracy, generates the pitch, and hands you a ready-to-send proposal — while the lead is still warm.",
+    desc: "A análise de sinais e a criação de propostas ficam indisponíveis até existirem dados reais e uma fonte autorizada.",
   },
   {
     icon: Users,
@@ -41,20 +42,13 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Payments with Guarantees",
-    desc: "Multicaixa Express and PayPay with automatic reference generation, webhook-ready order tracking and a 30-day money-back guarantee.",
+    desc: "Os pedidos e pagamentos só serão apresentados após configuração de um provedor real e confirmação verificável; não há cobrança automática nesta versão.",
   },
   {
     icon: Lock,
     title: "Bank-grade Security",
     desc: "Row-level security on every table, TLS 1.3 in transit, AES-256 at rest. Your business data stays yours.",
   },
-];
-
-const STATS = [
-  { label: "Qualified leads / month", value: "60+" },
-  { label: "Sales signal accuracy", value: "94%" },
-  { label: "Hours saved weekly", value: "25h" },
-  { label: "Money-back guarantee", value: "30d" },
 ];
 
 const PLANS = [
@@ -152,21 +146,12 @@ export function Landing() {
             </div>
           </motion.div>
 
-          {/* Stats */}
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            custom={2}
-            className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4"
-          >
-            {STATS.map((s) => (
-              <div key={s.label} className="card p-5 text-center">
-                <p className="text-2xl font-extrabold text-gold-400">{s.value}</p>
-                <p className="mt-1 text-xs font-medium text-zinc-400">{s.label}</p>
-              </div>
-            ))}
-          </motion.div>
+          <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-amber-400/25 bg-amber-400/10 p-5 text-center">
+            <p className="text-sm font-semibold text-amber-200">Dados comerciais reais apenas</p>
+            <p className="mt-1 text-sm text-amber-100/75">
+              Métricas, preços, disponibilidade e resultados só aparecem depois de existirem na fonte de dados ligada. Sem números de demonstração.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -237,24 +222,14 @@ export function Landing() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                 </span>
-                bots active
+live data unavailable
               </div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Workflow preview
               </p>
-              <div className="mt-4 space-y-3 font-mono text-sm">
-                {[
-                  ["lead", "Nimbus SaaS — score 91 · LinkedIn", "text-emerald-400"],
-                  ["sale", "Order 923012301 paid · 29.160 Kz · PayPay", "text-gold-400"],
-                  ["bot", "Error handler: 0 incidents last 24h", "text-sky-400"],
-                  ["lead", "Kalahari Digital — score 78 · Reddit", "text-emerald-400"],
-                  ["sale", "Proposal sent to Vertex Labs", "text-gold-400"],
-                ].map(([kind, msg, cls], i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className={`badge ${cls} bg-white/5`}>{kind}</span>
-                    <span className="text-zinc-300">{msg}</span>
-                  </div>
-                ))}
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
+                <p className="font-semibold text-zinc-200">Live activity unavailable</p>
+                <p className="mt-1">Atividade, vendas e leads serão apresentados aqui apenas quando existirem na base de dados ligada.</p>
               </div>
             </div>
           </div>
@@ -301,12 +276,9 @@ export function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/auth"
-                className={`mt-8 w-full ${p.highlight ? "btn-primary" : "btn-ghost"}`}
-              >
-                {p.cta}
-              </Link>
+              <div className="mt-8">
+                <CheckoutButton plan={p.name.toLowerCase()} label={p.cta} primary={p.highlight} />
+              </div>
             </motion.div>
           ))}
         </div>
@@ -331,7 +303,7 @@ export function Landing() {
             Let the bots work while you sleep
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-zinc-400">
-            30-day money-back guarantee. Multicaixa Express, PayPay & international USD/EUR transfers accepted.
+            Compras e pagamentos reais exigem um provedor configurado e confirmação verificável. Sem dados de demonstração.
           </p>
           <a href="#lead-form" className="btn-primary mt-8 text-base">
             Request your demo

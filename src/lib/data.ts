@@ -149,7 +149,7 @@ export async function createOrder(input: {
   amount: number;
   method: string;
 }): Promise<Order> {
-  const reference = String(923012293 + Math.floor(Math.random() * 999999));
+  const reference = `manual-${crypto.randomUUID()}`;
   const row = await mapError(
     supabase!
       .from("orders")

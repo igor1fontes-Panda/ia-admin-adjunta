@@ -103,9 +103,7 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
         <div>
           <h3 className="text-lg font-bold text-zinc-50">International payments (USD / EUR)</h3>
           <p className="mt-1 text-sm text-zinc-400">
-            These accounts receive payments for products purchased on our app/website.
-            Always include your <span className="font-semibold text-gold-300">order reference</span> in
-            the transfer description so the payment is matched automatically.
+            O checkout Stripe é o canal de cobrança automática quando o produto estiver publicado e configurado. Transferências bancárias continuam sujeitas a confirmação humana e comprovativo verificável.
           </p>
         </div>
       </div>
@@ -117,9 +115,7 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
 
       {detailed ? (
         <p className="mt-4 text-xs text-zinc-500">
-          Local payments: Multicaixa Express and PayPay references are generated automatically with each
-          order. International transfers are confirmed manually after the funds arrive — contact support
-          with the transfer receipt if you need expedited activation.
+          Pagamentos locais e transferências internacionais ficam indisponíveis até existir um provedor real configurado. Qualquer confirmação deve ser feita manualmente com comprovativo verificável.
         </p>
       ) : null}
     </div>

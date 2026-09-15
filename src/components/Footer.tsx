@@ -27,7 +27,7 @@ export function Footer() {
           <p className="mb-2 font-semibold text-zinc-200">Company</p>
           <p>Fontes AI Admin Adjunta Solutions</p>
           <p className="mt-1">© 2026 · All rights reserved</p>
-          <p className="mt-1">30-day money-back guarantee</p>
+          <p className="mt-1">Termos comerciais publicados quando disponíveis</p>
         </div>
       </div>
     </footer>

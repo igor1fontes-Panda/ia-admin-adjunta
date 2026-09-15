@@ -76,6 +76,10 @@ The system is designed for a brand-new business with zero data:
 
 Payments: Multicaixa Express & PayPay (reference generated per order), 30-day money-back guarantee.
 
+## Supabase CLI in headless environments
+
+The Supabase CLI may fail with `spawn xdg-open ENOENT` when the environment has no desktop opener. This is not an application error: run `supabase login`, copy the authorization URL printed in the terminal, and open it in a browser on your own machine. Do not install `xdg-open`, put tokens in source code, or expose server-only keys in `VITE_*` variables. After authorization, verify access with `supabase projects list`; migrations still require an explicit, authenticated apply step in the intended Supabase project.
+
 ## Commands
 
 ```bash

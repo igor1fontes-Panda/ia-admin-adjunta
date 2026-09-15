@@ -4,8 +4,8 @@ import { isLive, submitLead } from "../lib/data";
 
 /**
  * Public lead-capture form. Writes a REAL row into the Supabase `leads`
- * table (anonymous insert is allowed by RLS; reads are not). The daily
- * qualifier bot then scores it with AI automatically.
+ * table (anonymous insert is allowed by RLS; reads are not). Qualification is
+ * only performed when an authorized agent and verifiable source are configured.
  */
 export function LeadForm() {
   const [busy, setBusy] = useState(false);
@@ -42,8 +42,7 @@ export function LeadForm() {
         <CheckCircle2 size={40} className="mx-auto text-emerald-400" />
         <h3 className="mt-4 text-xl font-bold text-zinc-50">Request received!</h3>
         <p className="mx-auto mt-2 max-w-sm text-sm text-zinc-400">
-          Your request is now a real lead in our system. Our AI qualifier will score
-          it automatically and our team will contact you within one business day.
+          Your request is now a real lead in our system. Qualification will only happen after an authorized agent and a verifiable data source are available.
         </p>
       </div>
     );
