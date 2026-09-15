@@ -1,0 +1,33 @@
+name: Deploy Status
+
+# Lightweight post-deploy verification. Freebuff hosting builds static output;
+# this checks the live URL stays healthy after each push to main.
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: "Public site URL to health-check"
+        required: false
+        default: ""
+  schedule:
+    - cron: "30 */6 * * *"   # every 6 hours
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health-check site
+        env:
+          SITE_URL: ${{ inputs.site_url || vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "SITE_URL not configured — skipping (set repo variable SITE_URL to enable)."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$SITE_URL")
+          echo "GET $SITE_URL → HTTP $code"
+          if [ "$code" -ge 500 ]; then
+            echo "::error::Site is returning server errors (HTTP $code)"
+            exit 1
+          fi
+          echo "✅ Site healthy"

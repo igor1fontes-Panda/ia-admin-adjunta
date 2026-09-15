@@ -1,0 +1,24 @@
+node_modules/
+dist/
+
+# Freebuff hosting build snapshot (platform-managed, changes on every deploy)
+isolate/
+
+# Incremental TS build cache (machine-local)
+tschedb*
+tsconfig.tsbuildinfo
+.env
+.env.local
+.env.*.local
+*.local
+
+# Bot-generated local artifacts (when Supabase is not configured)
+data/
+
+# OS / editor
+.DS_Store
+*.log
+
+# Python bytecode
+__pycache__/
+*.pyc

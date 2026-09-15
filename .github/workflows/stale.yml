@@ -1,0 +1,43 @@
+# Marks inactive issues and pull requests as stale, then closes them after a
+# grace period. Real messages (not placeholders) in the project's language.
+name: Mark stale issues and pull requests
+
+on:
+  schedule:
+    - cron: "17 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v11
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 30
+          days-before-close: 14
+          exempt-issue-labels: pinned,security,roadmap
+          exempt-pr-labels: pinned,security,work-in-progress
+          stale-issue-message: >
+            This issue has been inactive for 30 days. It will be closed in 14
+            days if there is no further activity. If it is still relevant,
+            comment or remove the `stale` label. /
+            Esta issue está inativa há 30 dias e será fechada em 14 dias sem
+            nova atividade. Se ainda é relevante, comente ou remova a label `stale`.
+          stale-pr-message: >
+            This pull request has been inactive for 30 days. It will be closed
+            in 14 days if there is no further activity. /
+            Este pull request está inativo há 30 dias e será fechado em 14
+            dias sem nova atividade.
+          close-issue-message: >
+            Closed for inactivity. Reopen if the problem returns. /
+            Feita por inatividade. Reabra se o problema persistir.
+          close-pr-message: >
+            Closed for inactivity. Reopen or rebase to continue. /
+            Fechado por inatividade. Reabra ou faça rebase para continuar.
+          stale-issue-label: stale
+          stale-pr-label: stale
