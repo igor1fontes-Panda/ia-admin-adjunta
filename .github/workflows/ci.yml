@@ -41,3 +41,14 @@ jobs:
           # Build works with or without live keys
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Publish CI summary
+        if: always()
+        run: |
+          {
+            echo "## CI summary"
+            echo "- Commit: \\`${GITHUB_SHA:0:12}\\`"
+            echo "- Node: \\`$(node --version)\\`"
+            echo "- npm: \\`$(npm --version)\\`"
+            echo "- Result: \\`${{ job.status }}\\`"
+          } >> "$GITHUB_STEP_SUMMARY"
