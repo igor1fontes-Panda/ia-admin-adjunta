@@ -15,6 +15,8 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    // The app intentionally ships one entry chunk for static hosts; keep the warning aligned with that constraint.
+    chunkSizeWarningLimit: 1100,
     // Single-file index chunk: the public Supabase config lives in
     // src/lib/data.ts and MUST stay in the lazily-shared core chunk the
     // platform builder deploys. Route-level code splitting is disabled so
