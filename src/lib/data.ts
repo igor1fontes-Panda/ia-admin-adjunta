@@ -31,13 +31,16 @@ export type DataLayerHealth = {
   message: string;
 };
 
-export async function checkDataLayerHealth(): Promise<DataLayerHealth> {
+export async function checkDataLayerHealth(timeoutMs = 8000): Promise<DataLayerHealth> {
   const checkedAt = new Date().toISOString();
   if (!supabase) return { configured: false, reachable: false, schemaReady: false, checkedAt, message: "Supabase public configuration is missing." };
-  const { error } = await supabase.from("activity_log").select("id").limit(1);
-  if (error) {
-    const schemaReady = !/relation .* does not exist|schema cache|could not find the table/i.test(error.message);
-    return { configured: true, reachable: false, schemaReady, checkedAt, message: schemaReady ? `Supabase responded with an error: ${error.message}` : "Supabase is reachable, but required migrations are not applied." };
+  const timeout = new Promise<{ data: null; error: { message: string } }>((resolve) => {
+    setTimeout(() => resolve({ data: null, error: { message: "Health check timed out." } }), timeoutMs);
+  });
+  const result = await Promise.race([supabase.from("activity_log").select("id").limit(1), timeout]);
+  if (result.error) {
+    const schemaReady = !/relation .* does not exist|schema cache|could not find the table|pgrst205/i.test(result.error.message);
+    return { configured: true, reachable: schemaReady, schemaReady, checkedAt, message: schemaReady ? `Supabase health check failed: ${result.error.message}` : "Supabase is reachable, but required migrations are not applied." };
   }
   return { configured: true, reachable: true, schemaReady: true, checkedAt, message: "Supabase is reachable and the activity schema is available." };
 }

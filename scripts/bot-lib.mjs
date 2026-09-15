@@ -32,6 +32,21 @@ export const supabase = supabaseReady ? createClient(SUPABASE_URL, SERVICE_KEY) 
 
 export const geminiReady = Boolean(GEMINI_KEY);
 export const blackboxReady = Boolean(BLACKBOX_KEY);
+
+export async function verifyBotReadiness() {
+  const checks = {
+    supabase: supabaseReady,
+    model: geminiReady || blackboxReady,
+  };
+  if (!checks.supabase) return { ready: false, checks, message: "Supabase is not configured; no real-data operation can run." };
+  if (!checks.model) return { ready: false, checks, message: "No approved AI provider is configured; no inference will run." };
+  const { error } = await supabase.from("activity_log").select("id").limit(1);
+  if (error) {
+    const diagnosis = diagnoseSupabaseError(error.message);
+    return { ready: false, checks, message: diagnosis || `Supabase health check failed: ${error.message}` };
+  }
+  return { ready: true, checks, message: "Supabase and an approved AI provider are ready." };
+}
 const ai = geminiReady ? new GoogleGenAI({ apiKey: GEMINI_KEY }) : null;
 
 /**
