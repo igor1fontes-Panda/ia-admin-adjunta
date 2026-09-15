@@ -119,8 +119,9 @@ export function Landing() {
             className="mx-auto max-w-3xl text-center"
           >
             <span className="punk-sticker mb-6">
-              <Rocket size={13} className="mr-1.5 inline" /> Autonomous AI admin · v1.2 production
+              <Rocket size={13} className="mr-1.5 inline" /> Human + AI command system · real data only
             </span>
+            <p className="section-kicker mb-4 text-xs font-semibold text-cyan-300">FONTES / AI ADMIN ADJUNTA</p>
             <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-zinc-50 sm:text-6xl">
               Your business, running{" "}
               <span
@@ -182,6 +183,18 @@ export function Landing() {
               <h3 className="mt-4 text-lg font-semibold text-zinc-50">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">{f.desc}</p>
             </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Ecosystem */}
+      <section id="ecosystem" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+        <div className="card grid gap-6 border-cyan-400/20 p-6 sm:grid-cols-3">
+          {[["Mercado", "Sinais e preços apenas de fontes ligadas"], ["Agentes IA", "Pesquisa, vendas e produto com auditoria"], ["Projetos", "Operação humana com controlo administrativo"]].map(([title, desc]) => (
+            <div key={title} className="border-l border-fuchsia-400/40 pl-4">
+              <p className="section-kicker text-xs font-semibold text-fuchsia-300">{title}</p>
+              <p className="mt-2 text-sm text-zinc-400">{desc}</p>
+            </div>
           ))}
         </div>
       </section>

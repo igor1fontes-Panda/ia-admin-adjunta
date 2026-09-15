@@ -33,12 +33,17 @@ export function Header() {
 
   const links = (
     <>
-      <Link to="/" className="text-sm text-zinc-300 transition hover:text-gold-400">
-        Home
+      <Link to="/" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        Início
       </Link>
+      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">Produtos</a>
+      <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">Loja</a>
+      <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">Agentes IA</a>
+      <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">Serviços</a>
+      <a href="/#payments" className="text-sm text-zinc-300 transition hover:text-cyan-300">Suporte</a>
       <Link
         to="/dashboard"
-        className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-gold-400"
+        className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-cyan-300"
       >
         <LayoutDashboard size={15} /> Dashboard
       </Link>
@@ -62,8 +67,8 @@ export function Header() {
             <span className="brand-letter brand-letter-a">A</span>
             <Bot size={13} aria-hidden="true" />
           </span>
-          <span className="text-sm font-bold tracking-wide text-zinc-50 sm:text-base">
-            Fontes AI <span className="text-gold-400">Admin Adjunta</span>
+          <span className="brand-wordmark text-xs font-bold tracking-wide text-zinc-50 sm:text-sm">
+            Fontes <span className="text-cyan-300">AI</span> <span className="text-fuchsia-400">Admin Adjunta</span>
           </span>
         </Link>
 

@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -17,7 +16,7 @@ body,
 
 body {
   @apply bg-ink-950 text-zinc-100 antialiased;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
 }
 
 .app-shell {
@@ -36,7 +35,8 @@ body {
   background:
     radial-gradient(circle at 12% 18%, rgba(34, 211, 238, 0.15), transparent 28%),
     radial-gradient(circle at 86% 28%, rgba(236, 72, 153, 0.13), transparent 30%),
-    linear-gradient(135deg, rgba(245, 158, 11, 0.06), transparent 38%),
+    linear-gradient(135deg, rgba(139, 92, 246, 0.08), transparent 38%),
+    url('/anime-tech-bg.png') center / cover fixed,
     #07070b;
 }
 
@@ -64,7 +64,7 @@ body {
   gap: 1px;
   overflow: hidden;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #fbbf24, #f97316);
+  background: linear-gradient(135deg, #22d3ee 0%, #8b5cf6 52%, #ec4899 100%);
   color: #08080c;
 }
 .brand-letter { font-size: 0.85rem; font-weight: 900; line-height: 1; }
@@ -77,7 +77,7 @@ body {
 @keyframes brand-bot { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.18); } }
 
 ::selection {
-  background: rgba(245, 158, 11, 0.35);
+  background: rgba(236, 72, 153, 0.35);
 }
 
 /* Thin scrollbars */
@@ -154,9 +154,20 @@ body {
 @layer components {
   .card {
     @apply rounded-2xl border border-white/10 bg-ink-900/80 backdrop-blur-sm;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+  }
+  .brand-wordmark {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 18px rgba(34, 211, 238, 0.28);
+  }
+  .section-kicker {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.18em;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gold-500 px-5 py-2.5 text-sm font-semibold text-ink-950 transition hover:bg-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 py-2.5 text-sm font-semibold text-ink-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:opacity-50;
+    box-shadow: 0 0 22px rgba(34, 211, 238, 0.2);
   }
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-zinc-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 disabled:opacity-50;
@@ -172,8 +183,8 @@ body {
   }
   .glow-gold {
     box-shadow:
-      0 0 0 1px rgba(245, 158, 11, 0.25),
-      0 8px 40px -8px rgba(245, 158, 11, 0.45);
+      0 0 0 1px rgba(34, 211, 238, 0.28),
+      0 8px 40px -8px rgba(236, 72, 153, 0.35);
   }
   .glow-punk {
     box-shadow:
