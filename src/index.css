@@ -36,8 +36,9 @@ body {
     radial-gradient(circle at 12% 18%, rgba(34, 211, 238, 0.15), transparent 28%),
     radial-gradient(circle at 86% 28%, rgba(236, 72, 153, 0.13), transparent 30%),
     linear-gradient(135deg, rgba(139, 92, 246, 0.08), transparent 38%),
-    url('/anime-tech-bg.png') center / cover fixed,
+    url('/anime-neon-background.png') center / cover fixed,
     #07070b;
+  animation: anime-background-drift 22s ease-in-out infinite alternate;
 }
 
 .page-dashboard::before { background: radial-gradient(circle at 78% 12%, rgba(34, 211, 238, 0.16), transparent 28%), linear-gradient(135deg, rgba(245, 158, 11, 0.06), transparent 40%), #07070b; }
@@ -71,10 +72,45 @@ body {
 .brand-letter-f { animation: brand-f 2.8s ease-in-out infinite; }
 .brand-letter-a { animation: brand-a 2.8s ease-in-out 0.18s infinite; }
 .brand-mark svg { animation: brand-bot 2.8s ease-in-out 0.36s infinite; }
+.brand-orbit {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  transform: rotate(-28deg) scaleX(0.72);
+  animation: brand-orbit 4s linear infinite;
+}
+.brand-orbit::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+
+@keyframes anime-background-drift {
+  0% { background-position: center, 48% 50%; }
+  100% { background-position: center, 54% 46%; }
+}
+@keyframes brand-orbit { to { transform: rotate(332deg) scaleX(0.72); } }
 
 @keyframes brand-f { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-4px) rotate(8deg); } }
 @keyframes brand-a { 0%, 100% { transform: translateY(0) rotate(8deg); } 50% { transform: translateY(4px) rotate(-8deg); } }
 @keyframes brand-bot { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.18); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell::before,
+  .brand-letter-f,
+  .brand-letter-a,
+  .brand-mark svg,
+  .brand-orbit {
+    animation: none;
+  }
+}
 
 ::selection {
   background: rgba(236, 72, 153, 0.35);

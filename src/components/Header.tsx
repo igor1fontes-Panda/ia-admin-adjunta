@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Bot, LayoutDashboard, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isLive, supabase } from "../lib/data";
 
@@ -63,9 +63,10 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <span className="brand-mark glow-gold" aria-label="Fontes AI Admin Adjunta">
+            <span className="brand-orbit" aria-hidden="true" />
             <span className="brand-letter brand-letter-f">F</span>
             <span className="brand-letter brand-letter-a">A</span>
-            <Bot size={13} aria-hidden="true" />
+            <Sparkles size={11} aria-hidden="true" />
           </span>
           <span className="brand-wordmark text-xs font-bold tracking-wide text-zinc-50 sm:text-sm">
             Fontes <span className="text-cyan-300">AI</span> <span className="text-fuchsia-400">Admin Adjunta</span>
