@@ -7,9 +7,11 @@ import {
   Gauge,
   LineChart,
   Lock,
+  Palette,
   Radar,
   Rocket,
   ShieldCheck,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { Footer } from "../components/Footer";
@@ -196,6 +198,44 @@ export function Landing() {
               <p className="mt-2 text-sm text-zinc-400">{desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Visual direction board */}
+      <section id="visual-lab" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
+        <div className="card overflow-hidden border-fuchsia-400/20 p-6 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="badge border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
+                <Palette size={13} /> Visual lab
+              </span>
+              <h2 className="mt-4 text-3xl font-bold text-zinc-50 sm:text-4xl">Six identities. One living ecosystem.</h2>
+              <p className="mt-3 max-w-2xl text-zinc-400">Escolhe uma direção para cada superfície. A implementação atual combina Neon Anime Punk no website com Cyber Market Command na APP.</p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-emerald-300"><Sparkles size={14} /> Active direction: hybrid</div>
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["Fontes Pulse", "F geométrico, linhas de energia e pulso ciano/magenta.", "from-cyan-300 to-fuchsia-400", "Website accent"],
+              ["AI Human Core", "Rosto humano e circuito para confiança e proximidade.", "from-violet-300 to-coral-400", "Trust layer"],
+              ["Neon Orbit", "Órbita luminosa para IA, agentes e dados conectados.", "from-cyan-300 to-blue-500", "Motion system"],
+              ["Anime Visor", "Emblema futurista, scanlines e glitch subtil.", "from-fuchsia-400 to-violet-500", "Campaign mode"],
+              ["Command Mark", "Monograma modular com estados de operação reais.", "from-emerald-300 to-cyan-400", "Admin active"],
+              ["Dual Identity", "Fontes artístico; AI Admin Adjunta técnico e operacional.", "from-fuchsia-400 to-cyan-300", "Selected hybrid"],
+            ].map(([name, desc, gradient, label], index) => (
+              <motion.div key={name} whileHover={{ y: -4 }} className={`group rounded-2xl border p-4 ${index === 5 ? "border-cyan-300/60 bg-cyan-300/[0.08] shadow-[0_0_30px_rgba(34,211,238,0.12)]" : "border-white/10 bg-white/[0.03]"}`}>
+                <div className={`mb-4 h-1.5 w-24 rounded-full bg-gradient-to-r ${gradient}`} />
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-semibold text-zinc-100">{name}</h3>
+                  <span className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{desc}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2 text-xs text-zinc-400">
+            {["Neon Anime Punk website", "Cyber Market Command dashboard", "Human-Tech checkout", "prefers-reduced-motion", "real data only"].map((item) => <span key={item} className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5">{item}</span>)}
+          </div>
         </div>
       </section>
 
