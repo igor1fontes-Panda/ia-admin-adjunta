@@ -207,7 +207,9 @@ export async function fetchActivity(): Promise<Activity[]> {
   const rows = await mapError(
     supabase!.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50),
   ) as DbRow[];
-  return (rows ?? []).map((r) => ({ id: r.id, kind: r.kind, message: r.message, created_at: r.created_at }));
+  return (rows ?? [])
+    .filter((r) => !/^Database initialized/i.test(String(r.message ?? "")))
+    .map((r) => ({ id: r.id, kind: r.kind, message: r.message, created_at: r.created_at }));
 }
 
 // ---- Agent learning memory (public read via RLS) ----
