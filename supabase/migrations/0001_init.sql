@@ -91,9 +91,9 @@ create policy "leads_public_insert" on public.leads
 -- ============ HARDENING: PUBLIC FORM CANNOT SET SCORE/STATUS ============
 
 create or replace function public.forces_default_lead_fields()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
-  if current_role = 'anon' then
+  if current_user = 'anon' then
     new.score := least(new.score, 60);          -- public form cannot self-qualify
     new.status := 'new';
     new.ai_action := null;

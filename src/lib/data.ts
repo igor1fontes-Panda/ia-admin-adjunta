@@ -23,6 +23,25 @@ export const supabase: SupabaseClient | null =
 
 export const isLive = supabase !== null;
 
+export type DataLayerHealth = {
+  configured: boolean;
+  reachable: boolean;
+  schemaReady: boolean;
+  checkedAt: string;
+  message: string;
+};
+
+export async function checkDataLayerHealth(): Promise<DataLayerHealth> {
+  const checkedAt = new Date().toISOString();
+  if (!supabase) return { configured: false, reachable: false, schemaReady: false, checkedAt, message: "Supabase public configuration is missing." };
+  const { error } = await supabase.from("activity_log").select("id").limit(1);
+  if (error) {
+    const schemaReady = !/relation .* does not exist|schema cache|could not find the table/i.test(error.message);
+    return { configured: true, reachable: false, schemaReady, checkedAt, message: schemaReady ? `Supabase responded with an error: ${error.message}` : "Supabase is reachable, but required migrations are not applied." };
+  }
+  return { configured: true, reachable: true, schemaReady: true, checkedAt, message: "Supabase is reachable and the activity schema is available." };
+}
+
 async function mapError<T>(
   p: PromiseLike<{ data: T | null; error: { message: string } | null }>,
 ): Promise<T> {
