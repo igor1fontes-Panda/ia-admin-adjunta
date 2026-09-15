@@ -471,9 +471,15 @@ function Overview({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
           <h3 className="flex items-center gap-2 font-semibold text-zinc-50">
-            <Bot size={18} className="text-gold-400" /> Autonomous activity
+            <Bot size={18} className="text-gold-400" /> Live activity
           </h3>
+          <p className="mt-1 text-xs text-emerald-300">Real Supabase activity only</p>
+        </div>
+        <span className="badge bg-emerald-500/15 text-emerald-300">Verified data</span>
+      </div>
           {activity.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">
               The autonomous agents report here the moment they run — lead scoring, daily insights and incident triage, straight from the real activity log.
