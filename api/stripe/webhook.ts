@@ -11,6 +11,28 @@ async function rawBody(req: any): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+function getSignature(req: any): string | undefined {
+  const value = req.headers["stripe-signature"];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function isMinimalResource(value: unknown): value is { id: string; object?: string } {
+  if (!value || typeof value !== "object") return false;
+  const resource = value as { id?: unknown; object?: unknown };
+  return typeof resource.id === "string" && (resource.object === undefined || typeof resource.object === "string");
+}
+
+async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["data"]["object"]> {
+  const resource = event.data.object;
+  if (!isMinimalResource(resource)) return resource;
+
+  if (event.type.startsWith("setup_intent.")) {
+    return stripe.setupIntents.retrieve(resource.id);
+  }
+
+  return resource;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -20,14 +42,18 @@ export default async function handler(req: any, res: any) {
   let event: Stripe.Event;
   try {
     const payload = await rawBody(req);
-    const signature = req.headers["stripe-signature"];
-    event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(payload, getSignature(req), process.env.STRIPE_WEBHOOK_SECRET);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
 
+  if (event.type.startsWith("setup_intent.")) {
+    await hydrateEventResource(event);
+    return res.status(200).json({ received: true });
+  }
+
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-    const session = event.data.object as Stripe.Checkout.Session;
+    const session = await hydrateEventResource(event) as Stripe.Checkout.Session;
     if (session.payment_status !== "paid" && event.type === "checkout.session.completed") {
       return res.status(200).json({ received: true });
     }
