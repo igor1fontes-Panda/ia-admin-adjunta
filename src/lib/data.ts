@@ -16,7 +16,10 @@ const DEFAULT_SUPABASE_URL = "https://aebdqztoolszdzfbdlbp.supabase.co";
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ObBPy7j5pmJOzhQhA-tOhw_2yaAXu24";
 
 const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
-const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+const anonKey =
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase: SupabaseClient | null =
   url && anonKey ? createSupabaseClient(url, anonKey) : null;

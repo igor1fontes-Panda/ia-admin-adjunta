@@ -20,10 +20,21 @@ export function Auth() {
     setBusy(true);
     setError(null);
     setNotice(null);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      setBusy(false);
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      setBusy(false);
+      return;
+    }
     try {
       if (isLive && supabase) {
         if (mode === "signup") {
-          const { data, error } = await supabase.auth.signUp({ email, password });
+          const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password });
           if (error) throw error;
           // With "Confirm email" disabled, signUp returns a session immediately —
           // sign the user straight in instead of telling them to re-sign-in.
@@ -33,7 +44,7 @@ export function Auth() {
           }
           setNotice("Account created! Check your email to confirm, then sign in.");
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
           if (error) throw error;
           navigate(from, { replace: true });
         }
@@ -97,7 +108,7 @@ export function Auth() {
                 id="password"
                 type="password"
                 required
-                minLength={4}
+                minLength={8}
                 className="input pl-10"
                 placeholder="••••••••"
                 value={password}
