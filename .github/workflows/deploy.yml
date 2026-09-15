@@ -70,8 +70,24 @@ jobs:
 
       - name: Deploy to production
         if: steps.creds.outputs.ready == 'true'
+        id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           url=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed: $url"
+
+      - name: Publish deployment summary
+        if: always()
+        run: |
+          {
+            echo "## Vercel deployment summary"
+            echo "- Commit: \\`${GITHUB_SHA:0:12}\\`"
+            echo "- Credentials: \\`${{ steps.creds.outputs.ready }}\\`"
+            if [ -n "${{ steps.deploy.outputs.url }}" ]; then
+              echo "- Deployment: ${{ steps.deploy.outputs.url }}"
+            else
+              echo "- Deployment: skipped (native Vercel Git integration may deploy this commit)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
