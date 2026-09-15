@@ -83,8 +83,8 @@ jobs:
         run: |
           {
             echo "## Vercel deployment summary"
-            echo "- Commit: \\`${GITHUB_SHA:0:12}\\`"
-            echo "- Credentials: \\`${{ steps.creds.outputs.ready }}\\`"
+            echo "- Commit: `${GITHUB_SHA:0:12}`"
+            echo "- Credentials: `${{ steps.creds.outputs.ready }}`"
             if [ -n "${{ steps.deploy.outputs.url }}" ]; then
               echo "- Deployment: ${{ steps.deploy.outputs.url }}"
             else
