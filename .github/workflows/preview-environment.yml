@@ -1,0 +1,30 @@
+name: Preview environment controller
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  deployments: write
+
+concurrency:
+  group: preview-environment-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Manage preview environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Preview environment controller
+        uses: cloudposse/github-action-preview-environment-controller@0.11.0
+        with:
+          env-label: |
+            preview: deploy
+          labels: '[]'
+          open: ${{ github.event.action != 'closed' }}
