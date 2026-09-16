@@ -33,6 +33,12 @@ jobs:
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
           echo "✅ Python bots compile"
 
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -45,6 +51,7 @@ jobs:
           # Build works with or without live keys
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_MOCK_DATA: "true"
 
       - name: Check client bundle for server secrets
         run: |

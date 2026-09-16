@@ -11,6 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint src",
     "typecheck": "tsc -b --noEmit",
     "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
     "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",
@@ -38,10 +40,19 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^24.3.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.10.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "jsdom": "^30.0.1",
     "typescript": "^5.5.4",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^4.1.11"
   }
 }

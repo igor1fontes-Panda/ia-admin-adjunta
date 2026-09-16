@@ -1,6 +1,7 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
+import { isMockMode, mockData } from "./data.mock";
 
 /**
  * REAL DATA ONLY — no demo mode, no simulations.
@@ -34,6 +35,7 @@ export type DataLayerHealth = {
 
 export async function checkDataLayerHealth(timeoutMs = 8000): Promise<DataLayerHealth> {
   const checkedAt = new Date().toISOString();
+  if (isMockMode) return { configured: true, reachable: true, schemaReady: true, checkedAt, message: "Offline mock data is enabled." };
   if (!supabase) return { configured: false, reachable: false, schemaReady: false, checkedAt, message: "Supabase public configuration is missing." };
   const timeout = new Promise<{ data: null; error: { message: string } }>((resolve) => {
     setTimeout(() => resolve({ data: null, error: { message: "Health check timed out." } }), timeoutMs);
@@ -57,6 +59,7 @@ async function mapError<T>(
 // ---- Leads ----
 
 export async function fetchLeads(): Promise<Lead[]> {
+  if (isMockMode) return mockData.leads;
   const rows = await mapError(
     supabase!.from("leads").select("*").order("created_at", { ascending: false }).limit(200),
   ) as any[];
@@ -85,6 +88,7 @@ const PLAN_MRR: Record<Client["plan"], number> = { starter: 1250, professional: 
 type DbRow = Record<string, any>;
 
 export async function fetchClients(): Promise<Client[]> {
+  if (isMockMode) return mockData.clients;
   const rows = await mapError(
     supabase!.from("clients").select("*").order("created_at", { ascending: false }).limit(200),
   ) as DbRow[];
@@ -125,6 +129,7 @@ export async function createClient(input: {
 // ---- Orders ----
 
 export async function fetchOrders(): Promise<Order[]> {
+  if (isMockMode) return mockData.orders;
   const rows = await mapError(
     supabase!.from("orders").select("*").order("created_at", { ascending: false }).limit(200),
   ) as DbRow[];
@@ -202,6 +207,7 @@ export async function submitLead(input: {
 // ---- Activity feed ----
 
 export async function fetchActivity(): Promise<Activity[]> {
+  if (isMockMode) return mockData.activity;
   const rows = await mapError(
     supabase!.from("activity_log").select("*").order("created_at", { ascending: false }).limit(50),
   ) as DbRow[];
@@ -215,6 +221,7 @@ export async function fetchActivity(): Promise<Activity[]> {
 export type AgentMemoryRow = { agent: string; key: string; value: unknown; updated_at: string };
 
 export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
+  if (isMockMode) return [];
   const rows = await mapError(
     supabase!.from("agent_memory").select("*").order("updated_at", { ascending: false }),
   ) as DbRow[];

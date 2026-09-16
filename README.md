@@ -31,8 +31,19 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-**Real data only.** The app requires a connected Supabase project. Without
-keys, every screen shows a step-by-step setup checklist instead of fake data.
+**Real data by default.** The app requires a connected Supabase project. Without
+keys, every screen shows a step-by-step setup checklist.
+
+### Running without Supabase
+
+For local UI work and tests, enable the deterministic fixture dataset:
+
+```bash
+VITE_MOCK_DATA=true npm run dev
+```
+
+Mock mode is intentionally opt-in and never enabled in production. It provides
+one valid lead, client, order, and activity item without contacting Supabase.
 
 ## Going live with real data
 
