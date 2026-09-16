@@ -14,10 +14,12 @@
     "typecheck": "tsc -b --noEmit",
     "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
     "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",
+    "db:neon:health": "node --env-file-if-exists=.env.local scripts/neon-health.mjs",
     "bot:insight": "python3 ai_engine.py"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@supabase/supabase-js": "^2.45.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

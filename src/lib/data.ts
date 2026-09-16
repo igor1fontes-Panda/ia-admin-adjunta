@@ -4,22 +4,20 @@ import { computeMetrics } from "./engine";
 
 /**
  * REAL DATA ONLY — no demo mode, no simulations.
- * The app requires VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY.
+ * The app requires public Supabase URL + publishable/anon key variables.
  * If they are missing, components render a setup checklist instead of fake data.
  */
 
-// Supabase project config. The URL and the PUBLISHABLE key are public by
-// design (security is enforced by row-level security server-side — see
-// supabase/migrations/0001_init.sql). They are baked in as defaults so the
-// static production build always connects, and can be overridden via env.
-const DEFAULT_SUPABASE_URL = "https://aebdqztoolszdzfbdlbp.supabase.co";
-const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ObBPy7j5pmJOzhQhA-tOhw_2yaAXu24";
-
-const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL;
+// These values are public by design. Secrets such as service-role keys must
+// never be used here; row-level security remains the authorization boundary.
+const env = import.meta.env as Record<string, string | undefined>;
+const url = env.VITE_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || "";
 const anonKey =
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
-  DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+  env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  env.VITE_SUPABASE_ANON_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "";
 
 export const supabase: SupabaseClient | null =
   url && anonKey ? createSupabaseClient(url, anonKey) : null;
