@@ -20,6 +20,7 @@
   "dependencies": {
     "@google/genai": "^2.22.0",
     "@neondatabase/serverless": "^1.1.0",
+    "@supabase/server": "^1.6.1",
     "@supabase/supabase-js": "^2.45.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
