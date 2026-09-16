@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -9,11 +9,20 @@ import {
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
-import { Landing } from "./pages/Landing";
-import { Auth } from "./pages/Auth";
-import { Dashboard } from "./pages/Dashboard";
 import { SetupRequired } from "./components/SetupRequired";
 import { isLive, supabase } from "./lib/data";
+
+const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
+const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+
+function PageSpinner() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -34,12 +43,14 @@ function AppFrame() {
       <div className="anime-skyline" aria-hidden="true" />
       <Header />
       <main className="relative z-10 flex-1">
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<DashboardGate />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<PageSpinner />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={<DashboardGate />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

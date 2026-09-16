@@ -33,6 +33,12 @@ jobs:
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
           echo "✅ Python bots compile"
 
+      - name: Python dependency audit
+        run: |
+          pip install pip-audit -q
+          pip-audit -r requirements.txt
+          echo "✅ Python dependencies clean"
+
       - name: Dependency audit
         run: npm audit --audit-level=high
 
