@@ -80,6 +80,32 @@ Payments: Multicaixa Express & PayPay (reference generated per order), 30-day mo
 
 The Supabase CLI may fail with `spawn xdg-open ENOENT` when the environment has no desktop opener. This is not an application error: run `supabase login`, copy the authorization URL printed in the terminal, and open it in a browser on your own machine. Do not install `xdg-open`, put tokens in source code, or expose server-only keys in `VITE_*` variables. After authorization, verify access with `supabase projects list`; migrations still require an explicit, authenticated apply step in the intended Supabase project.
 
+## Migration alignment & pending migrations (0003 / 0004)
+
+The Supabase GitHub integration's "Supabase Preview" check fails with
+"Remote migration versions not found in local migrations directory" when the
+remote migration history contains versions that don't exist in
+`supabase/migrations/` — and Vercel gates production deploys on that check.
+
+The one-shot fix tool (a vendored CLI lives at `.tools/supabase`, gitignored):
+
+```bash
+# 1. export the dashboard access token (supabase.com/dashboard/account/tokens)
+export SUPABASE_ACCESS_TOKEN=sbp_...
+
+# 2. inspect — writes local-vs-remote migration state to supabase-migration-state.txt
+sh scripts/fix-supabase-migrations.sh inspect
+
+# 3. fix — marks remote-only history entries reverted (objects untouched; our
+#    migrations are idempotent), pushes all local migrations (applies 0003 +
+#    0004), then verifies. Never pass local versions (0001..0004).
+sh scripts/fix-supabase-migrations.sh fix <remote-only-version> [...]
+```
+
+Requires a working service key / access token: if the dashboard shows a
+truncated `sb_secret_...` key that the API rejects with 401, regenerate it in
+Supabase → Project Settings → API and use the full value.
+
 ## Commands
 
 ```bash
