@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { createServerSupabaseClient } from "../lib/supabase-server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -58,11 +58,12 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ received: true });
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceRoleKey) return res.status(503).json({ error: "Order database is not configured." });
-
-    const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    let admin;
+    try {
+      admin = createServerSupabaseClient();
+    } catch {
+      return res.status(503).json({ error: "Order database is not configured." });
+    }
     const amount = (session.amount_total || 0) / 100;
     const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
     const { error } = await admin.from("orders").upsert(
