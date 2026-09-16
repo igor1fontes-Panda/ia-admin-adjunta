@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
 import { isLive, supabase } from "../lib/data";
+import { errorMessage } from "../lib/errors";
 
 export function Auth() {
   const navigate = useNavigate();
@@ -53,8 +54,8 @@ export function Auth() {
           "Accounts are disabled until the database is connected (see dashboard setup steps).",
         );
       }
-    } catch (err: any) {
-      setError(err.message ?? "Something went wrong");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Something went wrong"));
     } finally {
       setBusy(false);
     }

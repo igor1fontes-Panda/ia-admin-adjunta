@@ -32,7 +32,6 @@ import {
   Package,
   Plus,
   RefreshCcw,
-  Search,
   ShieldCheck,
   Target,
   TrendingUp,
@@ -43,6 +42,7 @@ import { PaymentDetails } from "../components/PaymentDetails";
 import type { Activity, Client, Lead, Metric, Order, ProductPackStage } from "../types";
 import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
 import type { AgentMemoryRow } from "../lib/data";
+import { errorMessage } from "../lib/errors";
 import {
   agentStatus,
   computeMetrics,
@@ -115,9 +115,9 @@ export function Dashboard() {
       setActivity(activity);
       setMemory(mem);
       setMetrics(computeMetrics(leads, clients, orders));
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (requestId !== requestRef.current) return;
-      const msg = String(e?.message ?? "Failed to load data from Supabase");
+      const msg = errorMessage(e, "Failed to load data from Supabase");
       if (/could not find the table|pgrst205|schema cache|does not exist/i.test(msg)) {
         setError(
           "Database tables are not created yet. One-time setup: open your Supabase project → SQL Editor → run supabase/migrations/0001_init.sql, then 0002_agent_memory.sql. The command center fills with your real data immediately after.",
@@ -175,8 +175,8 @@ export function Dashboard() {
     setError(null);
     try {
       await fn();
-    } catch (e: any) {
-      setError(e?.message ?? "Operation failed");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Operation failed"));
     }
   }
 
@@ -320,8 +320,7 @@ export function Dashboard() {
           activity={activity}
           orders={orders.slice(0, 5)}
           leads={leads}
-          clients={clients}
-          pulse={todayPulse(leads, orders, activity)}
+    pulse={todayPulse(leads, orders, activity)}
           steps={onboardingSteps(leads, clients, orders, activity)}
         />
       ) : null}
@@ -364,7 +363,6 @@ function Overview({
   activity,
   orders,
   leads,
-  clients,
   pulse,
   steps,
 }: {
@@ -372,7 +370,6 @@ function Overview({
   activity: Activity[];
   orders: Order[];
   leads: Lead[];
-  clients: Client[];
   pulse: Pulse;
   steps: OnboardingStep[];
 }) {
