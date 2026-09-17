@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for data.mock.ts</title>
+    <title>Code coverage report for lib/errors.ts</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="prettify.css" />
-    <link rel="stylesheet" href="base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.png" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(sort-arrow-sprite.png);
+            background-image: url(../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,27 +19,27 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="index.html">All files</a> data.mock.ts</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">lib</a> errors.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>4/4</span>
             </div>
         
             
@@ -72,24 +72,57 @@
 <a name='L7'></a><a href='#L7'>7</a>
 <a name='L8'></a><a href='#L8'>8</a>
 <a name='L9'></a><a href='#L9'>9</a>
-<a name='L10'></a><a href='#L10'>10</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import type { Activity, Client, Lead, Order } from "../types";
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export class AppError extends Error {
+  readonly code: string;
+  constructor(message: string, code = "APP_ERROR") {
+    super(message);
+    this.name = "AppError";
+    this.code = code;
+  }
+}
 &nbsp;
-export const mockLeads: Lead[] = [{ id: "mock-lead-1", company: "Exemplo Lda.", contact_name: "Ana Silva", email: "ana@example.test", niche: "Consultoria", channel: "website", score: 72, status: "qualified", ai_action: "Agendar descoberta", created_at: "2025-01-15T10:00:00.000Z" }];
-export const mockClients: Client[] = [{ id: "mock-client-1", name: "Exemplo Lda.", email: "finance@example.test", plan: "professional", mrr: 2916, status: "active", created_at: "2025-01-10T10:00:00.000Z" }];
-export const mockOrders: Order[] = [{ id: "mock-order-1", client_id: "mock-client-1", client_name: "Exemplo Lda.", amount: 2916, currency: "AOA", method: "card", status: "paid", reference: "mock-order-1", created_at: "2025-01-20T10:00:00.000Z" }];
-export const mockActivity: Activity[] = [{ id: "mock-activity-1", kind: "system", message: "Offline mock mode enabled.", created_at: "2025-01-20T10:00:00.000Z" }];
+export class SupabaseError extends AppError {
+  constructor(message: string) { super(message, "SUPABASE_ERROR"); this.name = "SupabaseError"; }
+}
 &nbsp;
-export const mockData = { leads: mockLeads, clients: mockClients, orders: mockOrders, activity: mockActivity };
-export const isMockMode = String((import.meta.env as Record&lt;string, string | undefined&gt;).VITE_MOCK_DATA ?? "").toLowerCase() === "true";
+export class ValidationError extends AppError {
+  constructor(message: string) { super(message, "VALIDATION_ERROR"); this.name = "ValidationError"; }
+}
+&nbsp;
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error &amp;&amp; error.message ? error.message : fallback;
+}
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -97,16 +130,16 @@ export const isMockMode = String((import.meta.env as Record&lt;string, string | 
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-09-16T16:59:49.270Z
+                at 2026-09-17T10:14:37.732Z
             </div>
-        <script src="prettify.js"></script>
+        <script src="../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="sorter.js"></script>
-        <script src="block-navigation.js"></script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
     </body>
 </html>
     
