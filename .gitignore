@@ -15,6 +15,10 @@ tsconfig.tsbuildinfo
 # Bot-generated local artifacts (when Supabase is not configured)
 data/
 
+# Vendored CLI binaries and migration-state snapshots (contain no secrets but are machine-local)
+.tools/
+supabase-migration-state.txt
+
 # OS / editor
 .DS_Store
 *.log
@@ -22,3 +26,4 @@ data/
 # Python bytecode
 __pycache__/
 *.pyc
+.venv-pip-audit/

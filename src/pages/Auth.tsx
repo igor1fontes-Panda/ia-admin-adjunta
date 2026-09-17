@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
 import { isLive, supabase } from "../lib/data";
 import { useT } from "../lib/i18n";
+import { errorMessage } from "../lib/errors";
 
 export function Auth() {
   const navigate = useNavigate();
@@ -53,8 +54,8 @@ export function Auth() {
       } else {
         throw new Error(t("auth.errDb"));
       }
-    } catch (err: any) {
-      setError(err.message ?? t("auth.errGeneric"));
+    } catch (err: unknown) {
+      setError(errorMessage(err, t("auth.errGeneric")));
     } finally {
       setBusy(false);
     }

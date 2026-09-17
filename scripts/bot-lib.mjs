@@ -10,9 +10,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-// Service key: legacy SUPABASE_SERVICE_ROLE_KEY (JWT) or new-model SUPABASE_SECRET_KEY (sb_secret_…)
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
+// Service key: new-model SUPABASE_SECRET_KEY (sb_secret_…) preferred, legacy SUPABASE_SERVICE_ROLE_KEY (JWT) accepted.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
 const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
@@ -169,7 +169,7 @@ export function parseJsonObject(raw) {
 export function diagnoseSupabaseError(message) {
   const msg = String(message ?? "");
   if (/unregistered api key|invalid api key/i.test(msg)) {
-    return "Recurring incident: Supabase rejected the service key (HTTP 401). Fix: Supabase Dashboard → Project Settings → API → copy the FULL sb_secret_ key → update the SUPABASE_SERVICE_ROLE_KEY secret. The stored key is truncated or was rotated.";
+    return "Recurring incident: Supabase rejected the service key (HTTP 401). Fix: Supabase Dashboard → Project Settings → API → copy the FULL sb_secret_ key → update the SUPABASE_SECRET_KEY secret. The stored key is truncated or was rotated.";
   }
   if (/relation .* does not exist|could not find the table/i.test(msg)) {
     return "Recurring incident: a required table is missing. Fix: run supabase/migrations/0001_init.sql and 0002_agent_memory.sql in the Supabase SQL Editor.";

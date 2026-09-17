@@ -40,8 +40,29 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-**Real data only.** The app requires a connected Supabase project. Without
-keys, every screen shows a step-by-step setup checklist instead of fake data.
+**Real data by default.** The app requires a connected Supabase project. Without
+keys, every screen shows a step-by-step setup checklist.
+
+### Local container and health checks
+
+Run the complete static app locally with Docker and deterministic fixtures:
+
+```bash
+docker compose up --build
+```
+
+The static health document is available at `/health.json` and returns the service status without contacting external services. Python dependencies are pinned in `requirements.txt` and mirrored in `requirements.lock`; CI runs both JavaScript and Python dependency audits. Run `npm run audit:python` locally to install the pinned audit tool and execute the same Python audit as CI.
+
+### Running without Supabase
+
+For local UI work and tests, enable the deterministic fixture dataset:
+
+```bash
+VITE_MOCK_DATA=true npm run dev
+```
+
+Mock mode is intentionally opt-in and never enabled in production. It provides
+one valid lead, client, order, and activity item without contacting Supabase.
 
 ## Going live with real data
 
@@ -166,6 +187,32 @@ Payments: Multicaixa Express & PayPay (reference generated per order), 30-day mo
 ## Supabase CLI in headless environments
 
 The Supabase CLI may fail with `spawn xdg-open ENOENT` when the environment has no desktop opener. This is not an application error: run `supabase login`, copy the authorization URL printed in the terminal, and open it in a browser on your own machine. Do not install `xdg-open`, put tokens in source code, or expose server-only keys in `VITE_*` variables. After authorization, verify access with `supabase projects list`; migrations still require an explicit, authenticated apply step in the intended Supabase project.
+
+## Migration alignment & pending migrations (0003 / 0004)
+
+The Supabase GitHub integration's "Supabase Preview" check fails with
+"Remote migration versions not found in local migrations directory" when the
+remote migration history contains versions that don't exist in
+`supabase/migrations/` — and Vercel gates production deploys on that check.
+
+The one-shot fix tool (a vendored CLI lives at `.tools/supabase`, gitignored):
+
+```bash
+# 1. export the dashboard access token (supabase.com/dashboard/account/tokens)
+export SUPABASE_ACCESS_TOKEN=sbp_...
+
+# 2. inspect — writes local-vs-remote migration state to supabase-migration-state.txt
+sh scripts/fix-supabase-migrations.sh inspect
+
+# 3. fix — marks remote-only history entries reverted (objects untouched; our
+#    migrations are idempotent), pushes all local migrations (applies 0003 +
+#    0004), then verifies. Never pass local versions (0001..0004).
+sh scripts/fix-supabase-migrations.sh fix <remote-only-version> [...]
+```
+
+Requires a working service key / access token: if the dashboard shows a
+truncated `sb_secret_...` key that the API rejects with 401, regenerate it in
+Supabase → Project Settings → API and use the full value.
 
 ## Commands
 

@@ -1,41 +1,16 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Globe, LayoutDashboard, LogOut, Menu, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isLive, supabase } from "../lib/data";
-import { setLang, useLang, useT, type Lang } from "../lib/i18n";
-
-function LangSwitch() {
-  const lang = useLang();
-  const t = useT();
-  const options: Lang[] = ["pt", "en"];
-  return (
-    <div
-      className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1"
-      role="group"
-      aria-label={t("lang.label")}
-    >
-      <Globe size={13} className="ml-1.5 text-zinc-500" aria-hidden="true" />
-      {options.map((code) => (
-        <button
-          key={code}
-          onClick={() => setLang(code)}
-          aria-pressed={lang === code}
-          className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition ${
-            lang === code ? "bg-cyan-300 text-ink-950" : "text-zinc-400 hover:text-zinc-200"
-          }`}
-        >
-          {code}
-        </button>
-      ))}
-    </div>
-  );
-}
+import { useT } from "../lib/i18n";
+import { usePreferences } from "../lib/i18n";
 
 export function Header() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const t = useT();
+  const { locale, theme, setLocale, toggleTheme } = usePreferences();
 
   useEffect(() => {
     if (!isLive || !supabase) return;
@@ -103,8 +78,16 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">{links}</nav>
-        <div className="hidden items-center gap-3 md:flex">
-          <LangSwitch />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1" aria-label="Idioma">
+            <button type="button" onClick={() => setLocale("pt")} aria-pressed={locale === "pt"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>PT</button>
+            <button type="button" onClick={() => setLocale("en")} aria-pressed={locale === "en"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>EN</button>
+          </div>
+          <button type="button" onClick={toggleTheme} className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300" aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"} title={theme === "dark" ? "Tema claro" : "Tema noturno"}>
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
+        <div className="hidden md:block">
           {email ? (
             <Link
               to="/dashboard"
@@ -136,7 +119,15 @@ export function Header() {
         <div className="border-t border-white/10 bg-ink-950 px-4 pb-4 pt-2 md:hidden">
           <div className="flex flex-col gap-3">{links}</div>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <LangSwitch />
+            <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1" aria-label="Idioma">
+                <button type="button" onClick={() => setLocale("pt")} aria-pressed={locale === "pt"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>PT</button>
+                <button type="button" onClick={() => setLocale("en")} aria-pressed={locale === "en"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>EN</button>
+              </div>
+              <button type="button" onClick={toggleTheme} className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300" aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"}>
+                {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+            </div>
             {email ? (
               <Link
                 to="/dashboard"

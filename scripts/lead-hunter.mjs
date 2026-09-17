@@ -37,7 +37,7 @@ try {
   log("🤖 lead-qualifier starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
 
   if (!supabaseReady) {
-    log("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — nothing to qualify. Add repo secrets to enable real runs.");
+    log("⚠️  SUPABASE_URL_2 / SUPABASE_SECRET_KEY not configured — nothing to qualify. Add repo secrets to enable real runs.");
     process.exit(0);
   }
 

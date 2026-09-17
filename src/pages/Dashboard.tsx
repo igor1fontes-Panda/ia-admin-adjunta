@@ -48,6 +48,9 @@ import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClient
 import type { AgentMemoryRow } from "../lib/data";
 import type { DeliveryRow } from "../lib/engine";
 import { useT, useTAny } from "../lib/i18n";
+import { errorMessage } from "../lib/errors";
+import { DashboardTabNav, type DashboardTab } from "./dashboard/DashboardTabNav";
+import { DashboardTabContent } from "./dashboard/DashboardTabContent";
 import {
   academyState,
   agentStatus,
@@ -76,8 +79,7 @@ import {
   type Pulse,
 } from "../lib/engine";
 
-type Tab = "overview" | "packs" | "leads" | "charts" | "clients" | "orders" | "agents" | "ops" | "ecosystem";
-
+type Tab = DashboardTab | "ops";
 type ConnState = "connecting" | "live" | "offline";
 
 const EMPTY_METRICS: Metric = {
@@ -130,9 +132,9 @@ export function Dashboard() {
       setMemory(mem);
       setDeliveries(del);
       setMetrics(computeMetrics(leads, clients, orders));
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (requestId !== requestRef.current) return;
-      const msg = String(e?.message ?? "Failed to load data from Supabase");
+      const msg = errorMessage(e, "Failed to load data from Supabase");
       if (/could not find the table|pgrst205|schema cache|does not exist/i.test(msg)) {
         setError(
           "Database tables are not created yet. One-time setup: open your Supabase project → SQL Editor → run supabase/migrations/0001_init.sql, then 0002_agent_memory.sql. The command center fills with your real data immediately after.",
@@ -190,18 +192,18 @@ export function Dashboard() {
     setError(null);
     try {
       await fn();
-    } catch (e: any) {
-      setError(e?.message ?? "Operation failed");
+    } catch (e: unknown) {
+      setError(errorMessage(e, "Operation failed"));
     }
   }
 
   function handleLeadStatus(id: string, status: Lead["status"]) {
     const prev = leads.find((l) => l.id === id)?.status;
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
-    updateLeadStatus(id, status).catch((e: any) => {
+    updateLeadStatus(id, status).catch((e: unknown) => {
       // Revert the optimistic update on failure
       if (prev) setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status: prev } : l)));
-      setError(e?.message ?? "Could not update lead status");
+      setError(errorMessage(e, "Could not update lead status"));
     });
   }
 
@@ -311,48 +313,49 @@ export function Dashboard() {
         </div>
       </div>
 
-      {tab === "packs" ? <ProductPacksTab leads={leads} clients={clients} orders={orders} activity={activity} /> : null}
-      {tab === "overview" ? (
-        <Overview
-          metrics={metrics ?? EMPTY_METRICS}
-          activity={activity}
-          orders={orders.slice(0, 5)}
-          leads={leads}
-          clients={clients}
-          pulse={todayPulse(leads, orders, activity)}
-          steps={onboardingSteps(leads, clients, orders, activity)}
-          onGoTo={setTab}
-        />
-      ) : null}
-      {tab === "leads" ? (
-        <LeadsTab leads={leads} onStatus={handleLeadStatus} />
-      ) : null}
-      {tab === "charts" ? (
-        <ChartsTab leads={leads} orders={orders} clients={clients} />
-      ) : null}
-      {tab === "clients" ? (
-        <ClientsTab
-          clients={clients}
-          showNew={showNewClient}
-          setShowNew={setShowNewClient}
-          onNew={handleNewClient}
-        />
-      ) : null}
-      {tab === "orders" ? (
-        <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
-      ) : null}
-      {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
+      <DashboardTabNav tab={tab as DashboardTab} setTab={(next) => setTab(typeof next === "function" ? (next as (t: DashboardTab) => DashboardTab)(tab as DashboardTab) as Tab : (next as DashboardTab) as Tab)} />
+
+      <DashboardTabContent
+        tab={tab as DashboardTab}
+        panels={{
+          packs: <ProductPacksTab leads={leads} clients={clients} orders={orders} activity={activity} />,
+          overview: (
+            <Overview
+              metrics={metrics ?? EMPTY_METRICS}
+              activity={activity}
+              orders={orders.slice(0, 5)}
+              leads={leads}
+              clients={clients}
+              pulse={todayPulse(leads, orders, activity)}
+              steps={onboardingSteps(leads, clients, orders, activity)}
+              onGoTo={(id) => setTab(id)}
+            />
+          ),
+          leads: <LeadsTab leads={leads} onStatus={handleLeadStatus} />,
+          charts: <ChartsTab leads={leads} orders={orders} clients={clients} />,
+          clients: (
+            <ClientsTab
+              clients={clients}
+              showNew={showNewClient}
+              setShowNew={setShowNewClient}
+              onNew={handleNewClient}
+            />
+          ),
+          orders: <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />,
+          agents: <AgentsTab activity={activity} memory={memory} />,
+          ecosystem: (
+            <EcosystemTab
+              metrics={metrics ?? EMPTY_METRICS}
+              leads={leads}
+              orders={orders}
+              activity={activity}
+              memory={memory}
+              realtime={realtime}
+            />
+          ),
+        }}
+      />
       {tab === "ops" ? <OpsTab memory={memory} deliveries={deliveries} /> : null}
-      {tab === "ecosystem" ? (
-        <EcosystemTab
-          metrics={metrics ?? EMPTY_METRICS}
-          leads={leads}
-          orders={orders}
-          activity={activity}
-          memory={memory}
-          realtime={realtime}
-        />
-      ) : null}
     </div>
   );
 }
@@ -364,7 +367,6 @@ function Overview({
   activity,
   orders,
   leads,
-  clients,
   pulse,
   steps,
   onGoTo,
@@ -373,7 +375,7 @@ function Overview({
   activity: Activity[];
   orders: Order[];
   leads: Lead[];
-  clients: Client[];
+  clients?: Client[];
   pulse: Pulse;
   steps: OnboardingStep[];
   onGoTo: (tab: Tab) => void;

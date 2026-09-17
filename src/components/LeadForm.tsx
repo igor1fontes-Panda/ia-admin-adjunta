@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { isLive, submitLead } from "../lib/data";
 import { useT } from "../lib/i18n";
+import { errorMessage } from "../lib/errors";
 
 /**
  * Public lead-capture form. Writes a REAL row into the Supabase `leads`
@@ -31,8 +32,8 @@ export function LeadForm() {
         niche: String(fd.get("niche") || "SaaS"),
       });
       setDone(true);
-    } catch (err: any) {
-      setError(err.message ?? t("leadForm.retry"));
+    } catch (err: unknown) {
+      setError(errorMessage(err, t("leadForm.retry")));
     } finally {
       setBusy(false);
     }

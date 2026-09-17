@@ -15,16 +15,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
-    // The app intentionally ships one entry chunk for static hosts; keep the warning aligned with that constraint.
-    chunkSizeWarningLimit: 1100,
-    // Single-file index chunk: the public Supabase config lives in
-    // src/lib/data.ts and MUST stay in the lazily-shared core chunk the
-    // platform builder deploys. Route-level code splitting is disabled so
-    // every host (Freebuff static, Vercel, any CDN) serves a working app
-    // from index.html alone.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks(id) {
+          if (id.includes("node_modules/recharts")) return "charts";
+          if (id.includes("node_modules/framer-motion")) return "motion";
+          return undefined;
+        },
       },
     },
   },
