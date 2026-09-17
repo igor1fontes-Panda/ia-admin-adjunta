@@ -31,7 +31,6 @@ import {
   Gauge,
   GraduationCap,
   LayoutGrid,
-  Loader2,
   Network,
   Package,
   Plus,
@@ -72,7 +71,6 @@ import {
   skillFreshness,
   timeAgo,
   todayPulse,
-  TEACHER_PREFIX,
   type AcademyStudent,
   type IncomeRow,
   type OnboardingStep,
@@ -95,7 +93,6 @@ export function Dashboard() {
   const t = useT();
   const tAny = useTAny();
   const [tab, setTab] = useState<Tab>("overview");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [realtime, setRealtime] = useState<ConnState>("connecting");
   const [metrics, setMetrics] = useState<Metric | null>(null);
@@ -113,7 +110,6 @@ export function Dashboard() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     const requestId = ++requestRef.current;
-    setLoading(true);
     setError(null);
     try {
       const [leads, clients, orders, activity, mem, del] = await Promise.all([
@@ -145,8 +141,7 @@ export function Dashboard() {
     } finally {
       if (requestId === requestRef.current) {
         loadingRef.current = false;
-        setLoading(false);
-      }
+        }
     }
   }, []);
 

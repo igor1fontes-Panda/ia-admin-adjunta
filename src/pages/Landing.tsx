@@ -23,8 +23,6 @@ import { useT, useTAny } from "../lib/i18n";
 const FEATURE_ICONS = [Radar, LineChart, Users, Database, ShieldCheck, Lock];
 const FEATURE_KEYS = ["leads", "sales", "clients", "data", "payments", "security"] as const;
 
-const PLAN_FEATURE_KEYS = ["starter", "professional", "enterprise"] as const;
-
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   show: (i: number) => ({

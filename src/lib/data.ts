@@ -1,7 +1,11 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Activity, Client, Lead, Metric, Order } from "../types";
-import { computeMetrics } from "./engine";
+import { computeMetrics, type DeliveryRow } from "./engine";
 import { isMockMode, mockData } from "./data.mock";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 /**
  * REAL DATA ONLY — no demo mode, no simulations.
@@ -269,17 +273,17 @@ export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
 export async function fetchDeliveryStatus(): Promise<import("./engine").DeliveryRow[]> {
   const rows = await mapError(
     supabase!.from("delivery_status").select("*").order("created_at", { ascending: false }).limit(200),
-  ) as any[];
-  return (rows ?? []).map((r: Record<string, any>) => ({
+  ) as Array<Record<string, unknown>>;
+  return (rows ?? []).map((r) => ({
     id: String(r.id),
     client_name: String(r.client_name ?? "Walk-in"),
     pack: String(r.pack ?? "unknown"),
     method: String(r.method ?? "unknown"),
     amount: Number(r.amount) || 0,
-    qa_status: r.qa_status,
-    checks: (r.checks ?? {}) as Record<string, boolean>,
-    notes: r.notes ?? null,
-    verified_at: r.verified_at ?? null,
+    qa_status: (r.qa_status === "passed" || r.qa_status === "failed" ? r.qa_status : "pending") as DeliveryRow["qa_status"],
+    checks: isRecord(r.checks) ? Object.fromEntries(Object.entries(r.checks).map(([key, value]) => [key, Boolean(value)])) : {},
+    notes: typeof r.notes === "string" ? r.notes : null,
+    verified_at: typeof r.verified_at === "string" ? r.verified_at : null,
     created_at: String(r.created_at),
   }));
 }
