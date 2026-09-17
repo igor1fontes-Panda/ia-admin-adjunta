@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, Menu, Sparkles, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isLive, supabase } from "../lib/data";
+import { usePreferences } from "../lib/i18n";
 
 export function Header() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const { locale, theme, setLocale, toggleTheme, t } = usePreferences();
 
   useEffect(() => {
     if (!isLive || !supabase) return;
@@ -34,9 +36,9 @@ export function Header() {
   const links = (
     <>
       <Link to="/" className="text-sm text-zinc-300 transition hover:text-cyan-300">
-        Início
+        {t("home")}
       </Link>
-      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">Produtos</a>
+      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("products")}</a>
       <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">Loja</a>
       <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">Agentes IA</a>
       <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">Serviços</a>
@@ -74,6 +76,15 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">{links}</nav>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1" aria-label={t("language")}>
+            <button type="button" onClick={() => setLocale("pt")} aria-pressed={locale === "pt"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>PT</button>
+            <button type="button" onClick={() => setLocale("en")} aria-pressed={locale === "en"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>EN</button>
+          </div>
+          <button type="button" onClick={toggleTheme} className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300" aria-label={theme === "dark" ? t("themeLight") : t("themeDark")} title={theme === "dark" ? t("themeLight") : t("themeDark")}>
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
         <div className="hidden md:block">
           {email ? (
             <Link

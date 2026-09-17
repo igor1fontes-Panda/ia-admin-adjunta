@@ -11,6 +11,8 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
 import { SetupRequired } from "./components/SetupRequired";
 import { isLive, supabase } from "./lib/data";
+import { PreferencesProvider } from "./lib/i18n";
+import "./theme.css";
 
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
@@ -26,11 +28,13 @@ function PageSpinner() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppFrame />
-      <SpeedInsights />
-      <Analytics />
-    </BrowserRouter>
+    <PreferencesProvider>
+      <BrowserRouter>
+        <AppFrame />
+        <SpeedInsights />
+        <Analytics />
+      </BrowserRouter>
+    </PreferencesProvider>
   );
 }
 
