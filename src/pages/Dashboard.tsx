@@ -44,6 +44,7 @@ import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClient
 import type { AgentMemoryRow } from "../lib/data";
 import { errorMessage } from "../lib/errors";
 import { DashboardTabNav, type DashboardTab } from "./dashboard/DashboardTabNav";
+import { DashboardTabContent } from "./dashboard/DashboardTabContent";
 import {
   agentStatus,
   computeMetrics,
@@ -290,45 +291,44 @@ export function Dashboard() {
 
       <DashboardTabNav tab={tab} setTab={setTab} />
 
-      {tab === "packs" ? <ProductPacksTab leads={leads} clients={clients} orders={orders} activity={activity} /> : null}
-      {tab === "overview" ? (
-        <Overview
-          metrics={metrics ?? EMPTY_METRICS}
-          activity={activity}
-          orders={orders.slice(0, 5)}
-          leads={leads}
-    pulse={todayPulse(leads, orders, activity)}
-          steps={onboardingSteps(leads, clients, orders, activity)}
-        />
-      ) : null}
-      {tab === "leads" ? (
-        <LeadsTab leads={leads} onStatus={handleLeadStatus} />
-      ) : null}
-      {tab === "charts" ? (
-        <ChartsTab leads={leads} orders={orders} clients={clients} />
-      ) : null}
-      {tab === "clients" ? (
-        <ClientsTab
-          clients={clients}
-          showNew={showNewClient}
-          setShowNew={setShowNewClient}
-          onNew={handleNewClient}
-        />
-      ) : null}
-      {tab === "orders" ? (
-        <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />
-      ) : null}
-      {tab === "agents" ? <AgentsTab activity={activity} memory={memory} /> : null}
-      {tab === "ecosystem" ? (
-        <EcosystemTab
-          metrics={metrics ?? EMPTY_METRICS}
-          leads={leads}
-          orders={orders}
-          activity={activity}
-          memory={memory}
-          realtime={realtime}
-        />
-      ) : null}
+      <DashboardTabContent
+        tab={tab}
+        panels={{
+          packs: <ProductPacksTab leads={leads} clients={clients} orders={orders} activity={activity} />,
+          overview: (
+            <Overview
+              metrics={metrics ?? EMPTY_METRICS}
+              activity={activity}
+              orders={orders.slice(0, 5)}
+              leads={leads}
+              pulse={todayPulse(leads, orders, activity)}
+              steps={onboardingSteps(leads, clients, orders, activity)}
+            />
+          ),
+          leads: <LeadsTab leads={leads} onStatus={handleLeadStatus} />,
+          charts: <ChartsTab leads={leads} orders={orders} clients={clients} />,
+          clients: (
+            <ClientsTab
+              clients={clients}
+              showNew={showNewClient}
+              setShowNew={setShowNewClient}
+              onNew={handleNewClient}
+            />
+          ),
+          orders: <OrdersTab orders={orders} clients={clients} onNew={handleNewOrder} onMarkPaid={handleMarkPaid} />,
+          agents: <AgentsTab activity={activity} memory={memory} />,
+          ecosystem: (
+            <EcosystemTab
+              metrics={metrics ?? EMPTY_METRICS}
+              leads={leads}
+              orders={orders}
+              activity={activity}
+              memory={memory}
+              realtime={realtime}
+            />
+          ),
+        }}
+      />
     </div>
   );
 }
