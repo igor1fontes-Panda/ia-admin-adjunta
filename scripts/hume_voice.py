@@ -49,7 +49,8 @@ HUME_BASE = os.environ.get("HUME_BASE_URL") or "https://api.hume.ai"
 VOICE_NAME = os.environ.get("HUME_VOICE_NAME") or "David Hume"
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or ""
-SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or ""
+# Service key: legacy SUPABASE_SERVICE_ROLE_KEY (JWT) or new-model SUPABASE_SECRET_KEY (sb_secret_…)
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SECRET_KEY") or ""
 STORAGE_BUCKET = os.environ.get("BRIEFING_BUCKET") or "briefings"
 
 

@@ -11,7 +11,8 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+// Service key: legacy SUPABASE_SERVICE_ROLE_KEY (JWT) or new-model SUPABASE_SECRET_KEY (sb_secret_…)
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
 const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
@@ -133,6 +134,27 @@ export function parseJsonArray(raw) {
     try {
       const parsed = JSON.parse(m[0]);
       if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* fall through */
+    }
+  }
+  return null;
+}
+
+/** Parse a JSON object out of a model response, tolerating code fences. */
+export function parseJsonObject(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+  } catch {
+    /* fall through */
+  }
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (m) {
+    try {
+      const parsed = JSON.parse(m[0]);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
     } catch {
       /* fall through */
     }

@@ -22,6 +22,7 @@
 | **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
 | **Voice briefings** (Hume AI TTS, optional) | ✅ Wired | `scripts/hume_voice.py` + `ai_engine.py` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
+| **Supabase db push** (migrations apply automatically on merge to main) | ✅ Ready | `.github/workflows/supabase-migrations.yml` |
 | Site health monitoring | ✅ Every 6h | `.github/workflows/deploy-status.yml` |
 
 ## Quick start
@@ -38,9 +39,20 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
 
 1. **Run the migrations**: Supabase SQL Editor → paste `supabase/migrations/0001_init.sql`, then `supabase/migrations/0002_agent_memory.sql` (tables + row-level security + public lead-capture policy + agent learning memory).
    - For voice briefings (optional): create a **public** storage bucket named `briefings` (Supabase → Storage → New bucket).
+
+   **Or use the Supabase CLI** (installed as a devDependency; no local Docker needed for link/push):
+   ```bash
+   npx supabase link --project-ref aebdqztoolszdzfbdlbp   # needs SUPABASE_ACCESS_TOKEN (Supabase → Account → Access Tokens)
+   npx supabase migration new my-change                   # creates supabase/migrations/<timestamp>_my-change.sql
+   npx supabase db push                                   # applies all pending migrations to the linked project
+   ```
+   `supabase/config.toml` is committed; CLI local state is git-ignored. `@supabase/ssr` is installed per the Supabase Connect flow — this SPA uses the plain `@supabase/supabase-js` client in `src/lib/data.ts` (no server-side session middleware needed).
 2. Set environment variables (never commit them):
-   - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work.
-   - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…`; legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
+   - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work. (Also set `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` for server-side consumers such as `@supabase/server`.)
+   - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…` (set it as `SUPABASE_SECRET_KEY`; both names are accepted); legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
+   - Automatic migrations (repo secret): `SUPABASE_ACCESS_TOKEN` — the **Supabase Migrations** workflow then runs `supabase db push` on every merge to `main` that changes `supabase/migrations/`. Without the secret it skips cleanly.
+   - Optional, for `@supabase/server`-based request verification in server runtimes: `SUPABASE_JWKS_URL` (`https://<project>.supabase.co/auth/v1/.well-known/jwks.json`). On Supabase Edge Functions it is injected automatically.
+   - The server-side Supabase SDK [`@supabase/server`](https://www.npmjs.com/package/@supabase/server) is installed; it resolves `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEYS`/`SUPABASE_SECRET_KEYS`, and `SUPABASE_JWKS` from the environment (JWKS falls back to the publishable/secret key when `SUPABASE_JWKS_URL` is not set).
 3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Optionally add `BLACKBOX_API_KEY` (Blackbox enterprise API, OpenAI-compatible, `nvidia/nemotron-3-ultra-550b-a55b`) as a second automatic provider. Without any key, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
 4. Push to `main`. GitHub Actions takes over:
    - **CI** runs on every push (typecheck → tests → build).
