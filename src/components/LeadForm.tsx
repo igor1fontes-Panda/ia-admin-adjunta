@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { isLive, submitLead } from "../lib/data";
+import { errorMessage } from "../lib/errors";
 
 /**
  * Public lead-capture form. Writes a REAL row into the Supabase `leads`
@@ -29,8 +30,8 @@ export function LeadForm() {
         niche: String(fd.get("niche") || "SaaS"),
       });
       setDone(true);
-    } catch (err: any) {
-      setError(err.message ?? "Could not submit — please try again.");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Could not submit — please try again."));
     } finally {
       setBusy(false);
     }

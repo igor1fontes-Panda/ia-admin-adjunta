@@ -62,18 +62,18 @@ export async function fetchLeads(): Promise<Lead[]> {
   if (isMockMode) return mockData.leads;
   const rows = await mapError(
     supabase!.from("leads").select("*").order("created_at", { ascending: false }).limit(200),
-  ) as any[];
+  ) as DbRow[];
   return (rows ?? []).map((r) => ({
     id: r.id,
-    company: r.company,
-    contact_name: r.contact_name,
-    email: r.email,
-    niche: r.niche,
-    channel: r.channel,
+    company: r.company ?? "",
+    contact_name: r.contact_name ?? "",
+    email: r.email ?? "",
+    niche: r.niche ?? "",
+    channel: r.channel ?? "",
     score: r.score ?? 50,
-    status: r.status,
+    status: (r.status ?? "new") as Lead["status"],
     ai_action: r.ai_action ?? null,
-    created_at: r.created_at,
+    created_at: r.created_at ?? "",
   }));
 }
 
@@ -85,7 +85,33 @@ export async function updateLeadStatus(id: string, status: Lead["status"]): Prom
 
 const PLAN_MRR: Record<Client["plan"], number> = { starter: 1250, professional: 2916, enterprise: 8333 };
 
-type DbRow = Record<string, any>;
+type DbRow = {
+  id: string;
+  company?: string;
+  contact_name?: string;
+  email?: string;
+  niche?: string;
+  channel?: string;
+  score?: number;
+  status?: string;
+  ai_action?: string | null;
+  name?: string;
+  plan?: Client["plan"];
+  mrr?: number;
+  client_id?: string | null;
+  client_name?: string;
+  amount?: number;
+  currency?: string;
+  method?: string;
+  reference?: string;
+  created_at?: string;
+  kind?: Activity["kind"];
+  message?: string;
+  agent?: string;
+  key?: string;
+  value?: unknown;
+  updated_at?: string;
+};
 
 export async function fetchClients(): Promise<Client[]> {
   if (isMockMode) return mockData.clients;
@@ -94,12 +120,12 @@ export async function fetchClients(): Promise<Client[]> {
   ) as DbRow[];
   return (rows ?? []).map((r) => ({
     id: r.id,
-    name: r.name,
-    email: r.email,
-    plan: r.plan,
-    mrr: r.mrr,
-    status: r.status,
-    created_at: r.created_at,
+    name: r.name ?? "",
+    email: r.email ?? "",
+    plan: r.plan ?? "starter",
+    mrr: r.mrr ?? 0,
+    status: (r.status ?? "active") as Client["status"],
+    created_at: r.created_at ?? "",
   }));
 }
 
@@ -117,12 +143,12 @@ export async function createClient(input: {
   ) as DbRow;
   return {
     id: row.id,
-    name: row.name,
-    email: row.email,
-    plan: row.plan,
-    mrr: Number(row.mrr),
-    status: row.status,
-    created_at: row.created_at,
+    name: row.name ?? input.name,
+    email: row.email ?? input.email,
+    plan: row.plan ?? input.plan,
+    mrr: Number(row.mrr ?? PLAN_MRR[input.plan]),
+    status: (row.status ?? "active") as Client["status"],
+    created_at: row.created_at ?? new Date().toISOString(),
   };
 }
 
@@ -135,14 +161,14 @@ export async function fetchOrders(): Promise<Order[]> {
   ) as DbRow[];
   return (rows ?? []).map((r) => ({
     id: r.id,
-    client_id: r.client_id,
-    client_name: r.client_name,
-    amount: r.amount,
+    client_id: r.client_id ?? null,
+    client_name: r.client_name ?? "Walk-in",
+    amount: r.amount ?? 0,
     currency: r.currency ?? "AOA",
-    method: r.method,
-    status: r.status,
-    reference: r.reference,
-    created_at: r.created_at,
+    method: r.method ?? "unknown",
+    status: (r.status ?? "pending") as Order["status"],
+    reference: r.reference ?? "",
+    created_at: r.created_at ?? "",
   }));
 }
 
@@ -169,14 +195,14 @@ export async function createOrder(input: {
   ) as DbRow;
   return {
     id: row.id,
-    client_id: row.client_id,
-    client_name: row.client_name,
-    amount: Number(row.amount),
+    client_id: row.client_id ?? null,
+    client_name: row.client_name ?? "Walk-in",
+    amount: Number(row.amount ?? 0),
     currency: row.currency ?? "AOA",
-    method: row.method,
-    status: row.status,
-    reference: row.reference,
-    created_at: row.created_at,
+    method: row.method ?? "unknown",
+    status: (row.status ?? "pending") as Order["status"],
+    reference: row.reference ?? reference,
+    created_at: row.created_at ?? new Date().toISOString(),
   };
 }
 
@@ -213,7 +239,12 @@ export async function fetchActivity(): Promise<Activity[]> {
   ) as DbRow[];
   return (rows ?? [])
     .filter((r) => !/^Database initialized/i.test(String(r.message ?? "")))
-    .map((r) => ({ id: r.id, kind: r.kind, message: r.message, created_at: r.created_at }));
+    .map((r) => ({
+      id: r.id,
+      kind: (r.kind ?? "system") as Activity["kind"],
+      message: r.message ?? "",
+      created_at: r.created_at ?? new Date().toISOString(),
+    }));
 }
 
 // ---- Agent learning memory (public read via RLS) ----
@@ -226,10 +257,10 @@ export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
     supabase!.from("agent_memory").select("*").order("updated_at", { ascending: false }),
   ) as DbRow[];
   return (rows ?? []).map((r) => ({
-    agent: r.agent,
-    key: r.key,
+    agent: r.agent ?? "unknown",
+    key: r.key ?? "unknown",
     value: r.value,
-    updated_at: r.updated_at,
+    updated_at: r.updated_at ?? new Date().toISOString(),
   }));
 }
 

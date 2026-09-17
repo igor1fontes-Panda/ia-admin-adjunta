@@ -34,6 +34,16 @@ npm run dev        # http://localhost:5173
 **Real data by default.** The app requires a connected Supabase project. Without
 keys, every screen shows a step-by-step setup checklist.
 
+### Local container and health checks
+
+Run the complete static app locally with Docker and deterministic fixtures:
+
+```bash
+docker compose up --build
+```
+
+The static health document is available at `/health.json` and returns the service status without contacting external services. Python dependencies are pinned in `requirements.txt` and mirrored in `requirements.lock`; CI runs both JavaScript and Python dependency audits.
+
 ### Running without Supabase
 
 For local UI work and tests, enable the deterministic fixture dataset:
