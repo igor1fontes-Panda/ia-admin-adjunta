@@ -228,6 +228,26 @@ export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
   }));
 }
 
+// ---- Delivery QA (AI Manager registrations + Error Handler verdicts) ----
+
+export async function fetchDeliveryStatus(): Promise<import("./engine").DeliveryRow[]> {
+  const rows = await mapError(
+    supabase!.from("delivery_status").select("*").order("created_at", { ascending: false }).limit(200),
+  ) as DbRow[];
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    client_name: r.client_name,
+    pack: r.pack,
+    method: r.method,
+    amount: Number(r.amount) || 0,
+    qa_status: r.qa_status,
+    checks: (r.checks ?? {}) as Record<string, boolean>,
+    notes: r.notes ?? null,
+    verified_at: r.verified_at ?? null,
+    created_at: r.created_at,
+  }));
+}
+
 // ---- Aggregated snapshot ----
 
 export type Snapshot = {

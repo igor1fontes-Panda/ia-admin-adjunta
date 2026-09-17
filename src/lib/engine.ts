@@ -8,6 +8,193 @@ export type FunnelStage = { stage: string; count: number };
 export type IncomeRow = { source: string; paid: number; pending: number; orders: number; sharePct: number };
 export type AgentRow = { name: string; schedule: string; runs: number; lastRun: string | null; lastMessage: string; stale: boolean };
 export type Pulse = { leadsToday: number; ordersToday: number; collectedToday: number; botRunsToday: number };
+
+// ---------- AI Academy (teacher agent + student curriculum) ----------
+
+export type MemoryEntry = { agent: string; key: string; value: unknown; updated_at: string };
+
+export type AcademySkill = { id: string; memoryKeys: string[]; learned: boolean };
+
+export type AcademyStudent = {
+  slug: string;
+  agentName: string;
+  skills: AcademySkill[];
+  marketBrief: { value: unknown; updatedAt: string } | null;
+  lessons: number;
+  graduation: "enrolled" | "in_training" | "trained";
+};
+
+export type AcademyState = {
+  teacherRuns: number;
+  teacherLastRun: string | null;
+  teacherLastMessage: string;
+  teacherBriefsWritten: number;
+  curriculumVersion: string;
+  trainedCount: number;
+  students: AcademyStudent[];
+};
+
+/**
+ * The AI Academy curriculum: the skill areas each student agent must master
+ * to sell autonomously, and which real `agent_memory` keys prove mastery.
+ * The AI Teacher writes `market_brief` entries per agent after studying the
+ * real market data — students act on the brief in their next scheduled run.
+ */
+const CURRICULUM: Array<{
+  slug: string;
+  agentName: string;
+  skills: Array<{ id: string; memoryKeys: string[] }>;
+}> = [
+  {
+    slug: "lead_qualifier",
+    agentName: "Lead Qualifier",
+    skills: [
+      { id: "lead_scoring", memoryKeys: [] },
+      { id: "channel_performance", memoryKeys: ["channel_bias"] },
+      { id: "market_brief", memoryKeys: ["market_brief"] },
+    ],
+  },
+  {
+    slug: "growth_marketing",
+    agentName: "Growth & Marketing",
+    skills: [
+      { id: "campaign_strategy", memoryKeys: ["last_play", "last_snapshot"] },
+      { id: "funnel_diagnostics", memoryKeys: ["last_snapshot"] },
+      { id: "market_brief", memoryKeys: ["market_brief"] },
+    ],
+  },
+  {
+    slug: "error_handler",
+    agentName: "Error Handler",
+    skills: [
+      { id: "incident_triage", memoryKeys: [] },
+      { id: "known_fixes", memoryKeys: ["known_fixes"] },
+      { id: "market_brief", memoryKeys: ["market_brief"] },
+    ],
+  },
+  {
+    slug: "insight_engine",
+    agentName: "Insight Engine",
+    skills: [
+      { id: "business_analytics", memoryKeys: [] },
+      { id: "market_brief", memoryKeys: ["market_brief"] },
+    ],
+  },
+];
+
+/** The Teacher Agent's activity prefix (see scripts/teacher-agent.mjs). */
+export const TEACHER_PREFIX = "AI Teacher";
+
+/**
+ * Academy state derived from REAL rows only: activity_log (teacher runs)
+ * and agent_memory (what students have actually learned). No fabricated
+ * progress — an agent that never received a brief is honestly "enrolled".
+ */
+export function academyState(activity: Activity[], memory: MemoryEntry[]): AcademyState {
+  const teacherRunsRows = activity.filter((a) => a.kind === "bot" && a.message.startsWith(TEACHER_PREFIX));
+  const briefs = memory.filter((m) => m.key === "market_brief");
+
+  const students: AcademyStudent[] = CURRICULUM.map(({ slug, agentName, skills }) => {
+    const memForAgent = memory.filter((m) => m.agent === slug);
+    const learnedSkills: AcademySkill[] = skills.map((s) => ({
+      id: s.id,
+      memoryKeys: s.memoryKeys,
+      learned: s.memoryKeys.length === 0 || s.memoryKeys.some((k) => memForAgent.some((m) => m.key === k)),
+    }));
+    const brief = briefs.find((b) => b.agent === slug) ?? null;
+    // Base skills (no memory keys) are assumed from the agent's code and do
+    // NOT count as observed learning — graduation only advances on real
+    // memory rows. Honest cold start: no memory = enrolled.
+    const anyLearned = learnedSkills.some((s) => s.memoryKeys.length > 0 && s.learned);
+    return {
+      slug,
+      agentName,
+      skills: learnedSkills,
+      marketBrief: brief ? { value: brief.value, updatedAt: brief.updated_at } : null,
+      lessons: memForAgent.length,
+      graduation: brief ? "trained" : anyLearned ? "in_training" : "enrolled",
+    };
+  });
+
+  return {
+    teacherRuns: teacherRunsRows.length,
+    teacherLastRun: teacherRunsRows[0]?.created_at ?? null,
+    teacherLastMessage: teacherRunsRows[0]?.message ?? "",
+    teacherBriefsWritten: briefs.length,
+    curriculumVersion: "academy-v1",
+    trainedCount: students.filter((s) => s.graduation === "trained").length,
+    students,
+  };
+}
+
+/** Freshness of a market brief in human terms (drives the UI badge). */
+export function briefFreshness(updatedAt: string): "fresh" | "aging" | "stale" {
+  const age = Date.now() - +new Date(updatedAt);
+  return age < 7 * 86400000 ? "fresh" : age < 30 * 86400000 ? "aging" : "stale";
+}
+
+// ---------- Operations (AI Manager missions, delivery QA, skills.sh) ----------
+
+export type DeliveryRow = {
+  id: string;
+  client_name: string;
+  pack: string;
+  method: string;
+  amount: number;
+  qa_status: "pending" | "passed" | "failed";
+  checks: Record<string, boolean>;
+  notes: string | null;
+  verified_at: string | null;
+  created_at: string;
+};
+
+export type MissionRow = { agent: string; value: Record<string, unknown>; updated_at: string };
+export type SkillEntryRow = { agent: string; value: Record<string, unknown>; updated_at: string };
+
+export type OpsState = {
+  missions: MissionRow[];
+  skills: SkillEntryRow[];
+  deliveries: DeliveryRow[];
+  qaPending: number;
+  qaPassed: number;
+  qaFailed: number;
+  scoutLastRun: string | null;
+};
+
+const MANAGED_AGENTS = ["lead_qualifier", "growth_marketing", "insight_engine", "error_handler"] as const;
+
+/**
+ * Operations state derived from REAL rows only: missions + skill entries
+ * live in agent_memory, QA state in delivery_status. Honest zeros when the
+ * manager/scout have not run yet.
+ */
+export function opsState(memory: MemoryEntry[], deliveries: DeliveryRow[]): OpsState {
+  const managed = new Set<string>(MANAGED_AGENTS);
+  const pick = (key: string): MissionRow[] =>
+    memory
+      .filter((m) => m.key === key && managed.has(m.agent) && m.value && typeof m.value === "object" && !Array.isArray(m.value))
+      .map((m) => ({ agent: m.agent, value: m.value as Record<string, unknown>, updated_at: m.updated_at }));
+
+  const missions = pick("mission");
+  const skills = pick("skill_entry");
+
+  return {
+    missions,
+    skills,
+    deliveries,
+    qaPending: deliveries.filter((d) => d.qa_status === "pending").length,
+    qaPassed: deliveries.filter((d) => d.qa_status === "passed").length,
+    qaFailed: deliveries.filter((d) => d.qa_status === "failed").length,
+    scoutLastRun: skills.length
+      ? skills.map((s) => s.updated_at).sort()[skills.length - 1] ?? null
+      : null,
+  };
+}
+
+/** Skill entry freshness (drives the Operações badge). */
+export function skillFreshness(updatedAt: string): "fresh" | "aging" | "stale" {
+  return briefFreshness(updatedAt);
+}
 export type OnboardingStep = { id: string; label: string; description: string; done: boolean };
 
 function dayKey(iso: string): string {
@@ -121,6 +308,7 @@ export function agentStatus(activity: Activity[]): AgentRow[] {
     { name: "Lead Qualifier", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Lead qualifier") },
     { name: "Insight Engine", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Insight engine") },
     { name: "Error Handler", schedule: "hourly", match: (m) => m.startsWith("Error handler") },
+    { name: "Growth & Marketing", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Growth & marketing") || m.startsWith("Growth & Marketing") || m.startsWith("Growth agent") },
   ];
   const now = Date.now();
   return defs.map(({ name, schedule, match }) => {

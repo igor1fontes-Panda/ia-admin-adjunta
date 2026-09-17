@@ -19,6 +19,14 @@
 | **Lead Qualifier bot** (self-learning, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
 | **Error Handler bot** (self-learning, hourly) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
 | **Insight Engine** (memory-aware analyst, daily) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
+| **Growth & Marketing agent** (daily campaign plan from real funnel data) | ✅ Autonomous | `scripts/growth-marketing.mjs` + `.github/workflows/ai-bots.yml` |
+| **AI Teacher agent** (Academy — trains the other agents from real market data) | ✅ Autonomous | `scripts/teacher-agent.mjs` + `.github/workflows/ai-bots.yml` |
+| **AI Manager** (commands the AI team: daily missions + automatic pack-sales registration) | ✅ Autonomous | `scripts/ops-manager.mjs` + `.github/workflows/ai-bots.yml` |
+| **Skills Scout** (fetches the skills each agent needs from the skills.sh ecosystem) | ✅ Autonomous | `scripts/skills-scout.mjs` + `.github/workflows/ai-bots.yml` |
+| **Delivery QA** (every sold pack verified as functional for the client) | ✅ Autonomous | `scripts/error-handler.mjs` + `supabase/migrations/0005_delivery_qa.sql` |
+| **Operations module** (missions, QA table, ecosystem skills) | ✅ Working | Dashboard → "Operações" |
+| **AI Academy submenu** (curriculum, market briefs, graduation per agent) | ✅ Working | Dashboard → AI Agents → "Academia IA" |
+| **Interface PT/EN** (persistent language switch, PT default) | ✅ Working | `src/lib/i18n.ts` + `Header` language pills |
 | **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
 | **Voice briefings** (Hume AI TTS, optional) | ✅ Wired | `scripts/hume_voice.py` + `ai_engine.py` |
 | CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
@@ -46,19 +54,19 @@ keys, every screen shows a step-by-step setup checklist instead of fake data.
    npx supabase migration new my-change                   # creates supabase/migrations/<timestamp>_my-change.sql
    npx supabase db push                                   # applies all pending migrations to the linked project
    ```
-   `supabase/config.toml` is committed; CLI local state is git-ignored. `@supabase/ssr` is installed per the Supabase Connect flow — this SPA uses the plain `@supabase/supabase-js` client in `src/lib/data.ts` (no server-side session middleware needed).
+   `supabase/config.toml` is committed; CLI local state is git-ignored. This SPA uses the plain `@supabase/supabase-js` client in `src/lib/data.ts` (no server-side session middleware needed).
 2. Set environment variables (never commit them):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work. (Also set `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` for server-side consumers such as `@supabase/server`.)
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…` (set it as `SUPABASE_SECRET_KEY`; both names are accepted); legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
    - Automatic migrations (repo secret): `SUPABASE_ACCESS_TOKEN` — the **Supabase Migrations** workflow then runs `supabase db push` on every merge to `main` that changes `supabase/migrations/`. Without the secret it skips cleanly.
-   - Optional, for `@supabase/server`-based request verification in server runtimes: `SUPABASE_JWKS_URL` (`https://<project>.supabase.co/auth/v1/.well-known/jwks.json`). On Supabase Edge Functions it is injected automatically.
-   - The server-side Supabase SDK [`@supabase/server`](https://www.npmjs.com/package/@supabase/server) is installed; it resolves `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEYS`/`SUPABASE_SECRET_KEYS`, and `SUPABASE_JWKS` from the environment (JWKS falls back to the publishable/secret key when `SUPABASE_JWKS_URL` is not set).
 3. **Optional but recommended — AI layer:** create a free API key at [Google AI Studio](https://aistudio.google.com) → add GitHub secret `GEMINI_API_KEY`. The bots use the official **Gemini Interactions API** with an automatic free-tier model fallback chain (`gemini-3.6-flash` → `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`). Optionally add `BLACKBOX_API_KEY` (Blackbox enterprise API, OpenAI-compatible, `nvidia/nemotron-3-ultra-550b-a55b`) as a second automatic provider. Without any key, bots still run using deterministic rule-scoring on real data — they never fabricate anything.
 4. Push to `main`. GitHub Actions takes over:
    - **CI** runs on every push (typecheck → tests → build).
    - **Lead Qualifier** runs daily at 06:00 UTC: reads real inbound leads (from the public form) → Gemini scores them 0-100 and assigns the next best action → results are written back to Supabase → dashboard updates in real time.
    - **Error Handler** runs hourly: scans real incidents, triages with Gemini when configured, logs the verdict.
    - **Insight Engine** runs daily: reads real metrics and posts a data-grounded growth insight to the activity feed.
+   - **Growth & Marketing agent** runs daily: reads the real funnel (leads/orders/clients), detects the bottleneck stage (traffic → qualification → nurture → closing → collection → scale), recalls its previous play + funnel delta from `agent_memory`, and produces ONE concrete campaign play (audience, channel mix, success metric, kill criteria). It never sends anything — the plan is recorded for human execution.
+   - **AI Teacher agent** runs daily: studies the real market data, diagnoses each agent's knowledge gaps, and writes a `market_brief` lesson into every agent's memory — fully autonomously, no administrative approval needed. The students apply the latest brief on their very next run.
    - **Health check** pings your production URL every 6 hours (set repo variable `SITE_URL`).
 
 ## How the agents learn (cold start → real growth)
@@ -73,10 +81,77 @@ The system is designed for a brand-new business with zero data:
 3. **Learning loop** — after leads get decided (won/lost), the Lead Qualifier
    measures **real per-channel conversion** and persists a channel bias to the
    `agent_memory` table. The Error Handler accumulates incident signatures and
-   their real fixes. The Insight Engine reads both and adapts its daily advice.
+   their real fixes. The Growth & Marketing agent compares the funnel snapshot
+   against its previous run and keeps the plays that moved real numbers. The
+   Insight Engine reads both and adapts its daily advice.
 4. **Visible learning** — the dashboard **AI Agents** tab shows each agent's
    live memory ("Learned: channel bias", "Learned: known fixes") exactly as
    the bots wrote it. Nothing simulated, ever.
+
+## The AI Academy (agents that teach themselves to sell)
+
+Inside the **AI Agents** module, the **"Academia IA"** submenu is the teaching
+space: the **AI Teacher** agent (`scripts/teacher-agent.mjs`) runs daily and,
+without any administrative approval:
+
+1. **Observes the real market** — real funnel rows (leads by channel/niche,
+   won/lost, clients, MRR, revenue) plus everything every student already
+   learned in `agent_memory`.
+2. **Diagnoses knowledge gaps** — which curriculum skills each student has no
+   real memory for, and which lessons are stale (> 14 days).
+3. **Teaches** — writes one `market_brief` lesson per student (market state,
+   focus skills, instruction, what to avoid) into `agent_memory`. AI-generated
+   when `GEMINI_API_KEY`/`BLACKBOX_API_KEY` exist; deterministic curriculum
+   briefs from real data otherwise.
+4. **Students apply the lesson** — the Lead Qualifier and Growth & Marketing
+   agents load their latest `market_brief` at the start of every run and adapt
+   their scoring/strategy to today's market, on their own.
+
+Progress is honest and visible: each student shows its curriculum skills
+(✓ learned from real memory rows), its graduation stage (Enrolled → In
+training → Trained) and the freshness of its current market brief. The
+Insight Engine also reads the briefs, closing the learning loop.
+
+No new secrets are required — the Teacher reuses the existing Supabase and
+AI provider keys.
+
+## The AI Manager (autonomous operations)
+
+The **"Operações"** module shows the boss of the AI team. The **AI Manager**
+(`scripts/ops-manager.mjs`) runs daily at 05:30 UTC — before the agents'
+shift — and, with no administrative approval:
+
+1. **Assigns a daily mission to every agent** through `agent_memory`
+   (`mission` key): the Lead Qualifier hunts leads for the best-selling
+   packs, Growth & Marketing attacks the current funnel bottleneck, the
+   Insight Engine audits the operation, and the Error Handler verifies
+   deliveries. Each agent picks up its mission at the start of its next run.
+2. **Registers sold packs automatically**: every PAID order becomes a
+   `delivery_status` row awaiting QA. Clients found in sales but missing
+   from the roster are auto-registered (plan inferred from the paid amount).
+
+**Delivery QA** (hourly, inside the Error Handler): every pending pack gets
+a REAL verdict — the order is actually paid, the client is registered, the
+amount matches the pack tier, and the production app is operational
+(`SITE_URL` repo variable enables the health check). Passed/failed with the
+individual checks is stored per delivery and shown in the module.
+
+## The Skills Scout (skills.sh integration)
+
+The **Skills Scout** (`scripts/skills-scout.mjs`) connects the team to the
+open **skills.sh** agent-skills ecosystem (the same one behind `npx skills
+add`). Daily, for each agent:
+
+1. Reads the agent's mission + market brief and derives what it needs to
+   learn next (queries per funnel stage: closing, traffic, QA…).
+2. Searches `https://skills.sh/api/search` and records the real skills
+   found (source repo, install counts).
+3. Fetches the top skill's actual instructions via `npx skills use <source>
+   --skill <id>` (read-only, no repo changes).
+4. Writes a `skill_entry` into the agent's memory so the next run uses the
+   new commands and prompts — autonomously.
+
+Nothing is sent anywhere; the Scout only appends knowledge to memory.
 
 ## Pricing (live in the app)
 
@@ -101,6 +176,10 @@ npm test                  # unit tests (engine)
 npm run typecheck         # tsc --noEmit
 npm run bot:leads         # qualify real leads locally (needs Supabase secrets)
 npm run bot:error-handler # triage incidents locally
+npm run bot:growth        # daily growth & marketing plan (needs Supabase secrets)
+npm run bot:teacher       # AI Teacher class — writes market briefs per agent (needs Supabase secrets)
+npm run bot:manager       # AI Manager — assigns daily missions + registers sold packs for QA (needs Supabase secrets)
+npm run bot:skills        # Skills Scout — searches skills.sh and delivers new techniques per agent (needs Supabase secrets)
 npm run bot:insight       # daily AI insight (needs python3 -m pip install -r requirements.txt)
 ```
 
@@ -118,6 +197,20 @@ print(interaction.output_text)
 
 JavaScript (`scripts/bot-lib.mjs`) uses the same Interactions API via `@google/genai`:
 `await ai.interactions.create({ model, input })` → `interaction.output_text`.
+
+## Interface language (PT / EN)
+
+The UI ships in **Portuguese by default** (Angola/Portugal audience) with a full
+English translation. Switch with the `PT | EN` pills in the header — the choice
+persists in `localStorage` and updates `<html lang>`. All screens are covered:
+landing, auth, dashboard modules, forms, and footers. The dictionary lives in
+`src/lib/i18n.ts` (PT is the source of truth; EN mirrors every key).
+
+## Repo layout
+
+- `docs/reports/` — business reports and reference PDFs (documentation, not app code).
+- `supabase/` — migrations + CLI config.
+- `scripts/` — autonomous agents (`lead-hunter`, `error-handler`, `growth-marketing`, `teacher-agent`, `ops-manager`, `skills-scout`) + shared `bot-lib.mjs`.
 
 ## Security model
 

@@ -6,14 +6,15 @@ name: Autonomous AI Bots
 #  - insight engine: daily data-grounded growth insight (Python GenAI SDK)
 on:
   schedule:
-    - cron: "0 6 * * *"      # lead qualifier + insight — daily 06:00 UTC
-    - cron: "0 * * * *"      # error handler — hourly
+    - cron: "30 5 * * *"     # AI Manager assigns missions + Skills Scout — daily 05:30 UTC (before the shift)
+    - cron: "0 6 * * *"      # lead qualifier + insight + growth + teacher — daily 06:00 UTC
+    - cron: "0 * * * *"      # error handler (incl. delivery QA) — hourly
   workflow_dispatch:
     inputs:
       bot:
         description: "Which bot to run"
         type: choice
-        options: [lead-hunter, error-handler, insight, all]
+        options: [lead-hunter, error-handler, insight, growth, teacher, manager, skills, all]
         default: all
 
 concurrency:
@@ -50,6 +51,104 @@ jobs:
           LEAD_BOT_MIN_SCORE: "70"
         run: node scripts/lead-hunter.mjs
 
+  growth-marketing:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'growth' || inputs.bot == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Generate daily growth & marketing plan
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/growth-marketing.mjs
+
+  teacher:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '0 6 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'teacher' || inputs.bot == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: AI Teacher — daily class from real market data
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/teacher-agent.mjs
+
+  manager:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '30 5 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'manager' || inputs.bot == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: AI Manager — assign missions + register sold packs for QA
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/ops-manager.mjs
+
+  skills-scout:
+    if: >-
+      github.event_name == 'schedule' && github.event.schedule == '30 5 * * *' ||
+      github.event_name == 'workflow_dispatch' && (inputs.bot == 'skills' || inputs.bot == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Skills Scout — fetch the skills the team needs from skills.sh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/skills-scout.mjs
+
   error-handler:
     if: >-
       github.event_name == 'schedule' && github.event.schedule == '0 * * * *' ||
@@ -67,12 +166,13 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Triage real incidents
+      - name: Triage real incidents + delivery QA
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           BLACKBOX_API_KEY: ${{ secrets.BLACKBOX_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SITE_URL: ${{ vars.SITE_URL }}
         run: node scripts/error-handler.mjs
 
   insight:

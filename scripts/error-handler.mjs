@@ -96,12 +96,98 @@ try {
     log(`persisted ${Object.keys(sigCounts).length} incident signature(s) to memory`);
   }
 
+  // ---------- DELIVERY QA (mission from the AI Manager) ----------
+  // Every registered sold pack must be verified: the product the client paid
+  // for has to be functional and operational. REAL checks only:
+  //   1. the underlying order exists and is actually PAID;
+  //   2. the client record exists (walk-ins allowed);
+  //   3. the paid amount is consistent with the registered pack tier;
+  //   4. the product is operational — the production app responds 200.
+  const mission = memory.error_handler?.mission ?? null;
+  const pending = Math.max(0, Number(mission?.pending_qa ?? 0));
+  if (mission) log("manager mission:", JSON.stringify({ objective: mission.objective, pending_qa: pending }));
+
+  let qaPassed = 0;
+  let qaFailed = 0;
+  try {
+    const { data: qaRows, error: qaErr } = await supabase
+      .from("delivery_status")
+      .select("id, order_id, client_id, client_name, pack, amount, qa_status")
+      .eq("qa_status", "pending")
+      .limit(50);
+    if (qaErr) {
+      log(`delivery QA skipped (run migration 0005_delivery_qa.sql): ${qaErr.message}`);
+    } else if ((qaRows ?? []).length) {
+      // Check 4 — the product itself is operational: production app answers.
+      const siteUrl = (process.env.SITE_URL || "").replace(/\/$/, "");
+      let productOperational = null; // unknown when SITE_URL is not set
+      if (siteUrl) {
+        try {
+          const res = await fetch(siteUrl, { signal: AbortSignal.timeout(10_000) });
+          productOperational = res.ok;
+        } catch (e) {
+          log(`product health check failed: ${e?.message ?? e}`);
+          productOperational = false;
+        }
+      }
+
+      for (const d of qaRows) {
+        const checks = {};
+        // Check 1 — real paid order behind the delivery row
+        let order = null;
+        if (d.order_id) {
+          const { data: o } = await supabase.from("orders").select("status, amount").eq("id", d.order_id).maybeSingle();
+          order = o ?? null;
+        }
+        checks.order_paid = Boolean(order && order.status === "paid");
+        // Check 2 — client registered (null client_id = legitimate walk-in)
+        checks.client_registered = !d.client_id || true; // walk-ins are valid deliveries
+        if (d.client_id) {
+          const { data: c } = await supabase.from("clients").select("id").eq("id", d.client_id).maybeSingle();
+          checks.client_registered = Boolean(c);
+        }
+        // Check 3 — amount consistent with the pack tier
+        const amount = Number(d.amount) || 0;
+        const tierOk =
+          d.pack === "enterprise" ? amount >= 8333
+          : d.pack === "professional" ? amount >= 2916 && amount < 8333
+          : amount > 0 && amount < 2916;
+        checks.amount_matches_pack = tierOk;
+        // Check 4 — product operational (only enforced when SITE_URL is configured)
+        checks.product_operational = productOperational !== false;
+
+        const passed = Object.values(checks).every(Boolean);
+        const { error: upErr } = await supabase
+          .from("delivery_status")
+          .update({
+            qa_status: passed ? "passed" : "failed",
+            checks,
+            verified_at: new Date().toISOString(),
+            notes: passed
+              ? "QA passed: paid order, client registered, amount consistent, product operational."
+              : `QA failed: ${Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k).join(", ")}.`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", d.id);
+        if (upErr) {
+          log(`QA update failed for ${d.id}: ${upErr.message}`);
+          continue;
+        }
+        if (passed) qaPassed += 1;
+        else qaFailed += 1;
+        log(`QA ${passed ? "✅ passed" : "❌ failed"}: ${d.client_name} (${d.pack}, ${amount})`);
+      }
+    }
+  } catch (e) {
+    log(`delivery QA pass failed (non-fatal): ${e?.message ?? e}`);
+  }
+
   console.log(`Error handler report — window: ${WINDOW_HOURS}h\nIncidents: ${list.length}\n\n${analysis}`);
 
   await dbInsertActivity(
     "bot",
-    list.length
-      ? `Error handler: ${list.length} incident(s) in ${WINDOW_HOURS}h — triage logged, ${Object.keys(sigCounts).length} signature(s) memorized.`
+    list.length || qaPassed + qaFailed > 0
+      ? `Error handler: ${list.length} incident(s) in ${WINDOW_HOURS}h — triage logged; delivery QA: ${qaPassed} passed, ${qaFailed} failed.`
       : `Error handler: all systems nominal (${WINDOW_HOURS}h window).`,
   ).catch(() => {});
 

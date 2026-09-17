@@ -47,6 +47,16 @@ try {
   if (learnedChannelBias) {
     log("learned channel bias:", JSON.stringify(learnedChannelBias));
   }
+  // Lesson from the AI Teacher (Academy): the latest market brief, when present
+  const marketBrief = memory.lead_qualifier?.market_brief ?? null;
+  if (marketBrief) {
+    log("academy brief:", JSON.stringify(marketBrief));
+  }
+  // Mission from the AI Manager: today's objective, when assigned
+  const mission = memory.lead_qualifier?.mission ?? null;
+  if (mission) {
+    log("manager mission:", JSON.stringify(mission));
+  }
 
   // 2) Real, unscored leads (no AI action assigned yet)
   const { data: leads, error } = await supabase
@@ -116,10 +126,18 @@ try {
     const biasContext = learnedChannelBias
       ? `Learned channel bias from previous runs (points added to score): ${JSON.stringify(learnedChannelBias.bias ?? learnedChannelBias)}`
       : "";
+    const briefContext = marketBrief && typeof marketBrief === "object"
+      ? `Academy market brief from the AI Teacher (latest lesson — apply it): ${JSON.stringify(marketBrief)}`
+      : "";
+    const missionContext = mission && typeof mission === "object"
+      ? `Today's mission assigned by the AI Manager (respect the directive and priorities): ${JSON.stringify(mission)}`
+      : "";
     const prompt = `You are the revenue-operations engine of Fontes AI Admin Adjunta (AI admin automation for SMBs in Angola/Portugal, plans 12,500–83,330 AOA/month).
 Score these REAL inbound leads. For each: score 0-100 buying intent, and one concrete next action.
 ${historyContext}
 ${biasContext}
+${briefContext}
+${missionContext}
 Favor channels and niches that actually converted before. Be honest and conservative. Return STRICT JSON array:
 [{"id":"<lead id>","score":0,"ai_action":"","priority":"high|medium|low"}]
 

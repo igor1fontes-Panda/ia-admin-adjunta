@@ -1,5 +1,6 @@
 import { Copy, Check, Landmark, Globe } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../lib/i18n";
 
 const USD_ACCOUNT = {
   currency: "USD",
@@ -24,6 +25,7 @@ const EUR_ACCOUNT = {
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
   return (
     <button
       type="button"
@@ -33,7 +35,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
       className="group flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-left transition hover:border-gold-500/40"
-      title="Copy"
+      title={t("pay.copy")}
     >
       <span className="min-w-0">
         <span className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{label}</span>
@@ -50,6 +52,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 function AccountCard({ acc }: { acc: typeof USD_ACCOUNT | typeof EUR_ACCOUNT }) {
   const isUsd = acc.currency === "USD";
+  const t = useT();
   return (
     <div className="card p-6">
       <div className="flex items-center justify-between">
@@ -68,19 +71,19 @@ function AccountCard({ acc }: { acc: typeof USD_ACCOUNT | typeof EUR_ACCOUNT }) 
       <div className="mt-4 space-y-2">
         {isUsd ? (
           <>
-            <CopyField label="Account number" value={(acc as typeof USD_ACCOUNT).account} />
-            <CopyField label="Routing (ABA)" value={(acc as typeof USD_ACCOUNT).routing} />
+            <CopyField label={t("pay.account")} value={(acc as typeof USD_ACCOUNT).account} />
+            <CopyField label={t("pay.routing")} value={(acc as typeof USD_ACCOUNT).routing} />
           </>
         ) : (
           <>
-            <CopyField label="IBAN" value={(acc as typeof EUR_ACCOUNT).iban} />
-            <CopyField label="BIC / SWIFT" value={(acc as typeof EUR_ACCOUNT).bic} />
+            <CopyField label={t("pay.iban")} value={(acc as typeof EUR_ACCOUNT).iban} />
+            <CopyField label={t("pay.bic")} value={(acc as typeof EUR_ACCOUNT).bic} />
           </>
         )}
-        <CopyField label="Beneficiary" value={acc.beneficiary} />
+        <CopyField label={t("pay.beneficiary")} value={acc.beneficiary} />
         {isUsd ? (
           <p className="text-xs text-zinc-500">
-            {acc.type} · Beneficiary address: {(acc as typeof USD_ACCOUNT).beneficiaryAddress}
+            {t("pay.checking")} · {t("pay.benefAddr")}: {(acc as typeof USD_ACCOUNT).beneficiaryAddress}
           </p>
         ) : null}
       </div>
@@ -94,6 +97,7 @@ function AccountCard({ acc }: { acc: typeof USD_ACCOUNT | typeof EUR_ACCOUNT }) 
  * (orders tab) so staff can share exact details when invoicing.
  */
 export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
+  const t = useT();
   return (
     <div>
       <div className="flex items-start gap-3">
@@ -101,10 +105,8 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
           <Globe size={18} />
         </span>
         <div>
-          <h3 className="text-lg font-bold text-zinc-50">International payments (USD / EUR)</h3>
-          <p className="mt-1 text-sm text-zinc-400">
-            O checkout Stripe é o canal de cobrança automática quando o produto estiver publicado e configurado. Transferências bancárias continuam sujeitas a confirmação humana e comprovativo verificável.
-          </p>
+          <h3 className="text-lg font-bold text-zinc-50">{t("pay.title")}</h3>
+          <p className="mt-1 text-sm text-zinc-400">{t("pay.intro")}</p>
         </div>
       </div>
 
@@ -114,9 +116,7 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
       </div>
 
       {detailed ? (
-        <p className="mt-4 text-xs text-zinc-500">
-          Pagamentos locais e transferências internacionais ficam indisponíveis até existir um provedor real configurado. Qualquer confirmação deve ser feita manualmente com comprovativo verificável.
-        </p>
+        <p className="mt-4 text-xs text-zinc-500">{t("pay.detailedNote")}</p>
       ) : null}
     </div>
   );

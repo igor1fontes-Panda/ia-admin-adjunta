@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
 import { isLive, supabase } from "../lib/data";
+import { useT } from "../lib/i18n";
 
 export function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const t = useT();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -22,12 +24,12 @@ export function Auth() {
     setNotice(null);
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
-      setError("Enter a valid email address.");
+      setError(t("auth.errEmail"));
       setBusy(false);
       return;
     }
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(t("auth.errPassword"));
       setBusy(false);
       return;
     }
@@ -42,19 +44,17 @@ export function Auth() {
             navigate(from, { replace: true });
             return;
           }
-          setNotice("Account created! Check your email to confirm, then sign in.");
+          setNotice(t("auth.dbNotice"));
         } else {
           const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
           if (error) throw error;
           navigate(from, { replace: true });
         }
       } else {
-        throw new Error(
-          "Accounts are disabled until the database is connected (see dashboard setup steps).",
-        );
+        throw new Error(t("auth.errDb"));
       }
     } catch (err: any) {
-      setError(err.message ?? "Something went wrong");
+      setError(err.message ?? t("auth.errGeneric"));
     } finally {
       setBusy(false);
     }
@@ -69,24 +69,22 @@ export function Auth() {
           </span>
         </div>
         <h1 className="mt-5 text-center text-2xl font-bold text-zinc-50">
-          {mode === "signin" ? "Welcome back" : "Create your account"}
+          {mode === "signin" ? t("auth.welcome") : t("auth.create")}
         </h1>
         <p className="mt-1 text-center text-sm text-zinc-400">
-          {mode === "signin"
-            ? "Sign in to your AI admin command center."
-            : "Start automating your sales in minutes."}
+          {mode === "signin" ? t("auth.signinSub") : t("auth.signupSub")}
         </p>
 
         {!isLive ? (
           <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
             <ShieldAlert size={14} className="mt-0.5 shrink-0" />
-            Real accounts require the database connection. Follow the setup steps on the dashboard.
+            {t("auth.dbNotice")}
           </p>
         ) : null}
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
-            <label className="label" htmlFor="email">Email</label>
+            <label className="label" htmlFor="email">{t("auth.email")}</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
               <input
@@ -101,7 +99,7 @@ export function Auth() {
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="password">Password</label>
+            <label className="label" htmlFor="password">{t("auth.password")}</label>
             <div className="relative">
               <Lock size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
               <input
@@ -129,36 +127,36 @@ export function Auth() {
           ) : null}
 
           <button type="submit" disabled={busy} className="btn-primary w-full">
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy ? t("auth.wait") : mode === "signin" ? t("auth.signIn") : t("auth.signUp")}
           </button>
         </form>
 
         <p className="mt-5 text-center text-sm text-zinc-400">
           {mode === "signin" ? (
             <>
-              No account yet?{" "}
+              {t("auth.noAccount")}{" "}
               <button
                 className="font-semibold text-gold-400 hover:underline"
                 onClick={() => setMode("signup")}
               >
-                Sign up
+                {t("auth.signupLink")}
               </button>
             </>
           ) : (
             <>
-              Already registered?{" "}
+              {t("auth.hasAccount")}{" "}
               <button
                 className="font-semibold text-gold-400 hover:underline"
                 onClick={() => setMode("signin")}
               >
-                Sign in
+                {t("auth.signinLink")}
               </button>
             </>
           )}
         </p>
 
         <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link to="/" className="hover:text-zinc-300">← Back to home</Link>
+          <Link to="/" className="hover:text-zinc-300">{t("auth.back")}</Link>
         </p>
       </div>
     </div>

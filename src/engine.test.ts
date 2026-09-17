@@ -256,3 +256,125 @@ describe("onboardingSteps", () => {
     expect(steps.find((s) => s.id === "agents")?.done).toBe(true);
   });
 });
+
+// ---------- AI Academy ----------
+
+import { academyState, briefFreshness, TEACHER_PREFIX } from "./lib/engine";
+
+describe("academyState", () => {
+  it("cold start: all students honestly enrolled, teacher never ran", () => {
+    const s = academyState([], []);
+    expect(s.teacherRuns).toBe(0);
+    expect(s.teacherLastRun).toBeNull();
+    expect(s.teacherBriefsWritten).toBe(0);
+    expect(s.trainedCount).toBe(0);
+    expect(s.students).toHaveLength(4);
+    for (const st of s.students) {
+      expect(st.graduation).toBe("enrolled");
+      expect(st.marketBrief).toBeNull();
+    }
+  });
+
+  it("agents with prior learnings graduate to in_training", () => {
+    const s = academyState(
+      [],
+      [{ agent: "lead_qualifier", key: "channel_bias", value: { bias: { linkedin: 4 } }, updated_at: new Date().toISOString() }],
+    );
+    const lq = s.students.find((st) => st.slug === "lead_qualifier")!;
+    expect(lq.graduation).toBe("in_training");
+    expect(lq.skills.find((k) => k.id === "channel_performance")?.learned).toBe(true);
+    expect(lq.skills.find((k) => k.id === "market_brief")?.learned).toBe(false);
+    // others without any memory stay enrolled
+    expect(s.students.find((st) => st.slug === "insight_engine")!.graduation).toBe("enrolled");
+  });
+
+  it("a market_brief marks the student trained and counts as a teacher brief", () => {
+    const s = academyState(
+      [activity({ message: `${TEACHER_PREFIX}: class session complete — 4/4 students` })],
+      [
+        { agent: "growth_marketing", key: "market_brief", value: { instruction: "focus on fintech" }, updated_at: new Date().toISOString() },
+        { agent: "error_handler", key: "market_brief", value: { instruction: "watch lead surge" }, updated_at: new Date().toISOString() },
+      ],
+    );
+    expect(s.teacherRuns).toBe(1);
+    expect(s.teacherBriefsWritten).toBe(2);
+    expect(s.trainedCount).toBe(2);
+    const gm = s.students.find((st) => st.slug === "growth_marketing")!;
+    expect(gm.graduation).toBe("trained");
+    expect(gm.marketBrief?.value).toEqual({ instruction: "focus on fintech" });
+    // memory-backed skills with no rows stay unlearned (honest progress)
+    expect(gm.skills.find((k) => k.id === "campaign_strategy")?.learned).toBe(false);
+    expect(gm.skills.find((k) => k.id === "market_brief")?.learned).toBe(true);
+  });
+});
+
+describe("briefFreshness", () => {
+  it("classifies fresh / aging / stale by real age", () => {
+    expect(briefFreshness(new Date().toISOString())).toBe("fresh");
+    expect(briefFreshness(new Date(Date.now() - 14 * 86400000).toISOString())).toBe("aging");
+    expect(briefFreshness(new Date(Date.now() - 45 * 86400000).toISOString())).toBe("stale");
+  });
+});
+
+// ---------- Operations (AI Manager / delivery QA / skills.sh) ----------
+
+import { opsState } from "./lib/engine";
+import type { DeliveryRow } from "./lib/engine";
+
+const delivery = (over: Partial<DeliveryRow>): DeliveryRow => ({
+  id: "d1",
+  client_name: "Acme",
+  pack: "professional",
+  method: "multicaixa",
+  amount: 2916,
+  qa_status: "pending",
+  checks: {},
+  notes: null,
+  verified_at: null,
+  created_at: new Date().toISOString(),
+  ...over,
+});
+
+describe("opsState", () => {
+  it("honest cold start: no missions, no skills, no QA rows", () => {
+    const s = opsState([], []);
+    expect(s.missions).toHaveLength(0);
+    expect(s.skills).toHaveLength(0);
+    expect(s.deliveries).toHaveLength(0);
+    expect(s.qaPending).toBe(0);
+    expect(s.qaPassed).toBe(0);
+    expect(s.qaFailed).toBe(0);
+    expect(s.scoutLastRun).toBeNull();
+  });
+
+  it("collects missions and skill entries per managed agent from real memory", () => {
+    const now = new Date().toISOString();
+    const s = opsState(
+      [
+        { agent: "lead_qualifier", key: "mission", value: { objective: "qualify", bottleneck: "closing" }, updated_at: now },
+        { agent: "lead_qualifier", key: "channel_bias", value: {}, updated_at: now }, // not a mission
+        { agent: "growth_marketing", key: "skill_entry", value: { ecosystem: "skills.sh" }, updated_at: now },
+        { agent: "rogue_agent", key: "mission", value: {}, updated_at: now }, // ignored: not managed
+      ],
+      [],
+    );
+    expect(s.missions).toHaveLength(1);
+    expect(s.missions[0].agent).toBe("lead_qualifier");
+    expect(s.missions[0].value.bottleneck).toBe("closing");
+    expect(s.skills).toHaveLength(1);
+    expect(s.skills[0].agent).toBe("growth_marketing");
+    expect(s.scoutLastRun).toBe(now);
+  });
+
+  it("counts delivery QA statuses from real rows", () => {
+    const s = opsState([], [
+      delivery({ id: "d1", qa_status: "passed" }),
+      delivery({ id: "d2", qa_status: "passed" }),
+      delivery({ id: "d3", qa_status: "failed" }),
+      delivery({ id: "d4" }),
+    ]);
+    expect(s.qaPassed).toBe(2);
+    expect(s.qaFailed).toBe(1);
+    expect(s.qaPending).toBe(1);
+  });
+});

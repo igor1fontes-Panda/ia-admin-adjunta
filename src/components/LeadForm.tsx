@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { isLive, submitLead } from "../lib/data";
+import { useT } from "../lib/i18n";
 
 /**
  * Public lead-capture form. Writes a REAL row into the Supabase `leads`
@@ -8,6 +9,7 @@ import { isLive, submitLead } from "../lib/data";
  * only performed when an authorized agent and verifiable source are configured.
  */
 export function LeadForm() {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function LeadForm() {
     e.preventDefault();
     setError(null);
     if (!isLive) {
-      setError("The database is not connected yet — follow the setup steps on the dashboard.");
+      setError(t("leadForm.dbError"));
       return;
     }
     const fd = new FormData(e.currentTarget);
@@ -30,7 +32,7 @@ export function LeadForm() {
       });
       setDone(true);
     } catch (err: any) {
-      setError(err.message ?? "Could not submit — please try again.");
+      setError(err.message ?? t("leadForm.retry"));
     } finally {
       setBusy(false);
     }
@@ -40,43 +42,39 @@ export function LeadForm() {
     return (
       <div className="card p-8 text-center glow-gold">
         <CheckCircle2 size={40} className="mx-auto text-emerald-400" />
-        <h3 className="mt-4 text-xl font-bold text-zinc-50">Request received!</h3>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-zinc-400">
-          Your request is now a real lead in our system. Qualification will only happen after an authorized agent and a verifiable data source are available.
-        </p>
+        <h3 className="mt-4 text-xl font-bold text-zinc-50">{t("leadForm.doneTitle")}</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-zinc-400">{t("leadForm.doneBody")}</p>
       </div>
     );
   }
 
   return (
     <div className="card p-8">
-      <h3 className="text-xl font-bold text-zinc-50">See your business on autopilot</h3>
-      <p className="mt-1 text-sm text-zinc-400">
-        Tell us about your company — we'll come back with a personalized automation plan.
-      </p>
+      <h3 className="text-xl font-bold text-zinc-50">{t("leadForm.title")}</h3>
+      <p className="mt-1 text-sm text-zinc-400">{t("leadForm.sub")}</p>
 
       <form onSubmit={submit} className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="lf-company">Company</label>
+          <label className="label" htmlFor="lf-company">{t("leadForm.company")}</label>
           <input id="lf-company" name="company" required className="input" placeholder="Acme Lda" />
         </div>
         <div>
-          <label className="label" htmlFor="lf-name">Your name</label>
+          <label className="label" htmlFor="lf-name">{t("leadForm.name")}</label>
           <input id="lf-name" name="contact_name" required className="input" placeholder="Maria Silva" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="lf-email">Work email</label>
+          <label className="label" htmlFor="lf-email">{t("leadForm.email")}</label>
           <input id="lf-email" name="email" type="email" required className="input" placeholder="maria@acme.com" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="lf-niche">Your niche</label>
+          <label className="label" htmlFor="lf-niche">{t("leadForm.niche")}</label>
           <select id="lf-niche" name="niche" className="input" defaultValue="SaaS">
-            <option value="SaaS">SaaS / Technology</option>
-            <option value="Fintech">Fintech / Finance</option>
-            <option value="Healthcare">Healthcare</option>
-            <option value="E-commerce">E-commerce / Retail</option>
-            <option value="Logistics">Logistics</option>
-            <option value="Agencies">Agencies / Services</option>
+            <option value="SaaS">{t("leadForm.nicheSaaS")}</option>
+            <option value="Fintech">{t("leadForm.nicheFintech")}</option>
+            <option value="Healthcare">{t("leadForm.nicheHealth")}</option>
+            <option value="E-commerce">{t("leadForm.nicheEcom")}</option>
+            <option value="Logistics">{t("leadForm.nicheLogistics")}</option>
+            <option value="Agencies">{t("leadForm.nicheAgencies")}</option>
           </select>
         </div>
 
@@ -88,7 +86,7 @@ export function LeadForm() {
 
         <button type="submit" disabled={busy} className="btn-primary sm:col-span-2">
           {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          {busy ? "Sending…" : "Request free automation audit"}
+          {busy ? t("leadForm.sending") : t("leadForm.send")}
         </button>
       </form>
     </div>

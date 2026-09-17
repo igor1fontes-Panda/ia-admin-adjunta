@@ -1,12 +1,41 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, Menu, Sparkles, X } from "lucide-react";
+import { Globe, LayoutDashboard, LogOut, Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isLive, supabase } from "../lib/data";
+import { setLang, useLang, useT, type Lang } from "../lib/i18n";
+
+function LangSwitch() {
+  const lang = useLang();
+  const t = useT();
+  const options: Lang[] = ["pt", "en"];
+  return (
+    <div
+      className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1"
+      role="group"
+      aria-label={t("lang.label")}
+    >
+      <Globe size={13} className="ml-1.5 text-zinc-500" aria-hidden="true" />
+      {options.map((code) => (
+        <button
+          key={code}
+          onClick={() => setLang(code)}
+          aria-pressed={lang === code}
+          className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition ${
+            lang === code ? "bg-cyan-300 text-ink-950" : "text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          {code}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function Header() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     if (!isLive || !supabase) return;
@@ -34,25 +63,25 @@ export function Header() {
   const links = (
     <>
       <Link to="/" className="text-sm text-zinc-300 transition hover:text-cyan-300">
-        Início
+        {t("nav.home")}
       </Link>
-      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">Produtos</a>
-      <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">Loja</a>
-      <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">Agentes IA</a>
-      <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">Serviços</a>
-      <a href="/#payments" className="text-sm text-zinc-300 transition hover:text-cyan-300">Suporte</a>
+      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.products")}</a>
+      <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.store")}</a>
+      <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.agents")}</a>
+      <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.services")}</a>
+      <a href="/#payments" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.support")}</a>
       <Link
         to="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-cyan-300"
       >
-        <LayoutDashboard size={15} /> Dashboard
+        <LayoutDashboard size={15} /> {t("nav.dashboard")}
       </Link>
       {email ? (
         <button
           onClick={signOut}
           className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-gold-400"
         >
-          <LogOut size={15} /> Sign out
+          <LogOut size={15} /> {t("nav.signOut")}
         </button>
       ) : null}
     </>
@@ -74,12 +103,13 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">{links}</nav>
-        <div className="hidden md:block">
+        <div className="hidden items-center gap-3 md:flex">
+          <LangSwitch />
           {email ? (
             <Link
               to="/dashboard"
               className="flex items-center gap-2 rounded-xl border border-gold-500/30 bg-gold-500/10 px-3 py-2 text-xs font-semibold text-gold-300 transition hover:bg-gold-500/20"
-              title="Open your command center"
+              title={t("nav.openCC")}
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-500 text-[10px] font-bold text-ink-950">
                 {email.slice(0, 1).toUpperCase()}
@@ -88,7 +118,7 @@ export function Header() {
             </Link>
           ) : (
             <Link to="/auth" className="btn-primary !px-4 !py-2 text-xs">
-              Get started
+              {t("nav.getStarted")}
             </Link>
           )}
         </div>
@@ -96,7 +126,7 @@ export function Header() {
         <button
           className="rounded-lg p-2 text-zinc-300 hover:bg-white/10 md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
+          aria-label={t("nav.toggleMenu")}
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -105,19 +135,22 @@ export function Header() {
       {open ? (
         <div className="border-t border-white/10 bg-ink-950 px-4 pb-4 pt-2 md:hidden">
           <div className="flex flex-col gap-3">{links}</div>
-          {email ? (
-            <Link
-              to="/dashboard"
-              className="btn-primary mt-3 w-full"
-              onClick={() => setOpen(false)}
-            >
-              Open command center
-            </Link>
-          ) : (
-            <Link to="/auth" className="btn-primary mt-3 w-full" onClick={() => setOpen(false)}>
-              Get started
-            </Link>
-          )}
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <LangSwitch />
+            {email ? (
+              <Link
+                to="/dashboard"
+                className="btn-primary flex-1 justify-center !py-2 text-xs"
+                onClick={() => setOpen(false)}
+              >
+                {t("nav.openCC")}
+              </Link>
+            ) : (
+              <Link to="/auth" className="btn-primary flex-1 justify-center !py-2 text-xs" onClick={() => setOpen(false)}>
+                {t("nav.getStarted")}
+              </Link>
+            )}
+          </div>
         </div>
       ) : null}
     </header>

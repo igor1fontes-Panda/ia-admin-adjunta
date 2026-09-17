@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Bot } from "lucide-react";
+import { useT } from "../lib/i18n";
 
 export function Footer() {
+  const t = useT();
   return (
     <footer className="border-t border-white/10 bg-ink-950">
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
@@ -12,22 +14,19 @@ export function Footer() {
             </span>
             <span className="font-bold text-zinc-50">Fontes AI Admin Adjunta</span>
           </div>
-          <p className="mt-3 max-w-sm text-sm text-zinc-400">
-            The autonomous AI admin that hunts leads, closes sales and runs your
-            business operations 24/7.
-          </p>
+          <p className="mt-3 max-w-sm text-sm text-zinc-400">{t("footer.tag")}</p>
         </div>
         <div className="text-sm text-zinc-400">
-          <p className="mb-2 font-semibold text-zinc-200">Contact</p>
+          <p className="mb-2 font-semibold text-zinc-200">{t("footer.contact")}</p>
           <p>📧 support@ia-admin-adjunta.com</p>
           <p className="mt-1">💬 WhatsApp: +244 923 012 293</p>
-          <p className="mt-1">Payments: Multicaixa Express · PayPay · <Link to="/#payments" className="hover:text-gold-400">USD/EUR accounts</Link></p>
+          <p className="mt-1">{t("footer.payments")} <Link to="/#payments" className="hover:text-gold-400">{t("footer.paymentsLink")}</Link></p>
         </div>
         <div className="text-sm text-zinc-400">
-          <p className="mb-2 font-semibold text-zinc-200">Company</p>
+          <p className="mb-2 font-semibold text-zinc-200">{t("footer.company")}</p>
           <p>Fontes AI Admin Adjunta Solutions</p>
-          <p className="mt-1">© 2026 · All rights reserved</p>
-          <p className="mt-1">Termos comerciais publicados quando disponíveis</p>
+          <p className="mt-1">{t("footer.rights")}</p>
+          <p className="mt-1">{t("footer.terms")}</p>
         </div>
       </div>
     </footer>
