@@ -42,7 +42,7 @@ Run the complete static app locally with Docker and deterministic fixtures:
 docker compose up --build
 ```
 
-The static health document is available at `/health.json` and returns the service status without contacting external services. Python dependencies are pinned in `requirements.txt` and mirrored in `requirements.lock`; CI runs both JavaScript and Python dependency audits.
+The static health document is available at `/health.json` and returns the service status without contacting external services. Python dependencies are pinned in `requirements.txt` and mirrored in `requirements.lock`; CI runs both JavaScript and Python dependency audits. Run `npm run audit:python` locally to install the pinned audit tool and execute the same Python audit as CI.
 
 ### Running without Supabase
 

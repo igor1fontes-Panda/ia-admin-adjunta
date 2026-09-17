@@ -1,0 +1,13 @@
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="light"] body { background: #f4f7fb; color: #172033; }
+html[data-theme="light"] .app-shell { background: #f4f7fb; }
+html[data-theme="light"] .app-shell::before { background: radial-gradient(circle at 12% 18%, rgba(34, 211, 238, 0.12), transparent 28%), radial-gradient(circle at 86% 28%, rgba(236, 72, 153, 0.09), transparent 30%), #f4f7fb; }
+html[data-theme="light"] header { border-color: rgba(15, 23, 42, 0.10); background: rgba(255, 255, 255, 0.88); }
+html[data-theme="light"] .brand-wordmark, html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] h3 { color: #172033 !important; }
+html[data-theme="light"] nav a, html[data-theme="light"] nav button { color: #475569; }
+html[data-theme="light"] .card, html[data-theme="light"] .bg-ink-900\/80 { background-color: rgba(255, 255, 255, 0.86); border-color: rgba(15, 23, 42, 0.10); }
+html[data-theme="light"] .text-zinc-100, html[data-theme="light"] .text-zinc-200 { color: #334155 !important; }
+html[data-theme="light"] .text-zinc-300, html[data-theme="light"] .text-zinc-400 { color: #64748b !important; }
+html[data-theme="light"] .text-zinc-500 { color: #94a3b8 !important; }
+html[data-theme="light"] .border-white\/10 { border-color: rgba(15, 23, 42, 0.10) !important; }
+html[data-theme="light"] .bg-white\/5, html[data-theme="light"] .bg-white\/10 { background-color: rgba(15, 23, 42, 0.05) !important; }
