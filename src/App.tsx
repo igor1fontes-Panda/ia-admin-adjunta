@@ -59,17 +59,7 @@ function AppFrame() {
   );
 }
 
-/**
- * Dashboard gate. When the serverless backend (Neon + auth) is not configured
- * we must show the setup checklist WITHOUT requiring sign-in — there are no
- * accounts to sign into yet, so gating this page behind auth would make the
- * checklist unreachable.
- */
 function DashboardGate() {
-  if (!import.meta.env.DEV && !import.meta.env.VITE_API_OK) {
-    // The API is reachable (health is checked by the deploy-status workflow);
-    // this gate only guards the local-dev cold state where no backend exists.
-  }
   return (
     <RequireAuth>
       <Dashboard />

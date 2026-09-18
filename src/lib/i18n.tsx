@@ -326,8 +326,8 @@ const pt = {
   setup: {
     title: "Ligação à base de dados necessária",
     sub: "Esta app funciona apenas com dados reais — sem modo demo, sem simulações.",
-    alert: "O espaço de trabalho Supabase ao vivo não está ligado nesta implantação, pelo que os dados autenticados, a persistência e a entrega autónoma estão pausados. Não são mostrados leads, compradores ou outreach falsos.",
-    hint: "Podes rever o fluxo de pacotes de produto a partir da pré-visualização pública. Liga o Supabase e executa as migrações do repositório quando estiveres pronto para ativar armazenamento real, execuções de agentes e outreach com consentimento.",
+    alert: "A base Neon Postgres ainda não está ligada nesta implantação, pelo que os dados autenticados, a persistência e a entrega autónoma estão pausados. Não são mostrados leads, compradores ou outreach falsos.",
+    hint: "Podes rever o fluxo de pacotes de produto a partir da pré-visualização pública. Confirma `DATABASE_URL` e `BETTER_AUTH_SECRET` no ambiente Vercel e aplica a migração Neon quando estiveres pronto para ativar armazenamento real, sessões e outreach com consentimento.",
   },
   leadForm: {
     title: "Vê o teu negócio em piloto automático",
@@ -821,8 +821,8 @@ const en: Dict = {
   setup: {
     title: "Database connection required",
     sub: "This app runs on real data only — no demo mode, no simulations.",
-    alert: "The live Supabase workspace is not connected in this deployment, so authenticated data, persistence and autonomous delivery are paused. No fake leads, buyers or outreach are shown.",
-    hint: "You can review the product-pack workflow from the public preview. Connect Supabase and run the repository migrations when you are ready to enable real storage, agent runs and consent-gated outreach.",
+    alert: "The Neon Postgres database is not connected in this deployment, so authenticated data, persistence and autonomous delivery are paused. No fake leads, buyers or outreach are shown.",
+    hint: "You can review the product-pack workflow from the public preview. Confirm `DATABASE_URL` and `BETTER_AUTH_SECRET` in Vercel and apply the Neon migration when you are ready to enable real storage, sessions and consent-gated outreach.",
   },
   leadForm: {
     title: "See your business on autopilot",

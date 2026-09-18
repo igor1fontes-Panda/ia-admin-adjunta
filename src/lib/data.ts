@@ -12,8 +12,6 @@
  */
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
-import { isMockMode, mockData } from "./data.mock";
-
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -76,7 +74,6 @@ export async function checkDataLayerHealth(timeoutMs = 8000): Promise<DataLayerH
 // ---- Leads ----
 
 export async function fetchLeads(): Promise<Lead[]> {
-  if (isMockMode) return mockData.leads;
   return api<Lead[]>("/leads");
 }
 
@@ -90,7 +87,6 @@ const PLAN_MRR: Record<Client["plan"], number> = { starter: 1250, professional: 
 void PLAN_MRR; // MRR is derived server-side from the plan; kept for reference.
 
 export async function fetchClients(): Promise<Client[]> {
-  if (isMockMode) return mockData.clients;
   return api<Client[]>("/clients");
 }
 
@@ -101,7 +97,6 @@ export async function createClient(input: { name: string; email: string; plan: C
 // ---- Orders ----
 
 export async function fetchOrders(): Promise<Order[]> {
-  if (isMockMode) return mockData.orders;
   return api<Order[]>("/orders");
 }
 
@@ -127,7 +122,6 @@ export async function submitLead(input: { company: string; contact_name: string;
 // ---- Activity feed ----
 
 export async function fetchActivity(): Promise<Activity[]> {
-  if (isMockMode) return mockData.activity;
   return api<Activity[]>("/activity");
 }
 
@@ -160,7 +154,7 @@ export async function fetchDeliveryStatus(): Promise<DeliveryRow[]> {
   return api<DeliveryRow[]>("/deliveries");
 }
 
-// ---- Auth (Better Auth) ----
+// ---- Auth (Better Auth + Neon) ----
 
 export async function authSignIn(email: string, password: string): Promise<void> {
   const res = await fetch(`${API}/auth/sign-in/email`, {
