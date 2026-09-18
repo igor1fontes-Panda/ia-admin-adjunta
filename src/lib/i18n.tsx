@@ -313,6 +313,10 @@ const pt = {
     errPassword: "A password precisa de pelo menos 8 caracteres.",
     errDb: "As contas estão desativadas até a base de dados estar ligada (ver passos de configuração no dashboard).",
     errGeneric: "Algo correu mal",
+    verifyTitle: "Verifica o teu email",
+    verifyBody: "Enviámos um link de verificação para ativar o login.",
+    resend: "Reenviar email",
+    resent: "Email reenviado — verifica a caixa de entrada.",
   },
   footer: {
     tag: "A administração IA autónoma que caça leads, fecha vendas e gere as operações do teu negócio 24/7.",
@@ -808,6 +812,10 @@ const en: Dict = {
     errPassword: "Password must be at least 8 characters.",
     errDb: "Accounts are disabled until the database is connected (see dashboard setup steps).",
     errGeneric: "Something went wrong",
+    verifyTitle: "Verify your email",
+    verifyBody: "We sent a verification link to activate sign-in.",
+    resend: "Resend email",
+    resent: "Email resent — check your inbox.",
   },
   footer: {
     tag: "The autonomous AI admin that hunts leads, closes sales and runs your business operations 24/7.",

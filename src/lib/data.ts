@@ -12,6 +12,7 @@
  */
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
+import { AUTH_BASE } from "./auth-client";
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -157,7 +158,7 @@ export async function fetchDeliveryStatus(): Promise<DeliveryRow[]> {
 // ---- Auth (Better Auth + Neon) ----
 
 export async function authSignIn(email: string, password: string): Promise<void> {
-  const res = await fetch(`${API}/auth/sign-in/email`, {
+  const res = await fetch(`${AUTH_BASE}/sign-in/email`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -170,7 +171,7 @@ export async function authSignIn(email: string, password: string): Promise<void>
 }
 
 export async function authSignUp(email: string, password: string, name: string): Promise<void> {
-  const res = await fetch(`${API}/auth/sign-up/email`, {
+  const res = await fetch(`${AUTH_BASE}/sign-up/email`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -182,8 +183,18 @@ export async function authSignUp(email: string, password: string, name: string):
   }
 }
 
+/** Resend the verification email (managed Neon Auth mode). */
+export async function authResendVerification(email: string): Promise<void> {
+  await fetch(`${AUTH_BASE}/send-verification-email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, callbackURL: `${window.location.origin}/auth` }),
+  });
+}
+
 export async function authSignOut(): Promise<void> {
-  await fetch(`${API}/auth/sign-out`, {
+  await fetch(`${AUTH_BASE}/sign-out`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -193,7 +204,12 @@ export async function authSignOut(): Promise<void> {
 
 export async function authGetSession(): Promise<{ email: string; name: string } | null> {
   try {
-    const session = await api<{ user?: { email?: string; name?: string } }>("/auth/get-session");
+    const res = await fetch(`${AUTH_BASE}/get-session`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return null;
+    const session = (await res.json()) as { user?: { email?: string; name?: string } } | null;
     if (session?.user?.email) return { email: session.user.email, name: session.user.name ?? "" };
     return null;
   } catch {

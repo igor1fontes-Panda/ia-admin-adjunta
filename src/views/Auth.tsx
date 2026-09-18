@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
-import { authSignIn, authSignUp } from "../lib/data";
-import { useT } from "../lib/i18n";
-import { errorMessage } from "../lib/errors";
+  import { Link, useLocation, useNavigate } from "react-router-dom";
+  import { Bot, Mail, Lock, ShieldAlert, MailCheck } from "lucide-react";
+  import { authSignIn, authSignUp, authResendVerification } from "../lib/data";
+  import { NEON_AUTH } from "../lib/auth-client";
+  import { useT } from "../lib/i18n";
+  import { errorMessage } from "../lib/errors";
 
 export function Auth() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export function Auth() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,10 +39,35 @@ export function Auth() {
     try {
       if (mode === "signup") {
         await authSignUp(normalizedEmail, password, name.trim() || normalizedEmail.split("@")[0]);
+        if (NEON_AUTH) {
+          // Managed Neon Auth requires email verification before the first
+          // sign-in — show the resend panel instead of navigating.
+          setPendingVerification(true);
+          return;
+        }
       } else {
         await authSignIn(normalizedEmail, password);
       }
       navigate(from, { replace: true });
+    } catch (err: unknown) {
+      const raw = errorMessage(err, t("auth.errGeneric"));
+      if (/EMAIL_NOT_VERIFIED|not verified/i.test(raw)) {
+        setPendingVerification(true);
+        return;
+      }
+      setError(raw);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await authResendVerification(email.trim().toLowerCase());
+      setResent(true);
     } catch (err: unknown) {
       setError(errorMessage(err, t("auth.errGeneric")));
     } finally {
@@ -123,6 +151,24 @@ export function Auth() {
             {busy ? t("auth.wait") : mode === "signin" ? t("auth.signIn") : t("auth.signUp")}
           </button>
         </form>
+
+        {pendingVerification ? (
+          <div className="mt-6 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-sky-200">
+              <MailCheck size={16} /> {t("auth.verifyTitle")}
+            </p>
+            <p className="mt-1 text-xs text-sky-300/90">
+              {t("auth.verifyBody")} <span className="font-medium text-sky-100">{email}</span>
+            </p>
+            {resent ? (
+              <p className="mt-2 text-xs font-medium text-emerald-300">{t("auth.resent")}</p>
+            ) : (
+              <button onClick={resend} disabled={busy} className="mt-3 text-xs font-semibold text-sky-300 underline-offset-2 hover:underline">
+                {t("auth.resend")}
+              </button>
+            )}
+          </div>
+        ) : null}
 
         <p className="mt-5 text-center text-sm text-zinc-400">
           {mode === "signin" ? (
