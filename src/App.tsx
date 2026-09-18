@@ -14,9 +14,9 @@ import { isLive, supabase } from "./lib/data";
 import { PreferencesProvider } from "./lib/i18n";
 import "./theme.css";
 
-const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
-const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
-const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Landing = lazy(() => import("./views/Landing").then((m) => ({ default: m.Landing })));
+const Auth = lazy(() => import("./views/Auth").then((m) => ({ default: m.Auth })));
+const Dashboard = lazy(() => import("./views/Dashboard").then((m) => ({ default: m.Dashboard })));
 
 function PageSpinner() {
   return (
