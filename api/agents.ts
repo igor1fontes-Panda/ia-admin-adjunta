@@ -3,7 +3,7 @@
  * autonomous bots have learned from real outcomes (channel conversion,
  * incident fixes, market briefs, skills).
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { agentMemory } from "../db/schema";

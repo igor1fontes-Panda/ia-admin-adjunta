@@ -2,7 +2,7 @@
  * GET /api/activity — activity feed (authenticated). Real bot/system/sale/lead
  * events only; the initialization note is filtered out like the old UI did.
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { activityLog } from "../db/schema";

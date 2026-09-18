@@ -4,7 +4,7 @@
  *   POST  /api/clients        — create (MRR derived from plan)
  *   PATCH /api/clients?id=…   — update status/plan
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { clients } from "../db/schema";

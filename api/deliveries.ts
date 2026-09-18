@@ -3,7 +3,7 @@
  * delivery QA rows written by the Ops Manager and verified by the
  * Error Handler bot.
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { deliveryStatus } from "../db/schema";

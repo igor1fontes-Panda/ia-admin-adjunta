@@ -12,7 +12,7 @@
  */
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "../../server/auth";
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "../lib/http";
 
 export const config = { runtime: "nodejs22.x" };
 
@@ -24,7 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
   try {
-    return await toNodeHandler(auth)(req, res);
+    return await toNodeHandler(auth)(req as never, res as never);
   } catch (error) {
     console.error("[auth] handler error:", error);
     return res.status(500).json({ error: "Authentication service error." });

@@ -3,7 +3,7 @@
  * Reports which layer is missing so the dashboard can guide setup instead of
  * showing fake data. Never throws.
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
