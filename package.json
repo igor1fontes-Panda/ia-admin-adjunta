@@ -24,6 +24,7 @@
     "bot:manager": "node --env-file-if-exists=.env.local scripts/ops-manager.mjs",
     "bot:skills": "node --env-file-if-exists=.env.local scripts/skills-scout.mjs",
     "db:neon:health": "node --env-file-if-exists=.env.local scripts/neon-health.mjs",
+    "auth:smoke": "node --env-file-if-exists=.env.local scripts/auth-smoke.mjs",
     "db:push": "drizzle-kit push",
     "bot:insight": "python3 ai_engine.py"
   },
