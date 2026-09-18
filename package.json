@@ -28,6 +28,7 @@
     "bot:insight": "python3 ai_engine.py"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.5",
     "@google/genai": "^2.22.0",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/server": "^1.6.1",
@@ -66,6 +67,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "jsdom": "^30.0.1",
+    "lightningcss": "^1.33.0",
     "supabase": "^2.117.0",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
