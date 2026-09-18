@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
-import { isLive, supabase } from "../lib/data";
+import { authSignIn, authSignUp } from "../lib/data";
 import { useT } from "../lib/i18n";
 import { errorMessage } from "../lib/errors";
 
@@ -14,15 +14,14 @@ export function Auth() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    setNotice(null);
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       setError(t("auth.errEmail"));
@@ -35,25 +34,12 @@ export function Auth() {
       return;
     }
     try {
-      if (isLive && supabase) {
-        if (mode === "signup") {
-          const { data, error } = await supabase.auth.signUp({ email: normalizedEmail, password });
-          if (error) throw error;
-          // With "Confirm email" disabled, signUp returns a session immediately —
-          // sign the user straight in instead of telling them to re-sign-in.
-          if (data.session) {
-            navigate(from, { replace: true });
-            return;
-          }
-          setNotice(t("auth.dbNotice"));
-        } else {
-          const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-          if (error) throw error;
-          navigate(from, { replace: true });
-        }
+      if (mode === "signup") {
+        await authSignUp(normalizedEmail, password, name.trim() || normalizedEmail.split("@")[0]);
       } else {
-        throw new Error(t("auth.errDb"));
+        await authSignIn(normalizedEmail, password);
       }
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       setError(errorMessage(err, t("auth.errGeneric")));
     } finally {
@@ -76,14 +62,25 @@ export function Auth() {
           {mode === "signin" ? t("auth.signinSub") : t("auth.signupSub")}
         </p>
 
-        {!isLive ? (
-          <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
-            <ShieldAlert size={14} className="mt-0.5 shrink-0" />
-            {t("auth.dbNotice")}
-          </p>
-        ) : null}
+        <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
+          <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+          {t("auth.dbNotice")}
+        </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
+          {mode === "signup" ? (
+            <div>
+              <label className="label" htmlFor="name">{t("leadForm.name")}</label>
+              <input
+                id="name"
+                type="text"
+                className="input"
+                placeholder="Igor Fontes"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+          ) : null}
           <div>
             <label className="label" htmlFor="email">{t("auth.email")}</label>
             <div className="relative">
@@ -119,11 +116,6 @@ export function Auth() {
           {error ? (
             <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
               {error}
-            </p>
-          ) : null}
-          {notice ? (
-            <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-300">
-              {notice}
             </p>
           ) : null}
 

@@ -1,37 +1,19 @@
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { isLive, supabase } from "../lib/data";
-import { useT } from "../lib/i18n";
-import { usePreferences } from "../lib/i18n";
+import { useState } from "react";
+import { authClient } from "../lib/auth-client";
+import { useT, usePreferences } from "../lib/i18n";
 
 export function Header() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
   const t = useT();
   const { locale, theme, setLocale, toggleTheme } = usePreferences();
-
-  useEffect(() => {
-    if (!isLive || !supabase) return;
-    const sb = supabase;
-    let mounted = true;
-    sb.auth.getSession().then(({ data }) => {
-      if (mounted) setEmail(data.session?.user?.email ?? null);
-    });
-    const { data: sub } = sb.auth.onAuthStateChange((_evt, session) => {
-      setEmail(session?.user?.email ?? null);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+  const { data: session } = authClient.useSession();
+  const email = session?.user?.email ?? null;
 
   async function signOut() {
-    if (isLive && supabase) {
-      await supabase.auth.signOut();
-    }
+    await authClient.signOut();
     navigate("/");
   }
 

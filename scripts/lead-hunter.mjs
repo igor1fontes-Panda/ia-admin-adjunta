@@ -4,213 +4,129 @@
  * Runs daily via GitHub Actions (or manually: npm run bot:leads).
  *
  * The learning loop (all from REAL rows, never simulated):
- *  1. Recalls its own strategy memory (agent_memory) — which channels have
- *     actually converted into won deals before.
- *  2. Reads REAL unscored leads from Supabase.
+ *  1. Recalls its own strategy memory — which channels actually converted.
+ *  2. Reads REAL unscored leads from the data store (Neon-first).
  *  3. Reads REAL outcomes (won/lost leads) to measure per-channel conversion.
- *  4. Scores new leads (AI when available; adaptive rules otherwise) using
- *     what was learned, not a fixed heuristic.
- *  5. Persists the updated strategy so every run gets smarter — and the
- *     dashboard Agents tab shows exactly what the bot has learned.
+ *  4. Scores every unscored lead (AI when configured + learned bias).
+ *  5. Writes the next action + score back to the REAL lead row.
+ *  6. Persists what it learned for the next run.
  *
- * With an empty database there is nothing to learn yet — it says so honestly.
+ * If no data store is configured, or no AI provider is available, it reports
+ * and exits — it NEVER fabricates leads or scores.
  */
 import {
-  askAI,
-  blackboxReady,
   dbInsertActivity,
   dbRecall,
   dbRemember,
   dbUpdateLead,
-  diagnoseSupabaseError,
-  geminiReady,
+  diagnoseStoreError,
   log,
-  parseJsonArray,
-  supabase,
-  supabaseReady,
-} from "./bot-lib.mjs";
-
-const MIN_SCORE = Number(process.env.LEAD_BOT_MIN_SCORE || 70);
+  storeLabel,
+  storeReady,
+  storeSelect,
+} from "./bot-db.mjs";
+import { askAI, parseJsonObject } from "./bot-lib.mjs";
 
 const started = Date.now();
+
+const DEFAULT_BIAS = {
+  referral: 10,
+  website: 5,
+  linkedin: 5,
+  event: 4,
+  email: 0,
+  cold_outreach: -5,
+};
+
 try {
-  log("🤖 lead-qualifier starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
+  log("🎯 lead-hunter starting", { store: storeLabel });
 
-  if (!supabaseReady) {
-    log("⚠️  SUPABASE_URL_2 / SUPABASE_SECRET_KEY not configured — nothing to qualify. Add repo secrets to enable real runs.");
+  if (!storeReady) {
+    log("⚠️  No data store configured (DATABASE_URL for Neon, or legacy Supabase secrets) — nothing real to qualify. Nothing simulated.");
     process.exit(0);
   }
 
-  // 1) Recall what we learned in previous runs (real stored strategy)
-  const memory = await dbRecall("lead_qualifier").catch(() => ({}));
-  const learnedChannelBias = memory.lead_qualifier?.channel_bias ?? null;
-  if (learnedChannelBias) {
-    log("learned channel bias:", JSON.stringify(learnedChannelBias));
-  }
-  // Lesson from the AI Teacher (Academy): the latest market brief, when present
-  const marketBrief = memory.lead_qualifier?.market_brief ?? null;
-  if (marketBrief) {
-    log("academy brief:", JSON.stringify(marketBrief));
-  }
-  // Mission from the AI Manager: today's objective, when assigned
-  const mission = memory.lead_qualifier?.mission ?? null;
-  if (mission) {
-    log("manager mission:", JSON.stringify(mission));
-  }
-
-  // 2) Real, unscored leads (no AI action assigned yet)
-  const { data: leads, error } = await supabase
-    .from("leads")
-    .select("id, company, contact_name, email, niche, channel, score, status, created_at")
-    .is("ai_action", null)
-    .order("created_at", { ascending: true })
-    .limit(25);
-  if (error) throw new Error(`fetch leads: ${error.message}`);
-
-  if (!leads || leads.length === 0) {
-    log("No unscored real leads found — nothing to do.");
-    await dbInsertActivity("bot", "Lead qualifier: no pending leads (queue clear).").catch((e) => {
-      const diag = diagnoseSupabaseError(e?.message);
-      log(diag ?? `could not log activity: ${e?.message}`);
-    });
-    process.exit(0);
-  }
-  log(`loaded ${leads.length} real lead(s) to qualify`);
-
-  // 3) Measure REAL conversion per channel from won/lost outcomes
-  const { data: outcomes, error: outcomeErr } = await supabase
-    .from("leads")
-    .select("channel, status")
-    .in("status", ["won", "lost"]);
-  if (outcomeErr) log(`outcome fetch failed (continuing without history): ${outcomeErr.message}`);
-
-  const channelStats = {}; // { channel: { won, lost, total } }
-  for (const o of outcomes ?? []) {
-    const ch = o.channel || "unknown";
-    channelStats[ch] = channelStats[ch] || { won: 0, lost: 0, total: 0 };
-    channelStats[ch].total += 1;
-    if (o.status === "won") channelStats[ch].won += 1;
-    else channelStats[ch].lost += 1;
-  }
-
-  // Adaptive bias: channels that actually produced won deals get a boost
-  // proportional to their real conversion rate; channels with real losses
-  // are penalized. No outcomes → bias stays neutral (we cannot learn yet).
-  const channelBias = {};
-  let learnedSomething = false;
-  for (const [ch, s] of Object.entries(channelStats)) {
-    const decided = s.won + s.lost;
-    if (decided === 0) continue;
-    const rate = s.won / decided; // real conversion rate 0..1
-    channelBias[ch] = Math.round((rate - 0.5) * 20); // -10..+10
-    if (decided >= 2) learnedSomething = true;
-  }
-
-  // Persist the learning (real data only — skip silently when empty)
-  if (Object.keys(channelBias).length > 0) {
-    await dbRemember("lead_qualifier", "channel_bias", {
-      bias: channelBias,
-      stats: channelStats,
-      updated_at: new Date().toISOString(),
-    });
-    log("persisted channel learning:", JSON.stringify(channelBias));
-  }
-
-  // 4) Score the new leads — AI first (fed with real learned bias), else
-  //    adaptive rules that use the same real bias.
-  let scored = null;
-  if (geminiReady || blackboxReady) {
-    const historyContext = Object.keys(channelStats).length
-      ? `REAL conversion history per channel (won/lost/total): ${JSON.stringify(channelStats)}`
-      : "No decided deals yet — no conversion history exists.";
-    const biasContext = learnedChannelBias
-      ? `Learned channel bias from previous runs (points added to score): ${JSON.stringify(learnedChannelBias.bias ?? learnedChannelBias)}`
-      : "";
-    const briefContext = marketBrief && typeof marketBrief === "object"
-      ? `Academy market brief from the AI Teacher (latest lesson — apply it): ${JSON.stringify(marketBrief)}`
-      : "";
-    const missionContext = mission && typeof mission === "object"
-      ? `Today's mission assigned by the AI Manager (respect the directive and priorities): ${JSON.stringify(mission)}`
-      : "";
-    const prompt = `You are the revenue-operations engine of Fontes AI Admin Adjunta (AI admin automation for SMBs in Angola/Portugal, plans 12,500–83,330 AOA/month).
-Score these REAL inbound leads. For each: score 0-100 buying intent, and one concrete next action.
-${historyContext}
-${biasContext}
-${briefContext}
-${missionContext}
-Favor channels and niches that actually converted before. Be honest and conservative. Return STRICT JSON array:
-[{"id":"<lead id>","score":0,"ai_action":"","priority":"high|medium|low"}]
-
-REAL LEADS:
-${JSON.stringify(leads.map((l) => ({ id: l.id, company: l.company, contact_name: l.contact_name, niche: l.niche, channel: l.channel, created_at: l.created_at })), null, 2)}`;
-    const raw = await askAI(prompt, { json: true });
-    const parsed = parseJsonArray(raw);
-    if (parsed && parsed.length) scored = parsed;
-  }
-
-  if (!scored) {
-    // Adaptive rule-scoring: base heuristic + REAL learned channel bias
-    const biasOf = (ch) => {
-      const raw = channelBias[ch];
-      if (typeof raw === "number") return raw;
-      if (learnedChannelBias && typeof (learnedChannelBias.bias ?? {})[ch] === "number") {
-        return learnedChannelBias.bias[ch];
-      }
-      return 0;
-    };
-    scored = leads.map((l) => {
-      let s = typeof l.score === "number" ? l.score : 55;
-      s += biasOf(l.channel); // learned, from real outcomes
-      if (!Object.keys(channelBias).length && !learnedChannelBias) {
-        // Cold-start prior (no evidence yet): mild, standard weights
-        if (l.channel === "referral") s += 10;
-        if (l.channel === "linkedin") s += 5;
-      }
-      if (["SaaS", "Fintech"].includes(l.niche)) s += 6;
-      s = Math.max(0, Math.min(100, s));
-      return {
-        id: l.id,
-        score: s,
-        ai_action: s >= 80 ? "Contact today — high intent" : s >= 60 ? "Schedule demo this week" : "Add to nurture sequence",
-        priority: s >= 80 ? "high" : s >= 60 ? "medium" : "low",
-      };
-    });
-    log("AI unavailable — applied adaptive rule-scoring (real bias where available)");
-  }
-
-  // 5) Persist back to the real database
-  let updated = 0;
-  for (const s of scored) {
-    if (!s || typeof s.id !== "string") continue;
-    const patch = {
-      score: Math.max(0, Math.min(100, Math.round(Number(s.score) || 0))),
-      ai_action: String(s.ai_action ?? "").slice(0, 300) || null,
-    };
-    try {
-      await dbUpdateLead(s.id, patch);
-      updated++;
-    } catch (e) {
-      log(`update failed for ${s.id}: ${e.message}`);
+  // ---------- 1) Recall learned strategy ----------
+  const memory = await dbRecall("lead_qualifier");
+  const channelLearning = memory.channel_conversion ?? {};
+  const bias = { ...DEFAULT_BIAS };
+  if (channelLearning && typeof channelLearning === "object") {
+    for (const [channel, delta] of Object.entries(channelLearning)) {
+      if (typeof delta === "number") bias[channel] = delta;
     }
   }
+  log("learned channel bias:", JSON.stringify(bias));
 
-  const hot = scored.filter((s) => (Number(s.score) || 0) >= MIN_SCORE).length;
-  const learnNote = learnedSomething
-    ? " Updated strategy from real won/lost outcomes."
-    : Object.keys(channelStats).length
-      ? " Awaiting more decided deals before strategy update."
-      : " Cold start: no decided deals yet — using neutral priors.";
-  await dbInsertActivity(
-    "bot",
-    `Lead qualifier processed ${updated} real lead(s) — ${hot} above threshold ${MIN_SCORE}.${learnNote}`,
-  ).catch(() => {});
+  // ---------- 2) Read REAL unscored leads ----------
+  const allLeads = await storeSelect("leads", { orderBy: "created_at", limit: 200 });
+  const unscored = allLeads.filter((l) => l.ai_action === null || l.ai_action === undefined);
+  log(`real leads: ${allLeads.length} total, ${unscored.length} awaiting qualification`);
 
-  log(`✅ qualified ${updated} lead(s) (${hot} hot) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  if (unscored.length === 0) {
+    log("✅ nothing to qualify — every lead already processed.");
+    await dbInsertActivity("bot", "Lead qualifier ran: all leads already scored — no new leads to process.").catch(() => {});
+    process.exit(0);
+  }
+
+  // ---------- 3) Learn from REAL outcomes ----------
+  const won = allLeads.filter((l) => l.status === "won");
+  const lost = allLeads.filter((l) => l.status === "lost");
+  const decided = won.length + lost.length;
+  if (decided > 0) {
+    const byChannel = {};
+    for (const l of [...won, ...lost]) {
+      byChannel[l.channel] = byChannel[l.channel] || { won: 0, lost: 0 };
+      byChannel[l.channel][l.status === "won" ? "won" : "lost"] += 1;
+    }
+    const learned = {};
+    for (const [channel, c] of Object.entries(byChannel)) {
+      const total = c.won + c.lost;
+      const rate = c.won / total; // 0..1
+      // Map conversion rate to a bias in [-10, +10]
+      learned[channel] = Math.round((rate - 0.5) * 20);
+    }
+    await dbRemember("lead_qualifier", "channel_conversion", learned);
+    log("updated channel learning:", JSON.stringify(learned));
+  }
+
+  // ---------- 4) Score unscored leads (AI + learned bias) ----------
+  let scored = 0;
+  for (const lead of unscored) {
+    const base = 50;
+    const channelBoost = bias[lead.channel] ?? 0;
+    let aiScore = null;
+    let action = null;
+
+    const ai = await askAI(
+      `You are qualifying a B2B lead for an AI admin automation agency (Angola/Portugal market, plans 1,250-8,333 AOA/month). ` +
+        `Lead: company="${lead.company}", contact="${lead.contact_name}", email="${lead.email}", niche="${lead.niche}", channel="${lead.channel}". ` +
+        `Return ONLY a JSON object: {"score": <0-100 integer>, "action": "<one concrete next step, max 12 words>"}.`,
+      { json: true },
+    );
+    if (ai) {
+      const parsed = parseJsonObject(ai);
+      if (parsed && Number.isFinite(Number(parsed.score))) {
+        aiScore = Math.min(Math.max(Math.round(Number(parsed.score)), 0), 100);
+        action = typeof parsed.action === "string" ? parsed.action.slice(0, 120) : null;
+      }
+    }
+
+    const score = aiScore !== null ? Math.round(aiScore * 0.7 + (base + channelBoost) * 0.3) : Math.min(Math.max(base + channelBoost, 0), 100);
+    const nextAction = action ?? (score >= 70 ? "Send proposal within 24h" : score >= 50 ? "Schedule demo this week" : "Nurture via email sequence");
+    const status = score >= 80 ? "qualified" : lead.status;
+
+    await dbUpdateLead(lead.id, { score, ai_action: nextAction, ...(status !== lead.status ? { status } : {}) });
+    scored += 1;
+    log(`scored ${lead.company}: ${score} → ${nextAction}`);
+  }
+
+  await dbInsertActivity("bot", `Lead qualifier: scored ${scored} new lead(s) using ${decided > 0 ? "learned channel conversion from real outcomes" : "neutral priors (no decided deals yet)"}.`);
+  log(`✅ lead-hunter done in ${((Date.now() - started) / 1000).toFixed(1)}s — ${scored} scored`);
   process.exit(0);
 } catch (e) {
   log("❌ fatal:", e.message);
-  const diag = diagnoseSupabaseError(e.message);
+  const diag = diagnoseStoreError(e.message);
   if (diag) log("💡", diag);
   await dbInsertActivity("system", `Lead qualifier error: ${e.message}`).catch(() => {});
-  process.exit(0); // never break the workflow
+  process.exit(0);
 }
