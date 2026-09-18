@@ -13,13 +13,21 @@
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
 import { AUTH_BASE } from "./auth-client";
+import { CLERK_ENABLED, getClerkToken } from "./clerk-bridge";
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...((init?.headers as Record<string, string>) ?? {}) };
+  // Clerk mode: authenticate API calls with the session JWT (verified
+  // server-side as a fallback identity in api/lib/http.ts).
+  if (CLERK_ENABLED) {
+    const token = await getClerkToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers,
   });
   if (!res.ok) {
     let message = `Request failed (${res.status})`;

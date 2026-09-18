@@ -27,3 +27,4 @@ supabase-migration-state.txt
 __pycache__/
 *.pyc
 .venv-pip-audit/
+.clerk/

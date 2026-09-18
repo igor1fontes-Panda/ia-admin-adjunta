@@ -23,26 +23,32 @@ export interface VercelResponse {
 }
 import type { Auth } from "../../server/auth";
 import { fromNodeHeaders } from "better-auth/node";
+import { verifyClerkUser } from "../../server/clerk";
 
 export type AuthUser = { id: string; email: string; name: string };
 
 /** Returns the signed-in user for this request, or null.
- * `auth` may be null when DATABASE_URL is not configured (null-safe server). */
+ * `auth` may be null when DATABASE_URL is not configured (null-safe server).
+ * Identity sources, in order: self-hosted Better Auth session cookie, then
+ * an additive Clerk session JWT (Bearer) when CLERK_SECRET_KEY is set. */
 export async function getSessionUser(
   req: VercelRequest,
   auth: Auth | null,
 ): Promise<AuthUser | null> {
-  if (!auth) return null;
-  try {
-    const session = await auth.api.getSession({
-      // Vercel lambda headers are a plain object — convert for Better Auth.
-      headers: fromNodeHeaders(req.headers),
-    });
-    if (!session?.user) return null;
-    return { id: session.user.id, email: session.user.email, name: session.user.name };
-  } catch {
-    return null;
+  if (auth) {
+    try {
+      const session = await auth.api.getSession({
+        // Vercel lambda headers are a plain object — convert for Better Auth.
+        headers: fromNodeHeaders(req.headers),
+      });
+      if (session?.user) {
+        return { id: session.user.id, email: session.user.email, name: session.user.name };
+      }
+    } catch {
+      // fall through to Clerk bearer verification
+    }
   }
+  return verifyClerkUser(req);
 }
 
 export function unauthorized(res: VercelResponse): VercelResponse {

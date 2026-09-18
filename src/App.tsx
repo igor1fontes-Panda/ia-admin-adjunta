@@ -9,7 +9,7 @@ import {
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
-import { authClient } from "./lib/auth-client";
+import { useSessionBridge, SessionProvider } from "./lib/clerk-bridge";
 import { PreferencesProvider } from "./lib/i18n";
 import "./theme.css";
 
@@ -28,11 +28,13 @@ function PageSpinner() {
 export default function App() {
   return (
     <PreferencesProvider>
-      <BrowserRouter>
-        <AppFrame />
-        <SpeedInsights />
-        <Analytics />
-      </BrowserRouter>
+      <SessionProvider>
+        <BrowserRouter>
+          <AppFrame />
+          <SpeedInsights />
+          <Analytics />
+        </BrowserRouter>
+      </SessionProvider>
     </PreferencesProvider>
   );
 }
@@ -68,12 +70,13 @@ function DashboardGate() {
 }
 
 /**
- * Auth gate — real Better Auth sessions only (HttpOnly cookie based).
+ * Auth gate — Clerk session when Clerk keys are configured, otherwise the
+ * self-hosted Better Auth session (HttpOnly cookie based). Shape comes from
+ * useSessionBridge so this component is provider-agnostic.
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { data: session, isPending } = authClient.useSession();
-
+  const { session, isPending } = useSessionBridge();
   if (isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
@@ -81,7 +84,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (!session?.user) {
+  if (!session) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;

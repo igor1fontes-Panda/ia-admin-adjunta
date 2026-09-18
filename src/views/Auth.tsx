@@ -1,8 +1,9 @@
 import { useState } from "react";
   import { Link, useLocation, useNavigate } from "react-router-dom";
   import { Bot, Mail, Lock, ShieldAlert, MailCheck } from "lucide-react";
-  import { authSignIn, authSignUp, authResendVerification } from "../lib/data";
-  import { NEON_AUTH } from "../lib/auth-client";
+import { authSignIn, authSignUp, authResendVerification } from "../lib/data";
+import { NEON_AUTH } from "../lib/auth-client";
+import { CLERK_ENABLED, ClerkSignIn, ClerkSignUp } from "../lib/clerk-bridge";
   import { useT } from "../lib/i18n";
   import { errorMessage } from "../lib/errors";
 
@@ -12,7 +13,9 @@ export function Auth() {
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
   const t = useT();
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(
+    () => (new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin"),
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -20,6 +23,22 @@ export function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [resent, setResent] = useState(false);
+
+  // Additive Clerk mode: hosted, pre-built sign-in/sign-up components replace
+  // the custom form entirely (session lands in the bridge context).
+  if (CLERK_ENABLED) {
+    return (
+      <div className="grid-bg flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-16">
+        <div className="card w-full max-w-md p-8 glow-gold">
+          {mode === "signin" ? (
+            <ClerkSignIn routing="path" path="/auth" signUpUrl="/auth?mode=signup" forceRedirectUrl="/dashboard" fallbackRedirectUrl="/dashboard" />
+          ) : (
+            <ClerkSignUp routing="path" path="/auth" signInUrl="/auth?mode=signin" forceRedirectUrl="/dashboard" fallbackRedirectUrl="/dashboard" />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

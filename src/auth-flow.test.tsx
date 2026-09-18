@@ -1,6 +1,15 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// These tests exercise the self-hosted Better Auth flow. Force the additive
+// Clerk bridge OFF so this file is deterministic even when a local .env.local
+// contains Clerk keys (Vitest loads them via Vite envPrefix).
+vi.mock("./lib/clerk-bridge", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("./lib/clerk-bridge")>();
+  return { ...mod, CLERK_ENABLED: false, getClerkToken: async () => "" };
+});
+
 import { AUTH_BASE } from "./lib/auth-client";
 import { PreferencesProvider } from "./lib/i18n";
 import { Auth } from "./views/Auth";

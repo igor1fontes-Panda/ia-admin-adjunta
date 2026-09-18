@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 import { useState } from "react";
-import { authClient } from "../lib/auth-client";
+import { useSessionBridge } from "../lib/clerk-bridge";
 import { useT, usePreferences } from "../lib/i18n";
 
 export function Header() {
@@ -9,11 +9,11 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const t = useT();
   const { locale, theme, setLocale, toggleTheme } = usePreferences();
-  const { data: session } = authClient.useSession();
-  const email = session?.user?.email ?? null;
+  const { session, signOut: bridgeSignOut } = useSessionBridge();
+  const email = session?.email ?? null;
 
   async function signOut() {
-    await authClient.signOut();
+    await bridgeSignOut();
     navigate("/");
   }
 
