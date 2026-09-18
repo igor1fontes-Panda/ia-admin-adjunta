@@ -9,7 +9,18 @@
  *   the public cannot set score/status/ai_action (mirrors the old Supabase
  *   trigger `forces_default_lead_fields`).
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+export interface VercelRequest {
+  method?: string;
+  body?: unknown;
+  query: Record<string, string | string[] | undefined>;
+  headers: Record<string, string | string[] | undefined>;
+}
+
+export interface VercelResponse {
+  status(code: number): VercelResponse;
+  json(payload: unknown): VercelResponse;
+  end(): VercelResponse;
+}
 import type { Auth } from "../../server/auth";
 import { fromNodeHeaders } from "better-auth/node";
 

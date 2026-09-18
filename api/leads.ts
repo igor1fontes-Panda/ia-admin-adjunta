@@ -7,7 +7,7 @@
  * hardening the old Supabase trigger provided. No session => no write access
  * to any other table.
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { leads } from "../db/schema";
@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST") {
-      const body = typeof req.body === "string" ? safeJson(req.body) : req.body || {};
+      const body = (typeof req.body === "string" ? safeJson(req.body) : req.body || {}) as Record<string, unknown>;
       const company = str(body.company).trim();
       const contact = str(body.contact_name).trim();
       const email = str(body.email).trim().toLowerCase();

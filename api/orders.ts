@@ -4,7 +4,7 @@
  *   POST  /api/orders        — create with generated payment reference
  *   PATCH /api/orders?id=…   — update status (mark paid / refunded)
  */
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { deliveryStatus, orders } from "../db/schema";
