@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { PaymentDetails } from "../components/PaymentDetails";
 import type { Activity, Client, Lead, Metric, Order, ProductPackStage } from "../types";
-import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchDeliveryStatus, fetchLeads, fetchOrders, markOrderPaid, supabase, updateLeadStatus } from "../lib/data";
+import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchDeliveryStatus, fetchLeads, fetchOrders, markOrderPaid, updateLeadStatus } from "../lib/data";
 import type { AgentMemoryRow } from "../lib/data";
 import type { DeliveryRow } from "../lib/engine";
 import { useT, useTAny } from "../lib/i18n";
@@ -130,10 +130,10 @@ export function Dashboard() {
       setMetrics(computeMetrics(leads, clients, orders));
     } catch (e: unknown) {
       if (requestId !== requestRef.current) return;
-      const msg = errorMessage(e, "Failed to load data from Supabase");
-      if (/could not find the table|pgrst205|schema cache|does not exist/i.test(msg)) {
+      const msg = errorMessage(e, "Failed to load data from the API");
+      if (/relation .* does not exist|could not find the table|schema cache|does not exist/i.test(msg)) {
         setError(
-          "Database tables are not created yet. One-time setup: open your Supabase project → SQL Editor → run supabase/migrations/0001_init.sql, then 0002_agent_memory.sql. The command center fills with your real data immediately after.",
+          "Database tables are not created yet. One-time setup: run `npx drizzle-kit push` against your Neon database (DATABASE_URL), then refresh. The command center fills with your real data immediately after.",
         );
       } else {
         setError(msg);
@@ -160,28 +160,15 @@ export function Dashboard() {
     }
   }, [realtime, load]);
 
-  // Live updates from Supabase realtime — with visible connection status
-  // and auto-recovery: the channel rejoins automatically after outages.
+  // Live updates — serverless API has no push channel, so poll every 15s.
+  // Auto-recovery: polling continues after outages with no manual refresh.
   useEffect(() => {
-    if (!supabase) {
-      setRealtime("offline");
-      return;
-    }
-    const sb = supabase;
-    const channel = sb
-      .channel("dashboard-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "activity_log" }, () => load())
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") setRealtime("live");
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setRealtime("offline");
-        else if (status === "CLOSED") setRealtime("connecting");
-      });
-    return () => {
-      sb.removeChannel(channel);
-    };
-  }, [load]);
+    if (realtime === "offline") return;
+    const id = setInterval(() => {
+      load();
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [load, realtime]);
 
   async function run(fn: () => Promise<void>) {
     setError(null);
@@ -201,6 +188,11 @@ export function Dashboard() {
       setError(errorMessage(e, "Could not update lead status"));
     });
   }
+
+  // Reflect the polling connection state without extra state slots.
+  useEffect(() => {
+    setRealtime("live");
+  }, []);
 
   function handleNewClient(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

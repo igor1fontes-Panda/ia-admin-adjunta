@@ -24,6 +24,7 @@
     "bot:manager": "node --env-file-if-exists=.env.local scripts/ops-manager.mjs",
     "bot:skills": "node --env-file-if-exists=.env.local scripts/skills-scout.mjs",
     "db:neon:health": "node --env-file-if-exists=.env.local scripts/neon-health.mjs",
+    "db:push": "drizzle-kit push",
     "bot:insight": "python3 ai_engine.py"
   },
   "dependencies": {
@@ -57,8 +58,10 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vercel/node": "^13.0.1",
     "@vitest/coverage-v8": "^5.0.0",
     "autoprefixer": "^10.6.1",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
