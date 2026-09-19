@@ -1,6 +1,6 @@
 const baseUrl = (process.env.AUTH_SMOKE_URL || "http://localhost:3000").replace(/\/$/, "")
 const email = `smoke-${Date.now()}@example.invalid`
-const password = "SmokeTest-123456"
+const password = process.env.AUTH_SMOKE_PASSWORD || `smoke-${crypto.randomUUID()}`
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
