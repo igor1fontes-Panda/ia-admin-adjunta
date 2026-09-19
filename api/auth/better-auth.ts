@@ -14,7 +14,9 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "../../server/auth";
 import type { VercelRequest, VercelResponse } from "../lib/http";
 
-export const config = { runtime: "nodejs22.x" };
+// Vercel accepts the runtime family name here; the project engine controls
+// the Node.js major version used by the build and function environment.
+export const config = { runtime: "nodejs" };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!auth) {
