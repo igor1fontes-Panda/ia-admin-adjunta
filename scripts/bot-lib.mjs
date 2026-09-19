@@ -173,7 +173,7 @@ async function execNeon(q) {
     let text = `update ${q._table} set ${sets.join(", ")}`;
     for (const [col, val] of q._filters) {
       params.push(param(val));
-      text += keys.length === params.length ? " where" : " and";
+      text += text.includes(" where") ? " and" : " where";
       text += ` "${col}" = $${params.length}`;
     }
     text += ` returning *`;
@@ -182,7 +182,7 @@ async function execNeon(q) {
     return { data: null, error: { message: `Unsupported mode ${q._mode}` } };
   }
 
-  if (q._single || q._maybe) data = (data && data[0]) || null;
+  if (q._single || q._maybe) return { data: (data && data[0]) || null, error: null };
   return { data: data ?? [], error: null };
 }
 
