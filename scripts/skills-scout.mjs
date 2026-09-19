@@ -29,10 +29,12 @@ import {
   dbRecall,
   dbRemember,
   diagnoseSupabaseError,
-  log,
+  createLogger,
   supabase,
   supabaseReady,
 } from "./bot-lib.mjs";
+
+const log = createLogger("skills-scout");
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 

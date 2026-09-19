@@ -33,7 +33,33 @@ const MODEL_CHAIN = [...new Set([
   "gemini-2.0-flash",
 ])];
 
-export const log = (...args) => console.log(`[${new Date().toISOString()}]`, ...args);
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg } so scheduled GitHub Actions runs are greppable
+ * and parseable instead of free-form console noise.
+ *   log("plain message")            → level "info"
+ *   log.warn("…") / log.error("…")  → level "warn" / "error"
+ *   createLogger("growth-marketing") → bot field stamped per script
+ */
+function emit(level, bot, args) {
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    ...(bot ? { bot } : {}),
+    msg: args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
 
 const neonSql = NEON_URL ? neon(NEON_URL) : null;
 const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;

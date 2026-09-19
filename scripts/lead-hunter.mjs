@@ -20,12 +20,14 @@ import {
   dbRemember,
   dbUpdateLead,
   diagnoseStoreError,
-  log,
+  createLogger,
   storeLabel,
   storeReady,
   storeSelect,
 } from "./bot-db.mjs";
 import { askAI, parseJsonObject } from "./bot-lib.mjs";
+
+const log = createLogger("lead-hunter");
 
 const started = Date.now();
 
