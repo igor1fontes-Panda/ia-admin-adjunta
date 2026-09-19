@@ -12,6 +12,9 @@ tsconfig.tsbuildinfo
 .env.*.local
 *.local
 
+# Vitest coverage HTML output (npm run coverage)
+coverage/
+
 # Bot-generated local artifacts (when Supabase is not configured)
 data/
 
