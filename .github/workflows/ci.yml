@@ -33,6 +33,11 @@ jobs:
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
           echo "✅ Python bots compile"
 
+      - name: Python bots logic tests (no live account)
+        run: |
+          python3 -m unittest discover -s tests -v
+          echo "✅ Python bot logic verified with fake transports"
+
       - name: Python dependency audit
         run: |
           pip install pip-audit -q
@@ -48,8 +53,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm test
+      - name: Unit tests with coverage gate (vitest thresholds fail below 50% lines)
+        run: npm run coverage
 
       - name: Build
         run: npm run build
