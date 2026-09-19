@@ -26,6 +26,7 @@
     "db:neon:health": "node --env-file-if-exists=.env.local scripts/neon-health.mjs",
     "db:push": "drizzle-kit push",
     "db:smoke": "node scripts/db-smoke.mjs",
+    "db:read-back": "node scripts/db-read-back.mjs",
     "preview:fullstack": "bun scripts/dev-server.mjs",
     "e2e": "bun scripts/e2e-gauntlet.mjs",
     "auth:smoke": "node --env-file-if-exists=.env.local scripts/auth-smoke.mjs",
