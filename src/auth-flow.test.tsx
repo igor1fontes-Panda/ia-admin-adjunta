@@ -14,8 +14,8 @@ import { AUTH_BASE } from "./lib/auth-client";
 import { PreferencesProvider } from "./lib/i18n";
 import { Auth } from "./views/Auth";
 
-// Contract tests for the managed Neon Auth (Better Auth) client flow:
-//  - auth calls target the managed AUTH_BASE (cross-origin, cookie based)
+// Contract tests for the self-hosted Neon + Better Auth flow:
+//  - auth calls target the app's same-origin AUTH_BASE (cookie based)
 //  - EMAIL_NOT_VERIFIED must surface the verification panel, not an error wall
 //  - navigation only happens on a real session
 vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,11 +55,11 @@ async function submitCredentials(email = "ana@acme.test", password = "password12
   return user;
 }
 
-describe("auth flow (managed Neon Auth)", () => {
+describe("auth flow (self-hosted Neon + Better Auth)", () => {
   afterEach(cleanup);
 
   it("targets the managed Neon Auth base URL with cookie credentials", async () => {
-    expect(AUTH_BASE).toContain("neonauth");
+    expect(AUTH_BASE).toBe("/api/auth");
     renderAuth();
     await submitCredentials();
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
