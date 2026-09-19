@@ -33,7 +33,18 @@ const MODEL_CHAIN = [...new Set([
   "gemini-2.0-flash",
 ])];
 
-export const log = (...args) => console.log(`[${new Date().toISOString()}]`, ...args);
+export function log(message, context = {}) {
+  const fields = context && typeof context === "object" && !Array.isArray(context)
+    ? context
+    : { args: [context, ...Array.from(arguments).slice(2)] };
+  process.stdout.write(`${JSON.stringify({
+    level: "info",
+    ts: new Date().toISOString(),
+    bot: process.env.BOT_NAME || "unknown",
+    msg: String(message),
+    ...fields,
+  })}\n`);
+}
 
 const neonSql = NEON_URL ? neon(NEON_URL) : null;
 const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
@@ -52,7 +63,7 @@ export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "no
 // Every query resolves to { data, error } exactly like supabase-js.
 // ---------------------------------------------------------------------------
 
-class ShimQuery {
+export class ShimQuery {
   constructor(table) {
     this._table = table;
     this._mode = "select";
