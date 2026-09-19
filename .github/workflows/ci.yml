@@ -28,10 +28,11 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Python bots syntax check
+      - name: Python bots syntax and offline tests
         run: |
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
-          echo "✅ Python bots compile"
+          python3 -m unittest -v test_ai_engine.py
+          echo "Python bots compile and offline tests pass"
 
       - name: Python bots logic tests (no live account)
         run: |

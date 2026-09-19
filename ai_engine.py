@@ -68,8 +68,16 @@ MODEL_CHAIN = list(dict.fromkeys([
     "gemini-2.0-flash",
 ]))
 
-def log(*args):
-    print(f"[{datetime.now(timezone.utc).isoformat()}]", *args)
+def log(message: str, **context) -> None:
+    """Emit one machine-readable event without leaking credentials."""
+    event = {
+        "level": "info",
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "bot": os.environ.get("BOT_NAME", "ai-engine"),
+        "msg": str(message),
+        **context,
+    }
+    print(json.dumps(event, default=str), flush=True)
 
 def supabase_get(table: str, params: dict | None = None) -> list:
     """Read real rows via Supabase REST (service role)."""

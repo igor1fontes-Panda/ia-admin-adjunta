@@ -1,5 +1,6 @@
 node_modules/
 dist/
+coverage/
 
 # Freebuff hosting build snapshot (platform-managed, changes on every deploy)
 isolate/

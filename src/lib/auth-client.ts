@@ -10,13 +10,17 @@
  */
 import { createAuthClient } from "better-auth/react";
 
-const DEFAULT_NEON_AUTH_URL = "https://ep-broad-salad-zanhmhy8.neonauth.c-2.eu-west-2.aws.neon.tech/neondb/auth";
+const configuredAuthUrl = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined)?.trim();
+const neonAuthUrl = configuredAuthUrl ? configuredAuthUrl.replace(/\/$/, "") : "";
 
-const neonAuthUrl = (import.meta.env.VITE_NEON_AUTH_URL ?? DEFAULT_NEON_AUTH_URL).replace(/\/$/, "");
-
+// Keep authentication same-origin by default. This makes the browser use the
+// Vercel function backed by Neon instead of a stale project-specific URL.
 export const NEON_AUTH = Boolean(neonAuthUrl);
 export const AUTH_BASE = neonAuthUrl || "/api/auth";
 
-export const authClient = createAuthClient(neonAuthUrl ? { baseURL: neonAuthUrl } : {});
+const authClientBaseURL = neonAuthUrl ||
+  (typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:5173/api/auth");
+
+export const authClient = createAuthClient({ baseURL: authClientBaseURL });
 
 export const { useSession, signIn, signUp, signOut } = authClient;

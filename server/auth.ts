@@ -20,7 +20,12 @@ if (isDbConfigured && !process.env.BETTER_AUTH_SECRET && !process.env.AUTH_SECRE
 export const auth = db
   ? betterAuth({
       appName: "fontes-ai-admin-adjunta",
-      baseURL: process.env.BETTER_AUTH_URL || process.env.PUBLIC_SITE_URL || undefined,
+      baseURL:
+        process.env.BETTER_AUTH_URL ||
+        (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ||
+        process.env.PUBLIC_SITE_URL ||
+        process.env.V0_RUNTIME_URL,
       secret: process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET,
       trustedOrigins: [
         ...(process.env.NODE_ENV === "development" ? [
@@ -37,6 +42,16 @@ export const auth = db
           process.env.PUBLIC_SITE_URL,
         ] : []),
       ].filter((value): value is string => Boolean(value)),
+      ...(process.env.NODE_ENV === "development"
+        ? {
+            advanced: {
+              defaultCookieAttributes: {
+                sameSite: "none" as const,
+                secure: true,
+              },
+            },
+          }
+        : {}),
       emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,

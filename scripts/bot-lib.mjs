@@ -35,18 +35,27 @@ const MODEL_CHAIN = [...new Set([
 
 /**
  * Structured logging for bots: one JSON line per event with
- * { level, ts, bot, msg } so scheduled GitHub Actions runs are greppable
- * and parseable instead of free-form console noise.
- *   log("plain message")            → level "info"
- *   log.warn("…") / log.error("…")  → level "warn" / "error"
- *   createLogger("growth-marketing") → bot field stamped per script
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
  */
 function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last)
+    ? last
+    : null;
+  const msgParts = (fields ? args.slice(0, -1) : args)
+    .map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
   const line = {
     level,
     ts: new Date().toISOString(),
-    ...(bot ? { bot } : {}),
-    msg: args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" "),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
   };
   console.log(JSON.stringify(line));
 }
@@ -78,7 +87,7 @@ export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "no
 // Every query resolves to { data, error } exactly like supabase-js.
 // ---------------------------------------------------------------------------
 
-class ShimQuery {
+export class ShimQuery {
   constructor(table) {
     this._table = table;
     this._mode = "select";
