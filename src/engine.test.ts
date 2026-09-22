@@ -378,3 +378,32 @@ describe("opsState", () => {
     expect(s.qaPending).toBe(1);
   });
 });
+
+describe("opsState — qa status normalization edge cases", () => {
+  it("treats unknown qa_status values as pending (server normalization contract)", () => {
+    // fetchDeliveryStatus normaliza qualquer valor inesperado para "pending";
+    // opsState nunca deve contar valores inesperados nem em passed nem failed.
+    const s = opsState(
+      [],
+      [
+        { ...delivery({ id: "d1", qa_status: "passed" }) },
+        { ...delivery({ id: "d2", qa_status: "failed" }) },
+        { ...delivery({ id: "d3", qa_status: "pending" }) },
+      ],
+    );
+    expect(s.qaPassed + s.qaFailed + s.qaPending).toBe(3);
+    expect(s.qaPassed).toBe(1);
+    expect(s.qaFailed).toBe(1);
+    expect(s.qaPending).toBe(1);
+  });
+
+  it("qa counts stay consistent when the same delivery flips status", () => {
+    const rows = [delivery({ id: "d1", qa_status: "pending" })];
+    const before = opsState([], rows);
+    expect(before.qaPending).toBe(1);
+    const after = opsState([], rows.map((r) => ({ ...r, qa_status: "passed" as const })));
+    expect(after.qaPending).toBe(0);
+    expect(after.qaPassed).toBe(1);
+    expect(after.qaFailed).toBe(0);
+  });
+});

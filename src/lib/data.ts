@@ -271,6 +271,7 @@ export async function fetchAgentMemory(): Promise<AgentMemoryRow[]> {
 // ---- Delivery QA (AI Manager registrations + Error Handler verdicts) ----
 
 export async function fetchDeliveryStatus(): Promise<import("./engine").DeliveryRow[]> {
+  if (isMockMode) return [];
   const rows = await mapError(
     supabase!.from("delivery_status").select("*").order("created_at", { ascending: false }).limit(200),
   ) as Array<Record<string, unknown>>;

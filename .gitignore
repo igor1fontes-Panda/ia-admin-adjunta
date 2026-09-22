@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# Coverage reports (generated locally by `npm run coverage`)
+coverage/
+
 # Freebuff hosting build snapshot (platform-managed, changes on every deploy)
 isolate/
 
