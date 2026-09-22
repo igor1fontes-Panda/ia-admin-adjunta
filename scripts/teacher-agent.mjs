@@ -29,11 +29,13 @@ import {
   dbRemember,
   diagnoseSupabaseError,
   geminiReady,
-  log,
+  createLogger,
   parseJsonObject,
   supabase,
   supabaseReady,
 } from "./bot-lib.mjs";
+
+const log = createLogger("teacher-agent");
 
 const started = Date.now();
 const STALE_MS = 14 * 24 * 3600 * 1000; // a lesson older than 14d is stale

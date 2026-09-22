@@ -1,5 +1,6 @@
 node_modules/
 dist/
+coverage/
 
 # Coverage reports (generated locally by `npm run coverage`)
 coverage/
@@ -14,6 +15,9 @@ tsconfig.tsbuildinfo
 .env.local
 .env.*.local
 *.local
+
+# Vitest coverage HTML output (npm run coverage)
+coverage/
 
 # Bot-generated local artifacts (when Supabase is not configured)
 data/
@@ -30,3 +34,4 @@ supabase-migration-state.txt
 __pycache__/
 *.pyc
 .venv-pip-audit/
+.clerk/

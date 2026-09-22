@@ -33,11 +33,13 @@ import {
   dbRemember,
   diagnoseSupabaseError,
   geminiReady,
-  log,
+  createLogger,
   parseJsonObject,
   supabase,
   supabaseReady,
 } from "./bot-lib.mjs";
+
+const log = createLogger("ops-manager");
 
 const started = Date.now();
 

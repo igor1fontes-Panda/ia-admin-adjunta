@@ -15,10 +15,12 @@ import {
   dbRemember,
   diagnoseSupabaseError,
   geminiReady,
-  log,
+  createLogger,
   supabase,
   supabaseReady,
 } from "./bot-lib.mjs";
+
+const log = createLogger("error-handler");
 
 const WINDOW_HOURS = 24;
 

@@ -76,7 +76,7 @@ one valid lead, client, order, and activity item without contacting Supabase.
    npx supabase db push                                   # applies all pending migrations to the linked project
    ```
    `supabase/config.toml` is committed; CLI local state is git-ignored. This SPA uses the plain `@supabase/supabase-js` client in `src/lib/data.ts` (no server-side session middleware needed).
-2. Set environment variables (never commit them):
+2. Set environment variables (never commit them) — the full list the repo reads lives in [README.env-vars.md](README.env-vars.md):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work. (Also set `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` for server-side consumers such as `@supabase/server`.)
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…` (set it as `SUPABASE_SECRET_KEY`; both names are accepted); legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
    - Automatic migrations (repo secret): `SUPABASE_ACCESS_TOKEN` — the **Supabase Migrations** workflow then runs `supabase db push` on every merge to `main` that changes `supabase/migrations/`. Without the secret it skips cleanly.

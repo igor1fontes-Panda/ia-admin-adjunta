@@ -28,11 +28,13 @@ import {
   dbRemember,
   diagnoseSupabaseError,
   geminiReady,
-  log,
+  createLogger,
   parseJsonObject,
   supabase,
   supabaseReady,
 } from "./bot-lib.mjs";
+
+const log = createLogger("growth-marketing");
 
 const started = Date.now();
 

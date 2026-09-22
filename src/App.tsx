@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -9,14 +9,13 @@ import {
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
-import { SetupRequired } from "./components/SetupRequired";
-import { isLive, supabase } from "./lib/data";
+import { useSessionBridge, SessionProvider } from "./lib/clerk-bridge";
 import { PreferencesProvider } from "./lib/i18n";
 import "./theme.css";
 
-const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
-const Auth = lazy(() => import("./pages/Auth").then((m) => ({ default: m.Auth })));
-const Dashboard = lazy(() => import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Landing = lazy(() => import("./views/Landing").then((m) => ({ default: m.Landing })));
+const Auth = lazy(() => import("./views/Auth").then((m) => ({ default: m.Auth })));
+const Dashboard = lazy(() => import("./views/Dashboard").then((m) => ({ default: m.Dashboard })));
 
 function PageSpinner() {
   return (
@@ -29,11 +28,13 @@ function PageSpinner() {
 export default function App() {
   return (
     <PreferencesProvider>
-      <BrowserRouter>
-        <AppFrame />
-        <SpeedInsights />
-        <Analytics />
-      </BrowserRouter>
+      <SessionProvider>
+        <BrowserRouter>
+          <AppFrame />
+          <SpeedInsights />
+          <Analytics />
+        </BrowserRouter>
+      </SessionProvider>
     </PreferencesProvider>
   );
 }
@@ -60,13 +61,7 @@ function AppFrame() {
   );
 }
 
-/**
- * Dashboard gate. When the database is not connected we must show the setup
- * checklist WITHOUT requiring sign-in — there are no accounts to sign into
- * yet, so gating this page behind auth would make the checklist unreachable.
- */
 function DashboardGate() {
-  if (!isLive) return <SetupRequired />;
   return (
     <RequireAuth>
       <Dashboard />
@@ -75,42 +70,21 @@ function DashboardGate() {
 }
 
 /**
- * Auth gate — real Supabase sessions only.
+ * Auth gate — Clerk session when Clerk keys are configured, otherwise the
+ * self-hosted Better Auth session (HttpOnly cookie based). Shape comes from
+ * useSessionBridge so this component is provider-agnostic.
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const [session, setSession] = useState<"checking" | "yes" | "no">("checking");
-
-  useEffect(() => {
-    let mounted = true;
-
-    if (isLive && supabase) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (mounted) setSession(data.session ? "yes" : "no");
-      });
-      const { data: sub } = supabase.auth.onAuthStateChange((_evt, s) => {
-        setSession(s ? "yes" : "no");
-      });
-      return () => {
-        mounted = false;
-        sub.subscription.unsubscribe();
-      };
-    }
-
-    setSession("no");
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (session === "checking") {
+  const { session, isPending } = useSessionBridge();
+  if (isPending) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
       </div>
     );
   }
-  if (session === "no") {
+  if (!session) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;

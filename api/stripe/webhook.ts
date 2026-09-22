@@ -1,5 +1,14 @@
+/**
+ * Stripe webhook — records paid orders in Neon Postgres (Drizzle).
+ *
+ * Parity with POST /api/orders: a paid checkout creates the order (status
+ * "paid") and registers the pack for delivery QA. Upsert on the unique
+ * `reference` column makes webhook retries idempotent.
+ */
 import Stripe from "stripe";
-import { createServerSupabaseClient } from "../lib/supabase-server";
+import { eq } from "drizzle-orm";
+import { db, isDbConfigured } from "../../db";
+import { activityLog, deliveryStatus, orders } from "../../db/schema";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -38,11 +47,16 @@ export default async function handler(req: any, res: any) {
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
     return res.status(503).json({ error: "Stripe webhook is not configured." });
   }
+  if (!isDbConfigured || !db) {
+    return res.status(503).json({ error: "Order database is not configured." });
+  }
 
   let event: Stripe.Event;
   try {
     const payload = await rawBody(req);
-    event = stripe.webhooks.constructEvent(payload, getSignature(req), process.env.STRIPE_WEBHOOK_SECRET);
+    const signature = getSignature(req);
+    if (!signature) throw new Error("Missing stripe-signature header.");
+    event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -58,26 +72,42 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ received: true });
     }
 
-    let admin;
-    try {
-      admin = createServerSupabaseClient();
-    } catch {
-      return res.status(503).json({ error: "Order database is not configured." });
-    }
-    const amount = (session.amount_total || 0) / 100;
+    const amount = ((session.amount_total || 0) / 100).toFixed(2);
     const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
-    const { error } = await admin.from("orders").upsert(
-      {
+    const currency = session.currency?.toUpperCase() || "EUR";
+
+    // Idempotent upsert — Stripe retries webhooks, the reference is unique.
+    const [order] = await db
+      .insert(orders)
+      .values({
+        client_id: null,
         client_name: customerName,
         amount,
-        currency: session.currency?.toUpperCase() || "EUR",
+        currency,
         method: "stripe",
         status: "paid",
         reference: session.id,
-      },
-      { onConflict: "reference" },
-    );
-    if (error) return res.status(500).json({ error: "Unable to record paid order." });
+      })
+      .onConflictDoUpdate({
+        target: orders.reference,
+        set: { status: "paid", amount },
+      })
+      .returning();
+
+    // Mirror the Ops Manager behaviour: register the sold pack for delivery QA.
+    await db.insert(deliveryStatus).values({
+      client_id: null,
+      order_id: order.id,
+      client_name: customerName,
+      pack: "stripe",
+      method: "stripe",
+      amount,
+    });
+
+    await db.insert(activityLog).values({
+      kind: "sale",
+      message: `Stripe: paid order ${order.reference} from ${customerName} (${amount} ${currency}).`,
+    });
   }
 
   return res.status(200).json({ received: true });
