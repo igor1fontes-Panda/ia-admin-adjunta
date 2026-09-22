@@ -163,6 +163,68 @@ export async function fetchDeliveryStatus(): Promise<DeliveryRow[]> {
   return api<DeliveryRow[]>("/deliveries");
 }
 
+// ---- Auth (Better Auth + Neon) ----
+
+export async function authSignIn(email: string, password: string): Promise<void> {
+  const res = await fetch(`${AUTH_BASE}/sign-in/email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    throw new Error(body.message || body.error || `Sign-in failed (${res.status})`);
+  }
+}
+
+export async function authSignUp(email: string, password: string, name: string): Promise<void> {
+  const res = await fetch(`${AUTH_BASE}/sign-up/email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    throw new Error(body.message || body.error || `Sign-up failed (${res.status})`);
+  }
+}
+
+/** Resend the verification email (managed Neon Auth mode). */
+export async function authResendVerification(email: string): Promise<void> {
+  await fetch(`${AUTH_BASE}/send-verification-email`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, callbackURL: `${window.location.origin}/auth` }),
+  });
+}
+
+export async function authSignOut(): Promise<void> {
+  await fetch(`${AUTH_BASE}/sign-out`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+}
+
+export async function authGetSession(): Promise<{ email: string; name: string } | null> {
+  try {
+    const res = await fetch(`${AUTH_BASE}/get-session`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return null;
+    const session = (await res.json()) as { user?: { email?: string; name?: string } } | null;
+    if (session?.user?.email) return { email: session.user.email, name: session.user.name ?? "" };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // ---- Aggregated snapshot ----
 
 export type Snapshot = {
