@@ -77,11 +77,19 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
 
   const url = `${upstream}${(req.url ?? "/").replace(/^\/api\/auth/, "")}`;
   const headers: Record<string, string> = { "content-type": "application/json" };
+  // Hop-by-hop + host-identity headers. x-forwarded-*/forwarded MUST be
+  // stripped: Better Auth validates the request host against its configured
+  // baseURL and rejects our domain with INVALID_HOSTNAME — the upstream must
+  // see its own host, not the one the edge layer injected.
+  const stripped = [
+    "host", "connection", "content-length", "transfer-encoding", "cookie", "origin",
+    "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port", "forwarded", "x-real-ip",
+  ];
   for (const [name, value] of Object.entries(req.headers ?? {})) {
     const v = Array.isArray(value) ? value.join(", ") : value;
     if (!v) continue;
     const lower = name.toLowerCase();
-    if (["host", "connection", "content-length", "transfer-encoding", "cookie", "origin"].includes(lower)) continue;
+    if (stripped.includes(lower)) continue;
     headers[lower] = v;
   }
   // Forward the caller's session cookies to the managed endpoint.
