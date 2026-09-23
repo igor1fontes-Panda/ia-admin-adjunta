@@ -18,6 +18,7 @@ import { AgentsTab } from "./dashboard/tabs/AgentsTab";
 import { ProductPacksTab } from "./dashboard/tabs/ProductPacksTab";
 import { OpsTab } from "./dashboard/tabs/OpsTab";
 import { EcosystemTab } from "./dashboard/tabs/EcosystemTab";
+import { GodsEyeTab } from "./dashboard/tabs/GodsEyeTab";
 
 export type Tab = DashboardTab | "ops";
 export type ConnState = "connecting" | "live" | "offline";
@@ -183,7 +184,7 @@ export function Dashboard() {
     offline: { cls: "border-red-500/30 bg-red-500/10 text-red-300", dot: "bg-red-400", label: t("dash.offline"), tip: t("dash.offlineTip") },
   }[realtime];
 
-  const tabs: Tab[] = ["overview", "packs", "leads", "charts", "clients", "orders", "agents", "ops", "ecosystem"];
+  const tabs: Tab[] = ["overview", "packs", "leads", "charts", "clients", "orders", "agents", "ops", "ecosystem", "godseye"];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -282,6 +283,7 @@ export function Dashboard() {
               realtime={realtime}
             />
           ),
+          godseye: <GodsEyeTab leads={leads} orders={orders} />,
         }}
       />
       {tab === "ops" ? <OpsTab memory={memory} deliveries={deliveries} /> : null}

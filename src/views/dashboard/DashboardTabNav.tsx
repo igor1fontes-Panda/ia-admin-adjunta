@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 
-export type DashboardTab = "overview" | "packs" | "leads" | "charts" | "clients" | "orders" | "agents" | "ecosystem";
+export type DashboardTab = "overview" | "packs" | "leads" | "charts" | "clients" | "orders" | "agents" | "ecosystem" | "godseye";
 
 const tabs: Array<[DashboardTab, string]> = [
   ["overview", "Overview"],
@@ -11,6 +11,7 @@ const tabs: Array<[DashboardTab, string]> = [
   ["orders", "Orders"],
   ["agents", "AI Agents"],
   ["ecosystem", "Ecosystem"],
+  ["godseye", "GodsEye Nano"],
 ];
 
 export function DashboardTabNav({ tab, setTab }: { tab: DashboardTab; setTab: Dispatch<SetStateAction<DashboardTab>> }) {
