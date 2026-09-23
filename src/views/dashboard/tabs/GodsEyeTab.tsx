@@ -179,9 +179,9 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
               <ul className="mt-3 max-h-72 space-y-1.5 overflow-y-auto pr-1 text-xs">
                 {state.rows.map((row) => {
                   if (key === "flights") {
-                    const f = row as { label: string; alt: number; vel: number };
+                    const f = row as { icao: string; label: string; alt: number; vel: number };
                     return (
-                      <li key={`${key}-${f.label}-${f.alt}`} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
+                      <li key={`${key}-${f.icao}`} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
                         <span className="truncate font-medium text-zinc-200">{f.label}</span>
                         <span className="shrink-0 tabular-nums text-zinc-500">{Math.round(f.alt * 3.28).toLocaleString("en-US")} ft</span>
                       </li>
