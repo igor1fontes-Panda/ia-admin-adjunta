@@ -1,18 +1,33 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // These tests exercise the self-hosted Better Auth flow. Force the additive
-// Clerk bridge OFF so this file is deterministic even when a local .env.local
-// contains Clerk keys (Vitest loads them via Vite envPrefix).
+// Clerk bridge OFF and the managed Neon Auth override OFF so this file is
+// deterministic even when a local .env.local contains those keys (Vitest
+// loads them via Vite envPrefix). Modules are imported dynamically AFTER the
+// env stub so their import-time constants are evaluated in the stubbed env.
 vi.mock("./lib/clerk-bridge", async (importOriginal) => {
   const mod = await importOriginal<typeof import("./lib/clerk-bridge")>();
   return { ...mod, CLERK_ENABLED: false, getClerkToken: async () => "" };
 });
 
-import { AUTH_BASE } from "./lib/auth-client";
+type AuthClientModule = typeof import("./lib/auth-client");
+type AuthModule = typeof import("./views/Auth");
+let AUTH_BASE: AuthClientModule["AUTH_BASE"];
+let Auth: AuthModule["Auth"];
+
+beforeAll(async () => {
+  vi.stubEnv("VITE_NEON_AUTH_URL", "");
+  ({ AUTH_BASE } = await import("./lib/auth-client"));
+  ({ Auth } = await import("./views/Auth"));
+});
+
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
+
 import { PreferencesProvider } from "./lib/i18n";
-import { Auth } from "./views/Auth";
 
 // Contract tests for the self-hosted Neon + Better Auth flow:
 //  - auth calls target the app's same-origin AUTH_BASE (cookie based)
