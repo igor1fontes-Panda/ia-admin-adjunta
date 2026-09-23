@@ -9,20 +9,23 @@
  * TWO OPERATING MODES:
  *
  * 1) Managed Neon Auth proxy — when VITE_NEON_AUTH_URL is set on the SERVER
- *    (it holds the managed endpoint https://<project>.neonauth.<region>.../
- *    <db>/auth), every /api/auth/* request is forwarded to Neon Auth
- *    server-to-server with a synthetic trusted Origin. The browser talks to
- *    our own domain only (same-origin), so the managed endpoint's origin
- *    allowlist can never reject the app with "Invalid origin" — the previous
- *    client-side cross-origin setup failed exactly there. Session cookies are
- *    forwarded both ways so sign-in/up/out and get-session work unchanged.
+ *    (the managed endpoint https://<project>.neonauth.<region>.../<db>/auth),
+ *    every /api/auth/* request is forwarded to Neon Auth server-to-server
+ *    with a synthetic trusted Origin. The browser talks to our own domain
+ *    only (same-origin), so the managed endpoint's origin allowlist can never
+ *    reject the app with "Invalid origin" — the previous client-side
+ *    cross-origin setup failed exactly there. Session cookies are forwarded
+ *    both ways so sign-in/up/out and get-session work unchanged.
+ *    This branch deliberately uses NO third-party imports (global fetch
+ *    only): serverless bundlers trace every static import, and the heavier
+ *    auth packages have export maps the tracer can miss — a missing traced
+ *    file crashes the whole function at cold start.
  *
  * 2) Self-hosted Better Auth — when no managed URL is configured, requests
  *    run the project's own Better Auth instance on Neon Postgres
- *    (DATABASE_URL + BETTER_AUTH_SECRET). Null-safe: 503 when unconfigured.
+ *    (DATABASE_URL + BETTER_AUTH_SECRET), loaded lazily. Null-safe: 503
+ *    when the database is not configured.
  */
-import { toNodeHandler } from "better-auth/node";
-import { auth } from "../../server/auth";
 import type { VercelRequest, VercelResponse } from "../lib/http";
 
 export const config = { runtime: "nodejs" };
@@ -38,6 +41,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return proxyToNeonAuth(req, res, upstream);
   }
 
+  // Self-hosted mode: load the auth stack lazily so this function only pays
+  // for it when it actually runs (and bundlers don't trace it in proxy mode).
+  const [{ auth }, { toNodeHandler }] = await Promise.all([
+    import("../../server/auth"),
+    import("better-auth/node"),
+  ]);
   if (!auth) {
     return res.status(503).json({
       error:
@@ -56,9 +65,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * Server-to-server proxy to managed Neon Auth. Trust model:
  *  - The managed endpoint pre-approves localhost origins; we identify as the
  *    project's own dev origin ("http://localhost:5173") server-side.
- *  - Vercel/Node normalize Host/X-Forwarded-* themselves; we only strip the
- *    hop-by-hop headers that must not cross a proxy boundary.
- *  - Session cookies (set-cookie) are copied back one-by-one so the browser
+ *  - Hop-by-hop headers and the browser's Origin/Cookie are stripped; session
+ *    cookies are forwarded explicitly so sessions survive the proxy hop.
+ *  - Response set-cookie headers are copied back one-by-one so the browser
  *    stores them on OUR origin — keeping the whole flow same-origin.
  */
 async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream: string) {
@@ -81,11 +90,13 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
   // Synthetic trusted origin (localhost is pre-approved by Neon Auth).
   headers.origin = "http://localhost:5173";
 
+  const method = req.method ?? "POST";
   try {
     const upstreamRes = await fetch(url, {
-      method: req.method ?? "POST",
+      method,
       headers,
-      body: ["GET", "HEAD", "OPTIONS"].includes(req.method ?? "") ? undefined : rawBody || "{}",
+      // fetch() forbids bodies on GET/HEAD/OPTIONS.
+      body: ["GET", "HEAD", "OPTIONS"].includes(method) ? undefined : rawBody || "{}",
     });
 
     const text = await upstreamRes.text();
@@ -106,7 +117,7 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
     res.setHeader("Access-Control-Allow-Headers", "content-type");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 
-    if (req.method === "OPTIONS") return res.status(204).end();
+    if (method === "OPTIONS") return res.status(204).end();
     return res.end(text);
   } catch (error) {
     console.error("[auth] proxy error:", error);
