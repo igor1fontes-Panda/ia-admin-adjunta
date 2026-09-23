@@ -1,25 +1,29 @@
 /**
  * Better Auth React client.
  *
- * Default target: the project's managed Neon Auth endpoint (powered by Better
- * Auth) — a public, project-specific URL provided by the owner. Sessions live
- * in HttpOnly cookies on that origin (SameSite=None; Secure for the SPA).
+ * The browser ALWAYS talks to this app's own /api/auth routes (same-origin,
+ * HttpOnly cookies on our domain). The server side decides where the session
+ * lives:
+ *   - VITE_NEON_AUTH_URL set on the server → server proxies to managed Neon
+ *     Auth (hosted Better Auth), injecting a trusted origin server-to-server.
+ *   - unset → self-hosted Better Auth on Neon Postgres (DATABASE_URL).
  *
- * Override: set VITE_NEON_AUTH_URL to "" to fall back to this app's own
- * /api/auth serverless routes (self-hosted Better Auth + DATABASE_URL).
+ * This removes the cross-origin browser calls that made managed Neon Auth
+ * reject the deployed origin with "Invalid origin".
  */
 import { createAuthClient } from "better-auth/react";
 
 const configuredAuthUrl = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined)?.trim();
-const neonAuthUrl = configuredAuthUrl ? configuredAuthUrl.replace(/\/$/, "") : "";
 
-// Keep authentication same-origin by default. This makes the browser use the
-// Vercel function backed by Neon instead of a stale project-specific URL.
-export const NEON_AUTH = Boolean(neonAuthUrl);
-export const AUTH_BASE = neonAuthUrl || "/api/auth";
+// Managed Neon Auth is active when the SERVER has the endpoint configured.
+// The VITE_ prefix also inlines it into the client bundle, which keeps the
+// NEON_AUTH flag true for the sign-up verification-panel UX — but the client
+// itself never calls that URL: everything goes through same-origin /api/auth.
+export const NEON_AUTH = Boolean(configuredAuthUrl);
+export const AUTH_BASE = "/api/auth";
 
-const authClientBaseURL = neonAuthUrl ||
-  (typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:5173/api/auth");
+const authClientBaseURL =
+  typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:5173/api/auth";
 
 export const authClient = createAuthClient({ baseURL: authClientBaseURL });
 

@@ -12,6 +12,7 @@
 export interface VercelRequest {
   method?: string;
   body?: unknown;
+  url?: string;
   query: Record<string, string | string[] | undefined>;
   headers: Record<string, string | string[] | undefined>;
 }
@@ -19,7 +20,11 @@ export interface VercelRequest {
 export interface VercelResponse {
   status(code: number): VercelResponse;
   json(payload: unknown): VercelResponse;
-  end(): VercelResponse;
+  end(data?: string | Uint8Array): VercelResponse;
+  append(name: string, value: string | string[]): VercelResponse;
+  setHeader(name: string, value: string | string[] | number): VercelResponse;
+  getHeader(name: string): string | number | string[] | undefined;
+  flushHeaders?(): void;
 }
 import type { Auth } from "../../server/auth";
 import { fromNodeHeaders } from "better-auth/node";

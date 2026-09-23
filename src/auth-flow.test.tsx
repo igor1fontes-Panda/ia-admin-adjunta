@@ -70,10 +70,10 @@ async function submitCredentials(email = "ana@acme.test", password = "password12
   return user;
 }
 
-describe("auth flow (self-hosted Neon + Better Auth)", () => {
+describe("auth flow (same-origin client + server proxy)", () => {
   afterEach(cleanup);
 
-  it("targets the managed Neon Auth base URL with cookie credentials", async () => {
+  it("targets the app's own /api/auth base URL with cookie credentials", async () => {
     expect(AUTH_BASE).toBe("/api/auth");
     renderAuth();
     await submitCredentials();

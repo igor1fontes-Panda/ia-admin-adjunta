@@ -193,11 +193,13 @@ export async function authSignUp(email: string, password: string, name: string):
 
 /** Resend the verification email (managed Neon Auth mode). */
 export async function authResendVerification(email: string): Promise<void> {
+  // Same-origin call — the server proxies to managed Neon Auth and injects the
+  // trusted origin itself, so no cross-origin rejection can occur here.
   await fetch(`${AUTH_BASE}/send-verification-email`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, callbackURL: `${window.location.origin}/auth` }),
+    body: JSON.stringify({ email }),
   });
 }
 
