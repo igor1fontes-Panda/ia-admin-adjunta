@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   agentStatus,
   computeMetrics,
@@ -208,22 +208,30 @@ describe("agentStatus", () => {
 
 describe("todayPulse", () => {
   it("counts only today's real activity (UTC day)", () => {
+    // Freeze the clock at UTC noon so "2 hours ago" can never cross
+    // midnight and make this test flaky between 00:00–02:00 UTC.
     const now = new Date();
-    const earlierToday = new Date(now.getTime() - 2 * 3600_000).toISOString();
-    const pulse = todayPulse(
-      [lead({}), lead({ id: "l2", created_at: "2020-01-01T00:00:00Z" })],
-      [
-        order({}),
-        order({ id: "o2", status: "pending" }),
-        order({ id: "o3", created_at: "2020-01-01T00:00:00Z" }),
-      ],
-      [activity({}), activity({ id: "a2", created_at: earlierToday })],
-    );
-    expect(pulse.leadsToday).toBe(1);
-    expect(pulse.ordersToday).toBe(2);
-    // only the PAID order counts towards collected money
-    expect(pulse.collectedToday).toBeGreaterThan(0);
-    expect(pulse.botRunsToday).toBe(2);
+    now.setUTCHours(12, 0, 0, 0);
+    vi.useFakeTimers({ now });
+    try {
+      const earlierToday = new Date(now.getTime() - 2 * 3600_000).toISOString();
+      const pulse = todayPulse(
+        [lead({}), lead({ id: "l2", created_at: "2020-01-01T00:00:00Z" })],
+        [
+          order({}),
+          order({ id: "o2", status: "pending" }),
+          order({ id: "o3", created_at: "2020-01-01T00:00:00Z" }),
+        ],
+        [activity({}), activity({ id: "a2", created_at: earlierToday })],
+      );
+      expect(pulse.leadsToday).toBe(1);
+      expect(pulse.ordersToday).toBe(2);
+      // only the PAID order counts towards collected money
+      expect(pulse.collectedToday).toBeGreaterThan(0);
+      expect(pulse.botRunsToday).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("is all zeros on a quiet day — real zeros, never simulated", () => {
