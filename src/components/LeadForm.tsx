@@ -3,6 +3,7 @@ import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { isLive, submitLead } from "../lib/data";
 import { useT } from "../lib/i18n";
 import { errorMessage } from "../lib/errors";
+import { firstIssue, leadInputSchema } from "../lib/schemas";
 
 /**
  * Public lead-capture form. Writes a REAL row into the Supabase `leads`
@@ -23,14 +24,20 @@ export function LeadForm() {
       return;
     }
     const fd = new FormData(e.currentTarget);
+    // Validate at the boundary before hitting the API.
+    const parsed = leadInputSchema.safeParse({
+      company: String(fd.get("company") || ""),
+      contact_name: String(fd.get("contact_name") || ""),
+      email: String(fd.get("email") || ""),
+      niche: String(fd.get("niche") || "SaaS"),
+    });
+    if (!parsed.success) {
+      setError(firstIssue(parsed.error));
+      return;
+    }
     setBusy(true);
     try {
-      await submitLead({
-        company: String(fd.get("company") || "").trim(),
-        contact_name: String(fd.get("contact_name") || "").trim(),
-        email: String(fd.get("email") || "").trim(),
-        niche: String(fd.get("niche") || "SaaS"),
-      });
+      await submitLead(parsed.data);
       setDone(true);
     } catch (err: unknown) {
       setError(errorMessage(err, t("leadForm.retry")));

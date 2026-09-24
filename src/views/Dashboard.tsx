@@ -3,6 +3,7 @@ import type { Activity, Client, Lead, Metric, Order } from "../types";
 import type { AgentMemoryRow } from "../lib/data";
 import { errorMessage } from "../lib/errors";
 import { createClient, createOrder, fetchActivity, fetchAgentMemory, fetchClients, fetchDeliveryStatus, fetchLeads, fetchOrders, markOrderPaid, updateLeadStatus } from "../lib/data";
+import { parseClientForm, parseOrderForm } from "../lib/schemas";
 import { useT, useTAny } from "../lib/i18n";
 import { DashboardTabNav, type DashboardTab } from "./dashboard/DashboardTabNav";
 import { DashboardTabContent } from "./dashboard/DashboardTabContent";
@@ -142,11 +143,9 @@ export function Dashboard() {
     const form = e.currentTarget;
     const fd = new FormData(form);
     run(async () => {
-      const client = await createClient({
-        name: String(fd.get("name") || ""),
-        email: String(fd.get("email") || ""),
-        plan: String(fd.get("plan") || "starter") as Client["plan"],
-      });
+      // Validate at the boundary: reject malformed input before any API call.
+      const input = parseClientForm(fd);
+      const client = await createClient(input);
       setClients((cs) => [client, ...cs]);
       setShowNewClient(false);
       form.reset();
@@ -157,15 +156,15 @@ export function Dashboard() {
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
-    const clientId = String(fd.get("client_id") || "");
-    const client = clients.find((c) => c.id === clientId);
     run(async () => {
-      const order = await createOrder({
-        client_id: clientId || null,
-        client_name: client?.name ?? String(fd.get("client_name") || "Walk-in"),
-        amount: Number(fd.get("amount") || 0),
-        method: String(fd.get("method") || "multicaixa"),
-      });
+      // Validate at the boundary; the walk-in client_id/name defaulting is
+      // handled by the schema adapter.
+      const input = parseOrderForm(fd);
+      const clientName =
+        input.client_name !== ""
+          ? input.client_name
+          : (clients.find((c) => c.id === input.client_id)?.name ?? "Walk-in");
+      const order = await createOrder({ ...input, client_name: clientName });
       setOrders((os) => [order, ...os]);
       form.reset();
     });
