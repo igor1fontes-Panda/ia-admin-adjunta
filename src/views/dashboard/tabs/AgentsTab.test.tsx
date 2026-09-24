@@ -68,9 +68,7 @@ it("toggles between the Agents and Academy sections", async () => {
 });
 
 it("renders learned memory per agent exactly as the bots wrote it", () => {
-  const memory: AgentMemoryRow[] = [
-    memoryRow("lead_qualifier", "channel_conversion", { referral: 8, email: -2 }),
-  ];
+  const memory: AgentMemoryRow[] = [memoryRow("lead_qualifier", "channel_conversion", { referral: 8, email: -2 })];
   render(<AgentsTab activity={[activityRow("bot", "Lead qualifier: scored 2 new lead(s).")]} memory={memory} />);
 
   // The "Learned:" card labels the memory key with underscores replaced.

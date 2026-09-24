@@ -12,7 +12,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
-      thresholds: { lines: 50, functions: 40, statements: 50, branches: 35 },
+      thresholds: { lines: 65, functions: 50, statements: 65, branches: 45 },
       exclude: ["src/test-setup.ts", "src/data.mock.ts", "src/types.ts", "isolate/**"],
     },
   },

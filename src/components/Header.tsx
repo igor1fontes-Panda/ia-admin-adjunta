@@ -22,11 +22,21 @@ export function Header() {
       <Link to="/" className="text-sm text-zinc-300 transition hover:text-cyan-300">
         {t("nav.home")}
       </Link>
-      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.products")}</a>
-      <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.store")}</a>
-      <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.agents")}</a>
-      <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.services")}</a>
-      <a href="/#payments" className="text-sm text-zinc-300 transition hover:text-cyan-300">{t("nav.support")}</a>
+      <a href="/#features" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        {t("nav.products")}
+      </a>
+      <a href="/#pricing" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        {t("nav.store")}
+      </a>
+      <a href="/#ecosystem" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        {t("nav.agents")}
+      </a>
+      <a href="/#lead-form" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        {t("nav.services")}
+      </a>
+      <a href="/#payments" className="text-sm text-zinc-300 transition hover:text-cyan-300">
+        {t("nav.support")}
+      </a>
       <Link
         to="/dashboard"
         className="inline-flex items-center gap-1.5 text-sm text-zinc-300 transition hover:text-cyan-300"
@@ -62,10 +72,30 @@ export function Header() {
         <nav className="hidden items-center gap-6 md:flex">{links}</nav>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1" aria-label="Idioma">
-            <button type="button" onClick={() => setLocale("pt")} aria-pressed={locale === "pt"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>PT</button>
-            <button type="button" onClick={() => setLocale("en")} aria-pressed={locale === "en"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>EN</button>
+            <button
+              type="button"
+              onClick={() => setLocale("pt")}
+              aria-pressed={locale === "pt"}
+              className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}
+            >
+              PT
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale("en")}
+              aria-pressed={locale === "en"}
+              className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}
+            >
+              EN
+            </button>
           </div>
-          <button type="button" onClick={toggleTheme} className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300" aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"} title={theme === "dark" ? "Tema claro" : "Tema noturno"}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300"
+            aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"}
+            title={theme === "dark" ? "Tema claro" : "Tema noturno"}
+          >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
@@ -103,10 +133,29 @@ export function Header() {
           <div className="mt-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-1" aria-label="Idioma">
-                <button type="button" onClick={() => setLocale("pt")} aria-pressed={locale === "pt"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>PT</button>
-                <button type="button" onClick={() => setLocale("en")} aria-pressed={locale === "en"} className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}>EN</button>
+                <button
+                  type="button"
+                  onClick={() => setLocale("pt")}
+                  aria-pressed={locale === "pt"}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "pt" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}
+                >
+                  PT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocale("en")}
+                  aria-pressed={locale === "en"}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-bold ${locale === "en" ? "bg-cyan-400 text-ink-950" : "text-zinc-400"}`}
+                >
+                  EN
+                </button>
               </div>
-              <button type="button" onClick={toggleTheme} className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300" aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"}>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="rounded-xl border border-white/10 bg-white/5 p-2 text-zinc-300 transition hover:border-cyan-400/40 hover:text-cyan-300"
+                aria-label={theme === "dark" ? "Tema claro" : "Tema noturno"}
+              >
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
             </div>
@@ -119,7 +168,11 @@ export function Header() {
                 {t("nav.openCC")}
               </Link>
             ) : (
-              <Link to="/auth" className="btn-primary flex-1 justify-center !py-2 text-xs" onClick={() => setOpen(false)}>
+              <Link
+                to="/auth"
+                className="btn-primary flex-1 justify-center !py-2 text-xs"
+                onClick={() => setOpen(false)}
+              >
                 {t("nav.getStarted")}
               </Link>
             )}

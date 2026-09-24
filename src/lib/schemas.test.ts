@@ -75,7 +75,9 @@ describe("FormData adapters", () => {
   });
 
   it("parseClientForm throws a readable error on a bad email", () => {
-    expect(() => parseClientForm(fd({ name: "Globex", email: "bad", plan: "starter" }))).toThrow(/valid billing email/i);
+    expect(() => parseClientForm(fd({ name: "Globex", email: "bad", plan: "starter" }))).toThrow(
+      /valid billing email/i,
+    );
   });
 
   it("parseOrderForm maps an empty client_id to null (walk-in)", () => {
@@ -85,12 +87,18 @@ describe("FormData adapters", () => {
   });
 
   it("parseOrderForm throws a readable error on a missing/invalid amount", () => {
-    expect(() => parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "", method: "card" }))).toThrow(/number/i);
-    expect(() => parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "10", method: "card" }))).toThrow(/1\.000 Kz/);
+    expect(() => parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "", method: "card" }))).toThrow(
+      /number/i,
+    );
+    expect(() => parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "10", method: "card" }))).toThrow(
+      /1\.000 Kz/,
+    );
   });
 
   it("parseOrderForm throws on an unknown method value", () => {
-    expect(() => parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "29160", method: "crypto" }))).toThrow(/payment method/i);
+    expect(() =>
+      parseOrderForm(fd({ client_id: "c1", client_name: "Globex", amount: "29160", method: "crypto" })),
+    ).toThrow(/payment method/i);
   });
 });
 

@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+isolate
+.agents
+.claude
+package-lock.json
+src/convex/_generated
+tsconfig.tsbuildinfo

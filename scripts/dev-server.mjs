@@ -64,7 +64,11 @@ function parseBody(req) {
     req.on("end", () => {
       const ct = req.headers["content-type"] ?? "";
       if (ct.includes("application/json")) {
-        try { resolve(JSON.parse(data || "{}")); } catch { resolve(data); }
+        try {
+          resolve(JSON.parse(data || "{}"));
+        } catch {
+          resolve(data);
+        }
       } else resolve(data);
     });
   });

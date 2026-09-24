@@ -1,5 +1,17 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Bot, CircleDollarSign, Cpu, Database, Gauge, Network, RefreshCcw, Target, Users, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  CircleDollarSign,
+  Cpu,
+  Database,
+  Gauge,
+  Network,
+  RefreshCcw,
+  Target,
+  Users,
+  Zap,
+} from "lucide-react";
 import type { Activity, Lead, Metric, Order } from "../../../types";
 import type { AgentMemoryRow } from "../../../lib/data";
 import type { ConnState } from "../../Dashboard";
@@ -66,12 +78,17 @@ export function EcosystemTab({
                     <span className={`flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ${s.tone}`}>
                       <s.icon size={18} />
                     </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">{i + 1}. {name}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      {i + 1}. {name}
+                    </span>
                   </div>
                   <p className="mt-3 flex-1 text-xs leading-relaxed text-zinc-400">{what}</p>
                   <p className={`mt-3 text-sm font-bold ${s.tone}`}>{stageCounts[s.id]}</p>
                 </div>
-                <ArrowRight size={16} className="absolute -right-[26px] top-1/2 hidden -translate-y-1/2 text-zinc-600 lg:block" />
+                <ArrowRight
+                  size={16}
+                  className="absolute -right-[26px] top-1/2 hidden -translate-y-1/2 text-zinc-600 lg:block"
+                />
               </div>
             );
           })}
@@ -99,7 +116,11 @@ export function EcosystemTab({
                     : "bg-red-500/15 text-red-300"
               }`}
             >
-              {realtime === "live" ? t("dash.live") : realtime === "connecting" ? t("dash.connecting") : t("dash.offline")}
+              {realtime === "live"
+                ? t("dash.live")
+                : realtime === "connecting"
+                  ? t("dash.connecting")
+                  : t("dash.offline")}
             </span>
           </div>
           <p className="mt-2 text-xs leading-relaxed text-zinc-400">{t("dash.eco.realtimeBody")}</p>
@@ -114,7 +135,9 @@ export function EcosystemTab({
               <li key={b.name} className="flex items-center justify-between gap-2">
                 <span className="text-zinc-300">{agentName(b.name)}</span>
                 <span className={b.runs > 0 ? "text-emerald-300" : "text-zinc-500"}>
-                  {b.runs > 0 ? `${b.runs} ${t("dash.eco.runsShort")} ${timeAgo(b.lastRun!)}` : t("dash.eco.awaitingFirst")}
+                  {b.runs > 0
+                    ? `${b.runs} ${t("dash.eco.runsShort")} ${timeAgo(b.lastRun!)}`
+                    : t("dash.eco.awaitingFirst")}
                 </span>
               </li>
             ))}
@@ -141,19 +164,28 @@ export function EcosystemTab({
           <span className="badge bg-amber-500/15 text-amber-300">{t("dash.eco.consent")}</span>
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {([
-            [t("dash.eco.chSeo"), t("dash.eco.chSeoDesc"), t("dash.eco.statusPlanning")],
-            [t("dash.eco.chEmail"), t("dash.eco.chEmailDesc"), t("dash.eco.statusNotConnected")],
-            [t("dash.eco.chShopify"), t("dash.eco.chShopifyDesc"), t("dash.eco.statusNotConnected")],
-            [t("dash.eco.chSocial"), t("dash.eco.chSocialDesc"), t("dash.eco.statusNotConnected")],
-          ] as Array<[string, string, string]>).map(([name, description, status]) => (
+          {(
+            [
+              [t("dash.eco.chSeo"), t("dash.eco.chSeoDesc"), t("dash.eco.statusPlanning")],
+              [t("dash.eco.chEmail"), t("dash.eco.chEmailDesc"), t("dash.eco.statusNotConnected")],
+              [t("dash.eco.chShopify"), t("dash.eco.chShopifyDesc"), t("dash.eco.statusNotConnected")],
+              [t("dash.eco.chSocial"), t("dash.eco.chSocialDesc"), t("dash.eco.statusNotConnected")],
+            ] as Array<[string, string, string]>
+          ).map(([name, description, status]) => (
             <div key={name} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-zinc-100">{name}</p>
-                <span className={`h-2 w-2 rounded-full ${status === t("dash.eco.statusPlanning") ? "bg-gold-400" : "bg-zinc-600"}`} aria-label={status} />
+                <span
+                  className={`h-2 w-2 rounded-full ${status === t("dash.eco.statusPlanning") ? "bg-gold-400" : "bg-zinc-600"}`}
+                  aria-label={status}
+                />
               </div>
               <p className="mt-2 text-xs leading-relaxed text-zinc-400">{description}</p>
-              <p className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${status === t("dash.eco.statusPlanning") ? "text-gold-300" : "text-zinc-500"}`}>{status}</p>
+              <p
+                className={`mt-3 text-[11px] font-semibold uppercase tracking-wide ${status === t("dash.eco.statusPlanning") ? "text-gold-300" : "text-zinc-500"}`}
+              >
+                {status}
+              </p>
             </div>
           ))}
         </div>
@@ -175,7 +207,9 @@ export function EcosystemTab({
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words text-xs text-zinc-400">
                   {typeof m.value === "string" ? m.value : JSON.stringify(m.value, null, 2)}
                 </pre>
-                <p className="mt-2 text-[11px] text-zinc-500">{t("dash.eco.updated")} {timeAgo(m.updated_at)}</p>
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  {t("dash.eco.updated")} {timeAgo(m.updated_at)}
+                </p>
               </div>
             ))}
           </div>

@@ -14,7 +14,8 @@ export const leadForm = {
   send: "Pedir auditoria de automação grátis",
   sending: "A enviar…",
   doneTitle: "Pedido recebido!",
-  doneBody: "O teu pedido é agora um lead real no nosso sistema. A qualificação só acontece depois de existir um agente autorizado e uma fonte de dados verificável.",
+  doneBody:
+    "O teu pedido é agora um lead real no nosso sistema. A qualificação só acontece depois de existir um agente autorizado e uma fonte de dados verificável.",
   dbError: "A base de dados ainda não está ligada — segue os passos de configuração no dashboard.",
   retry: "Não foi possível enviar — tenta novamente.",
 };

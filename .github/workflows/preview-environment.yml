@@ -26,5 +26,5 @@ jobs:
         with:
           env-label: |
             preview: deploy
-          labels: '[]'
+          labels: "[]"
           open: ${{ github.event.action != 'closed' }}

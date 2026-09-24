@@ -9,11 +9,22 @@ export const pricing = {
     cta: "Começar com Starter",
   },
   professional: {
-    features: ["Enxame caça-leads (24/7)", "Autómato de vendas + propostas", "Centro de comando de clientes", "Suporte prioritário WhatsApp", "Fluxos de automação ilimitados"],
+    features: [
+      "Enxame caça-leads (24/7)",
+      "Autómato de vendas + propostas",
+      "Centro de comando de clientes",
+      "Suporte prioritário WhatsApp",
+      "Fluxos de automação ilimitados",
+    ],
     cta: "Avançar para Professional",
   },
   enterprise: {
-    features: ["Tudo no Professional", "Agentes IA personalizados para o teu nicho", "Gestor de sucesso dedicado", "SLA 99,98% + registos de auditoria"],
+    features: [
+      "Tudo no Professional",
+      "Agentes IA personalizados para o teu nicho",
+      "Gestor de sucesso dedicado",
+      "SLA 99,98% + registos de auditoria",
+    ],
     cta: "Falar com vendas",
   },
 };

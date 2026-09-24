@@ -48,14 +48,10 @@ it("renders the command center and honest empty states when the API returns no r
 });
 
 it("shows the database-setup error path when the API reports missing tables", async () => {
-  dataMocks.fetchLeads.mockRejectedValueOnce(
-    new Error('relation "leads" does not exist'),
-  );
+  dataMocks.fetchLeads.mockRejectedValueOnce(new Error('relation "leads" does not exist'));
   render(<Dashboard />);
 
-  await waitFor(() =>
-    expect(screen.getByText(/Database tables are not created yet/)).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(screen.getByText(/Database tables are not created yet/)).toBeInTheDocument());
   // The error mentions the exact one-time setup command.
   expect(screen.getByText(/drizzle-kit push/)).toBeInTheDocument();
 });
@@ -81,9 +77,7 @@ it("validates the new-client form before calling createClient", async () => {
   await user.type(screen.getByPlaceholderText("billing@acme.com"), "not-an-email");
   await user.click(screen.getByRole("button", { name: /Criar cliente/ }));
 
-  await waitFor(() =>
-    expect(screen.getByText(/valid billing email/i)).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(screen.getByText(/valid billing email/i)).toBeInTheDocument());
   expect(dataMocks.createClient).not.toHaveBeenCalled();
 });
 
@@ -96,8 +90,6 @@ it("validates the new-order form and never sends a sub-minimum amount", async ()
   await user.type(screen.getByPlaceholderText("29160"), "10");
   await user.click(screen.getByRole("button", { name: /Criar pedido/ }));
 
-  await waitFor(() =>
-    expect(screen.getByText(/at least 1\.000 Kz/)).toBeInTheDocument(),
-  );
+  await waitFor(() => expect(screen.getByText(/at least 1\.000 Kz/)).toBeInTheDocument());
   expect(dataMocks.createOrder).not.toHaveBeenCalled();
 });

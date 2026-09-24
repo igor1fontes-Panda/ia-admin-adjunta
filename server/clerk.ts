@@ -12,9 +12,7 @@ import type { VercelRequest } from "../api/lib/http";
 const secretKey = process.env.CLERK_SECRET_KEY ?? "";
 export const isClerkConfigured = secretKey.startsWith("sk_");
 
-const clerk = isClerkConfigured
-  ? createClerkClient({ secretKey })
-  : null;
+const clerk = isClerkConfigured ? createClerkClient({ secretKey }) : null;
 
 export type ClerkUser = { id: string; email: string; name: string };
 
@@ -41,9 +39,10 @@ export async function verifyClerkUser(req: VercelRequest): Promise<ClerkUser | n
     const sub = (payload as { sub?: string }).sub;
     if (!sub) return null;
     const user = await clerk.users.getUser(sub);
-    const primaryEmail = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress
-      ?? user.emailAddresses[0]?.emailAddress
-      ?? "";
+    const primaryEmail =
+      user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress ??
+      user.emailAddresses[0]?.emailAddress ??
+      "";
     return { id: user.id, email: primaryEmail, name: [user.firstName, user.lastName].filter(Boolean).join(" ") };
   } catch {
     return null;

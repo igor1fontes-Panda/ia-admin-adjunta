@@ -70,10 +70,15 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
     // USGS — todos os sismos das últimas 24h (magnitude 2.5+)
     fetchJson("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson")
       .then((raw) => {
-        const features = (raw as { features?: Array<{ id: string; properties: { place?: string; mag?: number; time?: number } }> }).features ?? [];
-        const rows = features
-          .slice(0, 30)
-          .map((f) => ({ id: f.id, place: f.properties.place ?? "—", mag: f.properties.mag ?? 0, at: f.properties.time ?? 0 }));
+        const features =
+          (raw as { features?: Array<{ id: string; properties: { place?: string; mag?: number; time?: number } }> })
+            .features ?? [];
+        const rows = features.slice(0, 30).map((f) => ({
+          id: f.id,
+          place: f.properties.place ?? "—",
+          mag: f.properties.mag ?? 0,
+          at: f.properties.time ?? 0,
+        }));
         setQuakes({ rows, at: new Date().toISOString(), error: null });
       })
       .catch((e: unknown) => {
@@ -84,7 +89,8 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
     // NASA EONET — eventos naturais abertos (tempestades, incêndios, vulcões)
     fetchJson("https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=25")
       .then((raw) => {
-        const evs = (raw as { events?: Array<{ id: string; title: string; geometry: Array<{ date?: string }> }> }).events ?? [];
+        const evs =
+          (raw as { events?: Array<{ id: string; title: string; geometry: Array<{ date?: string }> }> }).events ?? [];
         const rows = evs.map((e) => ({ id: e.id, title: e.title, when: e.geometry?.[0]?.date ?? null }));
         setEvents({ rows, at: new Date().toISOString(), error: null });
       })
@@ -127,23 +133,25 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 via-transparent to-transparent px-6 py-5">
           <div>
             <h3 className="flex items-center gap-2 text-lg font-bold text-zinc-50">
-              <Globe2 size={20} className="text-cyan-300" /> {t("godsEye.title")}
+              <Globe2 size={20} className="text-cyan-300" /> {t("dash.godsEye.title")}
               <span className="badge ml-1 bg-cyan-500/15 text-cyan-300">nano</span>
             </h3>
-            <p className="mt-1 max-w-2xl text-sm text-zinc-400">{t("godsEye.sub")}</p>
+            <p className="mt-1 max-w-2xl text-sm text-zinc-400">{t("dash.godsEye.sub")}</p>
           </div>
           <button onClick={() => pull()} className="btn-ghost !px-4 !py-2 text-xs">
-            <RefreshCcw size={14} /> {t("godsEye.refresh")}
+            <RefreshCcw size={14} /> {t("dash.godsEye.refresh")}
           </button>
         </div>
 
         {/* Mercado próprio — a camada que nos distingue do OSINT puro */}
         <div className="grid grid-cols-2 gap-3 px-6 py-5 sm:grid-cols-3">
-          {([
-            [t("godsEye.market.hot"), market.hot, Crosshair, "text-gold-400"],
-            [t("godsEye.market.fresh"), market.fresh, Locate, "text-emerald-400"],
-            [t("godsEye.market.pending"), formatKz(market.pending), Radio, "text-sky-400"],
-          ] as Array<[string, string | number, typeof Crosshair, string]>).map(([label, value, Icon, tone]) => (
+          {(
+            [
+              [t("dash.godsEye.market.hot"), market.hot, Crosshair, "text-gold-400"],
+              [t("dash.godsEye.market.fresh"), market.fresh, Locate, "text-emerald-400"],
+              [t("dash.godsEye.market.pending"), formatKz(market.pending), Radio, "text-sky-400"],
+            ] as Array<[string, string | number, typeof Crosshair, string]>
+          ).map(([label, value, Icon, tone]) => (
             <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-ink-900/70 p-4">
               <span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 ${tone}`}>
                 <Icon size={18} />
@@ -162,43 +170,58 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
           <div key={key} className="card p-5">
             <div className="flex items-center justify-between gap-2">
               <h4 className={`flex items-center gap-2 font-semibold text-zinc-50`}>
-                <Icon size={16} className={tone} /> {t(`godsEye.feeds.${key}`)}
+                <Icon size={16} className={tone} /> {t(`dash.godsEye.feeds.${key}`)}
               </h4>
               <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
-                {state.rows.length} {t("godsEye.live")}
+                {state.rows.length} {t("dash.godsEye.live")}
               </span>
             </div>
 
             {state.error ? (
               <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {t("godsEye.feedError")}
+                <AlertTriangle size={13} className="mt-0.5 shrink-0" /> {t("dash.godsEye.feedError")}
               </p>
             ) : state.rows.length === 0 ? (
-              <p className="mt-3 text-xs text-zinc-500">{t("godsEye.feedEmpty")}</p>
+              <p className="mt-3 text-xs text-zinc-500">{t("dash.godsEye.feedEmpty")}</p>
             ) : (
               <ul className="mt-3 max-h-72 space-y-1.5 overflow-y-auto pr-1 text-xs">
                 {state.rows.map((row) => {
                   if (key === "flights") {
                     const f = row as { icao: string; label: string; alt: number; vel: number };
                     return (
-                      <li key={`${key}-${f.icao}`} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
+                      <li
+                        key={`${key}-${f.icao}`}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5"
+                      >
                         <span className="truncate font-medium text-zinc-200">{f.label}</span>
-                        <span className="shrink-0 tabular-nums text-zinc-500">{Math.round(f.alt * 3.28).toLocaleString("en-US")} ft</span>
+                        <span className="shrink-0 tabular-nums text-zinc-500">
+                          {Math.round(f.alt * 3.28).toLocaleString("en-US")} ft
+                        </span>
                       </li>
                     );
                   }
                   if (key === "quakes") {
                     const q = row as { id: string; place: string; mag: number; at: number };
                     return (
-                      <li key={`${key}-${q.id}`} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
+                      <li
+                        key={`${key}-${q.id}`}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5"
+                      >
                         <span className="truncate text-zinc-200">{q.place}</span>
-                        <span className={`shrink-0 font-bold tabular-nums ${q.mag >= 5 ? "text-red-400" : q.mag >= 4 ? "text-amber-400" : "text-zinc-400"}`}>M{q.mag.toFixed(1)}</span>
+                        <span
+                          className={`shrink-0 font-bold tabular-nums ${q.mag >= 5 ? "text-red-400" : q.mag >= 4 ? "text-amber-400" : "text-zinc-400"}`}
+                        >
+                          M{q.mag.toFixed(1)}
+                        </span>
                       </li>
                     );
                   }
                   const ev = row as { id: string; title: string; when: string | null };
                   return (
-                    <li key={`${key}-${ev.id}`} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5">
+                    <li
+                      key={`${key}-${ev.id}`}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5"
+                    >
                       <span className="truncate text-zinc-200">{ev.title}</span>
                       <span className="shrink-0 text-zinc-500">{ev.when ? timeAgo(ev.when) : "—"}</span>
                     </li>
@@ -207,13 +230,13 @@ export function GodsEyeTab({ leads, orders }: { leads: Lead[]; orders: Order[] }
               </ul>
             )}
             <p className="mt-3 text-[10px] text-zinc-600">
-              {state.at ? `${t("godsEye.updated")} ${timeAgo(state.at)}` : t("godsEye.feedEmpty")}
+              {state.at ? `${t("dash.godsEye.updated")} ${timeAgo(state.at)}` : t("dash.godsEye.feedEmpty")}
             </p>
           </div>
         ))}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-zinc-500">{t("godsEye.sources")}</p>
+      <p className="text-[11px] leading-relaxed text-zinc-500">{t("dash.godsEye.sources")}</p>
     </motion.div>
   );
 }

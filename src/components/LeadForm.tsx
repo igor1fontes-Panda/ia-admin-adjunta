@@ -63,19 +63,27 @@ export function LeadForm() {
 
       <form onSubmit={submit} className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="lf-company">{t("leadForm.company")}</label>
+          <label className="label" htmlFor="lf-company">
+            {t("leadForm.company")}
+          </label>
           <input id="lf-company" name="company" required className="input" placeholder="Acme Lda" />
         </div>
         <div>
-          <label className="label" htmlFor="lf-name">{t("leadForm.name")}</label>
+          <label className="label" htmlFor="lf-name">
+            {t("leadForm.name")}
+          </label>
           <input id="lf-name" name="contact_name" required className="input" placeholder="Maria Silva" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="lf-email">{t("leadForm.email")}</label>
+          <label className="label" htmlFor="lf-email">
+            {t("leadForm.email")}
+          </label>
           <input id="lf-email" name="email" type="email" required className="input" placeholder="maria@acme.com" />
         </div>
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="lf-niche">{t("leadForm.niche")}</label>
+          <label className="label" htmlFor="lf-niche">
+            {t("leadForm.niche")}
+          </label>
           <select id="lf-niche" name="niche" className="input" defaultValue="SaaS">
             <option value="SaaS">{t("leadForm.nicheSaaS")}</option>
             <option value="Fintech">{t("leadForm.nicheFintech")}</option>

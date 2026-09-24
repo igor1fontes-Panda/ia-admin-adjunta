@@ -20,7 +20,12 @@ export function Footer() {
           <p className="mb-2 font-semibold text-zinc-200">{t("footer.contact")}</p>
           <p>📧 support@ia-admin-adjunta.com</p>
           <p className="mt-1">💬 WhatsApp: +244 923 012 293</p>
-          <p className="mt-1">{t("footer.payments")} <Link to="/#payments" className="hover:text-gold-400">{t("footer.paymentsLink")}</Link></p>
+          <p className="mt-1">
+            {t("footer.payments")}{" "}
+            <Link to="/#payments" className="hover:text-gold-400">
+              {t("footer.paymentsLink")}
+            </Link>
+          </p>
         </div>
         <div className="text-sm text-zinc-400">
           <p className="mb-2 font-semibold text-zinc-200">{t("footer.company")}</p>

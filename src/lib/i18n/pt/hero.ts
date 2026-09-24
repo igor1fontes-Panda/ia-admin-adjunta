@@ -7,5 +7,6 @@ export const hero = {
   ctaPrimary: "Começar grátis",
   ctaSecondary: "Ver dashboard ao vivo",
   noticeTitle: "Apenas dados comerciais reais",
-  noticeBody: "Métricas, preços, disponibilidade e resultados só aparecem depois de existirem na fonte de dados ligada. Sem números de demonstração.",
+  noticeBody:
+    "Métricas, preços, disponibilidade e resultados só aparecem depois de existirem na fonte de dados ligada. Sem números de demonstração.",
 };

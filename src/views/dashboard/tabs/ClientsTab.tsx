@@ -26,11 +26,7 @@ export function ClientsTab({
       </div>
 
       {showNew ? (
-        <form
-          onSubmit={onNew}
-          noValidate
-          className="card mb-6 grid gap-4 p-6 sm:grid-cols-3"
-        >
+        <form onSubmit={onNew} noValidate className="card mb-6 grid gap-4 p-6 sm:grid-cols-3">
           <div>
             <label className="label">{t("dash.clientsTab.name")}</label>
             <input name="name" required className="input" placeholder="Acme Lda" />
@@ -44,7 +40,8 @@ export function ClientsTab({
             <select name="plan" className="input" defaultValue="professional">
               {Object.entries(PLAN_PRICES).map(([key, p]) => (
                 <option key={key} value={key}>
-                  {p.label} — {formatKz(p.monthly)}{t("dash.clientsTab.perMonth")}
+                  {p.label} — {formatKz(p.monthly)}
+                  {t("dash.clientsTab.perMonth")}
                 </option>
               ))}
             </select>
@@ -79,7 +76,10 @@ export function ClientsTab({
             </div>
             <div className="mt-4 flex items-center justify-between text-sm">
               <span className="rounded-lg bg-white/5 px-2.5 py-1 font-medium capitalize text-gold-300">{c.plan}</span>
-              <span className="font-bold text-zinc-100">{formatKz(c.mrr)}<span className="text-xs font-normal text-zinc-500">{t("dash.clientsTab.perMonth")}</span></span>
+              <span className="font-bold text-zinc-100">
+                {formatKz(c.mrr)}
+                <span className="text-xs font-normal text-zinc-500">{t("dash.clientsTab.perMonth")}</span>
+              </span>
             </div>
           </div>
         ))}
@@ -92,4 +92,3 @@ export function ClientsTab({
     </div>
   );
 }
-

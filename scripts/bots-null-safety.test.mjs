@@ -43,10 +43,14 @@ describe("bot scripts exit cleanly with zero credentials (fresh clone)", () => {
   for (const file of BOTS) {
     it(`${file} exits 0 and reports the missing store honestly`, () => {
       const { status, stdout } = runBotWithoutCredentials(file);
-      expect(status, `${file} must exit 0 without credentials (got ${status}). Output: ${stdout.slice(0, 400)}`).toBe(0);
+      expect(status, `${file} must exit 0 without credentials (got ${status}). Output: ${stdout.slice(0, 400)}`).toBe(
+        0,
+      );
       // The honest no-store report must reach the operator, not silence.
       expect(stdout.length).toBeGreaterThan(0);
-      expect(stdout).toMatch(/no data store|nothing real|not configured|nothing configured|no store|store.*none|sem dados/i);
+      expect(stdout).toMatch(
+        /no data store|nothing real|not configured|nothing configured|no store|store.*none|sem dados/i,
+      );
     });
   }
 });

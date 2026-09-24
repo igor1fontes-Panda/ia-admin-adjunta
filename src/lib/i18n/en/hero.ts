@@ -7,5 +7,6 @@ export const hero = {
   ctaPrimary: "Get started free",
   ctaSecondary: "See live dashboard",
   noticeTitle: "Real business data only",
-  noticeBody: "Metrics, prices, availability and results only appear once they exist in the connected data source. No demo numbers.",
+  noticeBody:
+    "Metrics, prices, availability and results only appear once they exist in the connected data source. No demo numbers.",
 };

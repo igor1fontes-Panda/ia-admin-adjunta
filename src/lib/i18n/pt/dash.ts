@@ -24,11 +24,26 @@ export const dash = {
   onb: {
     title: "Ativa o teu ecossistema",
     sub: "O sistema começa vazio e cresce com atividade real. Cada passo desbloqueia quando a base de dados o prova.",
-    leads: ["Captura o teu primeiro lead", "Partilha o formulário público de leads — cada submissão chega aqui em tempo real."],
-    clients: ["Regista o teu primeiro cliente", "Adiciona um cliente real no módulo Clientes (Starter 1.250 Kz, Professional 2.916 Kz, Enterprise 8.333 Kz por mês)."],
-    orders: ["Regista a tua primeira venda", "Cria um pedido real no módulo Pedidos apenas depois de o provedor de pagamento e a disponibilidade do produto serem verificados."],
-    collect: ["Cobra o teu primeiro pagamento", "Marca um pedido como pago quando o dinheiro chegar — os gráficos de receita e as tabelas de rendimento atualizam de imediato."],
-    agents: ["Os agentes completam o primeiro ciclo", "Os bots autónomos correm no GitHub Actions (diário 06:00 UTC + de hora a hora). As primeiras execuções reais aparecem aqui e no módulo Agentes IA."],
+    leads: [
+      "Captura o teu primeiro lead",
+      "Partilha o formulário público de leads — cada submissão chega aqui em tempo real.",
+    ],
+    clients: [
+      "Regista o teu primeiro cliente",
+      "Adiciona um cliente real no módulo Clientes (Starter 1.250 Kz, Professional 2.916 Kz, Enterprise 8.333 Kz por mês).",
+    ],
+    orders: [
+      "Regista a tua primeira venda",
+      "Cria um pedido real no módulo Pedidos apenas depois de o provedor de pagamento e a disponibilidade do produto serem verificados.",
+    ],
+    collect: [
+      "Cobra o teu primeiro pagamento",
+      "Marca um pedido como pago quando o dinheiro chegar — os gráficos de receita e as tabelas de rendimento atualizam de imediato.",
+    ],
+    agents: [
+      "Os agentes completam o primeiro ciclo",
+      "Os bots autónomos correm no GitHub Actions (diário 06:00 UTC + de hora a hora). As primeiras execuções reais aparecem aqui e no módulo Agentes IA.",
+    ],
   },
   cards: {
     leads: "Leads capturados",
@@ -43,11 +58,13 @@ export const dash = {
     title: "Atividade ao vivo",
     sub: "Apenas atividade real do Supabase",
     verified: "Dados verificados",
-    empty: "Os agentes autónomos reportam aqui assim que executam — pontuação de leads, insights diários e triagem de incidentes, diretamente do registo de atividade real.",
+    empty:
+      "Os agentes autónomos reportam aqui assim que executam — pontuação de leads, insights diários e triagem de incidentes, diretamente do registo de atividade real.",
   },
   orders: {
     latest: "Pedidos recentes",
-    empty: "As vendas aparecem aqui no momento em que pedidos reais são registados — com referência de pagamento, método e estado de cobrança.",
+    empty:
+      "As vendas aparecem aqui no momento em que pedidos reais são registados — com referência de pagamento, método e estado de cobrança.",
     form: "Pedido",
     client: "Cliente",
     walkin: "— Cliente avulso —",
@@ -61,7 +78,13 @@ export const dash = {
     thStatus: "Estado",
     thAction: "Ação",
     markPaid: "Marcar como pago",
-    methods: { multicaixa: "Multicaixa Express", paypay: "PayPay", card: "Cartão", wire_usd: "Transferência internacional — USD (Lead Bank)", wire_eur: "Transferência internacional — EUR (Banking Circle)" },
+    methods: {
+      multicaixa: "Multicaixa Express",
+      paypay: "PayPay",
+      card: "Cartão",
+      wire_usd: "Transferência internacional — USD (Lead Bank)",
+      wire_eur: "Transferência internacional — EUR (Banking Circle)",
+    },
   },
   leadsTab: {
     company: "Empresa",
@@ -70,13 +93,18 @@ export const dash = {
     score: "Pontuação",
     nextAction: "Próxima ação",
     status: "Estado",
-    empty: "Ainda sem leads — cada submissão real do formulário público chega aqui instantaneamente, pontuada e priorizada pelos agentes.",
+    empty:
+      "Ainda sem leads — cada submissão real do formulário público chega aqui instantaneamente, pontuada e priorizada pelos agentes.",
     aiTag: "IA",
   },
   statusLead: { new: "novo", contacted: "contactado", qualified: "qualificado", won: "ganho", lost: "perdido" },
   statusOrder: { pending: "pendente", paid: "pago", refunded: "reembolsado" },
   statusClient: { active: "ativo", trialing: "em teste", churned: "cancelado" },
-  actions: { hot: "Enviar proposta em 24h", warm: "Agendar demonstração esta semana", cold: "Nutrir via sequência de email" },
+  actions: {
+    hot: "Enviar proposta em 24h",
+    warm: "Agendar demonstração esta semana",
+    cold: "Nutrir via sequência de email",
+  },
   charts: {
     volume: "Volume de vendas — últimos 14 dias",
     collected: "Cobrado:",
@@ -105,7 +133,8 @@ export const dash = {
     email: "Email de faturação",
     plan: "Plano",
     create: "Criar cliente",
-    empty: "Ainda sem clientes — cria o primeiro acima e os cartões de plano, o gráfico de MRR e as tabelas de rendimento ganham vida com subscrições reais.",
+    empty:
+      "Ainda sem clientes — cria o primeiro acima e os cartões de plano, o gráfico de MRR e as tabelas de rendimento ganham vida com subscrições reais.",
     perMonth: "/mês",
   },
   agents: {
@@ -118,9 +147,11 @@ export const dash = {
     learnDesc: "Guarda evidência de resultados ganhos/perdidos",
     act: "Agir",
     actDesc: "Qualifica, redige e regista as próximas ações",
-    safety: "Limite de segurança: nenhuma mensagem não solicitada, compra ou publicação. Aprovação humana obrigatória para ações fora dos canais ligados e consentidos.",
+    safety:
+      "Limite de segurança: nenhuma mensagem não solicitada, compra ou publicação. Aprovação humana obrigatória para ações fora dos canais ligados e consentidos.",
     promptTitle: "Runtime de prompts",
-    promptBody: "Instruções estáveis e contratos de ferramentas estão separados dos registos por execução. O contexto dinâmico é renovado à hora e contém apenas dados verificados da conta.",
+    promptBody:
+      "Instruções estáveis e contratos de ferramentas estão separados dos registos por execução. O contexto dinâmico é renovado à hora e contém apenas dados verificados da conta.",
     tools: "Ferramentas:",
     cacheKey: "Chave de cache:",
     bytes: "Bytes de contexto:",
@@ -142,20 +173,39 @@ export const dash = {
   eco: {
     title: "Como funciona o ecossistema — ao vivo",
     sub: "Um loop contínuo: cada etapa lê e escreve na mesma base de dados real. Nenhum passo é simulado.",
-    capture: ["Captar", "O formulário público de leads e os canais de marketing empurram cada prospecto para a tabela leads — visível instantaneamente via realtime."],
-    qualify: ["Qualificar", "O bot Qualificador de Leads pontua cada novo lead de 0-100 usando IA mais o seu viés de conversão por canal aprendido, e escreve a próxima melhor ação."],
-    convert: ["Converter", "Leads quentes tornam-se clientes (planos Starter / Professional / Enterprise), registados aqui com a sua receita recorrente mensal."],
-    collect: ["Cobrar", "Cada venda cria um pedido com referência de pagamento. Marcar como pago move o dinheiro para os gráficos de receita e tabelas de rendimento."],
-    learn: ["Aprender", "Os bots persistem o que aprendem (que canais convertem, que correções funcionaram) em agent_memory — cada decisão futura usa isso."],
-    loopNote: "O loop fecha: Aprender alimenta Qualificar — cada execução pontua novos leads com tudo o que foi aprendido até agora.",
+    capture: [
+      "Captar",
+      "O formulário público de leads e os canais de marketing empurram cada prospecto para a tabela leads — visível instantaneamente via realtime.",
+    ],
+    qualify: [
+      "Qualificar",
+      "O bot Qualificador de Leads pontua cada novo lead de 0-100 usando IA mais o seu viés de conversão por canal aprendido, e escreve a próxima melhor ação.",
+    ],
+    convert: [
+      "Converter",
+      "Leads quentes tornam-se clientes (planos Starter / Professional / Enterprise), registados aqui com a sua receita recorrente mensal.",
+    ],
+    collect: [
+      "Cobrar",
+      "Cada venda cria um pedido com referência de pagamento. Marcar como pago move o dinheiro para os gráficos de receita e tabelas de rendimento.",
+    ],
+    learn: [
+      "Aprender",
+      "Os bots persistem o que aprendem (que canais convertem, que correções funcionaram) em agent_memory — cada decisão futura usa isso.",
+    ],
+    loopNote:
+      "O loop fecha: Aprender alimenta Qualificar — cada execução pontua novos leads com tudo o que foi aprendido até agora.",
     realtime: "Supabase realtime",
-    realtimeBody: "Cada lead, venda, pagamento e execução de bot é empurrado para esta página no momento em que acontece — sem refresh.",
+    realtimeBody:
+      "Cada lead, venda, pagamento e execução de bot é empurrado para esta página no momento em que acontece — sem refresh.",
     agentsCard: "Agentes autónomos",
     awaitingFirst: "à espera da primeira execução",
     cc: "Este centro de comando",
-    ccBody: "App estática (Vite + React) a ler o teu projeto Supabase real. Publicada automaticamente a cada push — os mesmos dados em todos os dispositivos.",
+    ccBody:
+      "App estática (Vite + React) a ler o teu projeto Supabase real. Publicada automaticamente a cada push — os mesmos dados em todos os dispositivos.",
     channels: "Canais globais de crescimento",
-    channelsSub: "A descoberta orgânica está pronta a planear; envio e publicação ficam desativados até cada conta ser autorizada.",
+    channelsSub:
+      "A descoberta orgânica está pronta a planear; envio e publicação ficam desativados até cada conta ser autorizada.",
     consent: "Consentimento primeiro",
     chSeo: "Website + SEO",
     chSeoDesc: "Lead magnets, landing pages e metadados de pesquisa",
@@ -168,7 +218,8 @@ export const dash = {
     statusPlanning: "Em planeamento",
     statusNotConnected: "Não ligado",
     learned: "O que os agentes já aprenderam",
-    learnedEmpty: "Nada aprendido ainda — é o esperado num arranque a frio. As primeiras execuções dos bots e negócios decididos vão popular este painel com conhecimento real e merecido.",
+    learnedEmpty:
+      "Nada aprendido ainda — é o esperado num arranque a frio. As primeiras execuções dos bots e negócios decididos vão popular este painel com conhecimento real e merecido.",
     runsShort: "execuções ·",
     updated: "atualizado",
     memoryEntries: "entradas de memória ·",
@@ -203,8 +254,15 @@ export const dash = {
     deliv: "Entregáveis internos",
     delivItems: ["Promessa do produto", "Esboço da oferta", "Metadados SEO", "Rascunho de lead magnet"],
     delivNote: "Disponível depois de as cancelas de evidências e revisão passarem.",
-    delivFoot: "Publicação, Shopify, email e ações sociais ficam desativadas até as integrações oficiais serem autorizadas.",
-    sources: { leads: "leads", clients: "clientes", orders: "pedidos", activity: "atividade", agent_memory: "memória de agentes" },
+    delivFoot:
+      "Publicação, Shopify, email e ações sociais ficam desativadas até as integrações oficiais serem autorizadas.",
+    sources: {
+      leads: "leads",
+      clients: "clientes",
+      orders: "pedidos",
+      activity: "atividade",
+      agent_memory: "memória de agentes",
+    },
     risksDict: {
       "no-evidence": ["Evidências insuficientes", "Liga ou carrega registos reais antes de alegar procura de mercado."],
       market: ["Mercado-alvo incompleto", "Define público e problema do cliente antes da montagem."],
@@ -222,7 +280,8 @@ export const dash = {
     feedError: "Fonte indisponível neste momento — tenta atualizar.",
     feedEmpty: "À espera da primeira leitura da fonte pública…",
     updated: "atualizado",
-    sources: "Fontes públicas sem chave: OpenSky Network (tráfego aéreo) · USGS (sismologia) · NASA EONET (eventos naturais). Se uma fonte falhar ou estiver limitada, mostra-se indisponível — este módulo nunca simula dados.",
+    sources:
+      "Fontes públicas sem chave: OpenSky Network (tráfego aéreo) · USGS (sismologia) · NASA EONET (eventos naturais). Se uma fonte falhar ou estiver limitada, mostra-se indisponível — este módulo nunca simula dados.",
   },
   common: { none: "—" },
 };

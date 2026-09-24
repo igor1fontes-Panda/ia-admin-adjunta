@@ -90,7 +90,10 @@ function funnelSnapshot(leadRows, orderRows, clientRows) {
   return {
     leads: counts,
     byChannel,
-    topNiches: Object.entries(niches).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([n, c]) => ({ niche: n, leads: c })),
+    topNiches: Object.entries(niches)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([n, c]) => ({ niche: n, leads: c })),
     activeClients: clientRows.filter((c) => c.status === "active" || c.status === "trialing").length,
     mrr: clientRows
       .filter((c) => c.status === "active" || c.status === "trialing")
@@ -106,15 +109,29 @@ try {
   log("🎓 teacher-agent starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
 
   if (!supabaseReady) {
-    log("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — cannot read real market data. Nothing simulated; add repo secrets to enable real classes.");
+    log(
+      "⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — cannot read real market data. Nothing simulated; add repo secrets to enable real classes.",
+    );
     process.exit(0);
   }
 
   // 1) OBSERVE — real market data + current knowledge of every student
-  const [{ data: leadRows, error: leadErr }, { data: orderRows, error: orderErr }, { data: clientRows, error: clientErr }] = await Promise.all([
-    supabase.from("leads").select("channel, status, niche, created_at").order("created_at", { ascending: false }).limit(500),
+  const [
+    { data: leadRows, error: leadErr },
+    { data: orderRows, error: orderErr },
+    { data: clientRows, error: clientErr },
+  ] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("channel, status, niche, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase.from("orders").select("status, amount, created_at").order("created_at", { ascending: false }).limit(500),
-    supabase.from("clients").select("plan, mrr, status, created_at").order("created_at", { ascending: false }).limit(500),
+    supabase
+      .from("clients")
+      .select("plan, mrr, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
   ]);
   if (leadErr) throw new Error(`fetch leads: ${leadErr.message}`);
   if (orderErr) log(`orders fetch failed (continuing): ${orderErr.message}`);
@@ -132,9 +149,7 @@ try {
   for (const student of CURRICULUM) {
     const learned = memory[student.slug] ?? {};
     const keys = Object.keys(learned);
-    const gaps = student.skills.filter(
-      (skill) => !keys.some((k) => learned[k] !== undefined && k !== "market_brief"),
-    );
+    const gaps = student.skills.filter((skill) => !keys.some((k) => learned[k] !== undefined && k !== "market_brief"));
     const staleKeys = keys.filter((k) => {
       const v = learned[k];
       return v && typeof v === "object" && typeof v.updated_at === "string"
@@ -144,7 +159,9 @@ try {
     const previousBrief = learned.market_brief ?? null;
     lessons.push({ student, gaps, staleKeys, previousBrief, keys });
   }
-  log(`diagnosis: ${lessons.map((l) => `${l.student.slug}: ${l.gaps.length} gaps, ${l.staleKeys.length} stale`).join(" | ")}`);
+  log(
+    `diagnosis: ${lessons.map((l) => `${l.student.slug}: ${l.gaps.length} gaps, ${l.staleKeys.length} stale`).join(" | ")}`,
+  );
 
   // 3) TEACH — one market_brief per student
   let taught = 0;
@@ -156,7 +173,10 @@ try {
         : "no leads captured yet — the priority is driving traffic to the public lead form",
       focus_skills: gaps.length ? gaps.join(", ") : "sharpen existing skills",
       instruction: student.guidance,
-      avoid: previousBrief && typeof previousBrief === "object" ? "do not repeat strategies from the previous brief that produced no funnel movement" : "do not act on assumptions; only on recorded data",
+      avoid:
+        previousBrief && typeof previousBrief === "object"
+          ? "do not repeat strategies from the previous brief that produced no funnel movement"
+          : "do not act on assumptions; only on recorded data",
       generated_by: "curriculum",
     };
 

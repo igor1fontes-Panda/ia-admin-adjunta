@@ -8,11 +8,17 @@ export class AppError extends Error {
 }
 
 export class SupabaseError extends AppError {
-  constructor(message: string) { super(message, "SUPABASE_ERROR"); this.name = "SupabaseError"; }
+  constructor(message: string) {
+    super(message, "SUPABASE_ERROR");
+    this.name = "SupabaseError";
+  }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string) { super(message, "VALIDATION_ERROR"); this.name = "ValidationError"; }
+  constructor(message: string) {
+    super(message, "VALIDATION_ERROR");
+    this.name = "ValidationError";
+  }
 }
 
 export function errorMessage(error: unknown, fallback: string): string {

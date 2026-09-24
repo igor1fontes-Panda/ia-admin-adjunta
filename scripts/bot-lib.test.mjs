@@ -54,7 +54,11 @@ describe("bot-lib shim: SQL building (zero network)", () => {
 
   it("serializes object params for jsonb columns and arrays pass through", async () => {
     const lib = await freshLib();
-    await lib.supabase.from("agent_memory").select("*").eq("value", { bias: { linkedin: 4 } }).eq("tags", ["a", "b"]);
+    await lib.supabase
+      .from("agent_memory")
+      .select("*")
+      .eq("value", { bias: { linkedin: 4 } })
+      .eq("tags", ["a", "b"]);
 
     expect(neonCaptures[0].params[0]).toBe(JSON.stringify({ bias: { linkedin: 4 } }));
     expect(neonCaptures[0].params[1]).toEqual(["a", "b"]);
@@ -62,17 +66,13 @@ describe("bot-lib shim: SQL building (zero network)", () => {
 
   it("builds multi-row insert with returning *", async () => {
     const lib = await freshLib();
-    const { data, error } = await lib.supabase
-      .from("leads")
-      .insert([
-        { company: "Acme", score: 91 },
-        { company: "Globex", score: 42 },
-      ]);
+    const { data, error } = await lib.supabase.from("leads").insert([
+      { company: "Acme", score: 91 },
+      { company: "Globex", score: 42 },
+    ]);
 
     expect(error).toBeNull();
-    expect(neonCaptures[0].text).toBe(
-      'insert into leads ("company", "score") values ($1, $2), ($3, $4) returning *',
-    );
+    expect(neonCaptures[0].text).toBe('insert into leads ("company", "score") values ($1, $2), ($3, $4) returning *');
     expect(neonCaptures[0].params).toEqual(["Acme", 91, "Globex", 42]);
     expect(data).toEqual([]);
   });
@@ -141,7 +141,7 @@ describe("bot-lib helpers", () => {
   it("parseJsonArray tolerates code fences and prose", async () => {
     const lib = await freshLib();
     expect(lib.parseJsonArray('```json\n[{"a":1}]\n```')).toEqual([{ a: 1 }]);
-    expect(lib.parseJsonArray('Here you go: [1, 2, 3] hope it helps')).toEqual([1, 2, 3]);
+    expect(lib.parseJsonArray("Here you go: [1, 2, 3] hope it helps")).toEqual([1, 2, 3]);
     expect(lib.parseJsonArray("not json at all")).toBeNull();
     expect(lib.parseJsonArray("")).toBeNull();
   });
@@ -149,7 +149,7 @@ describe("bot-lib helpers", () => {
   it("parseJsonObject extracts objects, never arrays", async () => {
     const lib = await freshLib();
     expect(lib.parseJsonObject('{"bottleneck":"closing"}')).toEqual({ bottleneck: "closing" });
-    expect(lib.parseJsonObject('noise [1,2] noise')).toBeNull();
+    expect(lib.parseJsonObject("noise [1,2] noise")).toBeNull();
   });
 
   it("diagnoseSupabaseError maps recurring failures to actionable fixes", async () => {

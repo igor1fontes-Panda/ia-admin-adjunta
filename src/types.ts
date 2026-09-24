@@ -102,7 +102,13 @@ export type AgentPromptContext = {
   agent: string;
   sessionId: string;
   currentTask: string;
-  facts: Array<{ key: string; value: string; source: string; observedAt: string; confidence: "high" | "medium" | "low" }>;
+  facts: Array<{
+    key: string;
+    value: string;
+    source: string;
+    observedAt: string;
+    confidence: "high" | "medium" | "low";
+  }>;
   recordCounts: { leads: number; clients: number; orders: number; activity: number; memory: number };
   contextClock: string;
 };

@@ -49,7 +49,9 @@ export function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: st
                   <td className="px-5 py-4 text-xs text-zinc-400">
                     {l.ai_action}
                     {l.ai_action ? (
-                      <span className="ml-1.5 rounded bg-gold-500/15 px-1.5 py-0.5 font-mono text-[10px] text-gold-300">{t("dash.leadsTab.aiTag")}</span>
+                      <span className="ml-1.5 rounded bg-gold-500/15 px-1.5 py-0.5 font-mono text-[10px] text-gold-300">
+                        {t("dash.leadsTab.aiTag")}
+                      </span>
                     ) : null}
                   </td>
                   <td className="px-5 py-4">
@@ -59,7 +61,9 @@ export function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: st
                       className="rounded-lg border border-white/10 bg-ink-800 px-2 py-1 text-xs text-zinc-200 focus:outline-none"
                     >
                       {(["new", "contacted", "qualified", "won", "lost"] as const).map((s) => (
-                        <option key={s} value={s}>{t(`dash.statusLead.${s}`)}</option>
+                        <option key={s} value={s}>
+                          {t(`dash.statusLead.${s}`)}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -79,4 +83,3 @@ export function LeadsTab({ leads, onStatus }: { leads: Lead[]; onStatus: (id: st
     </div>
   );
 }
-

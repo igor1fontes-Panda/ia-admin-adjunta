@@ -25,10 +25,22 @@ export const dash = {
     title: "Activate your ecosystem",
     sub: "The system starts empty and grows with real activity. Each step unlocks as the database proves it.",
     leads: ["Capture your first lead", "Share the public lead form — every submission lands here in real time."],
-    clients: ["Register your first client", "Add a real client in the Clients module (Starter 1,250 Kz, Professional 2,916 Kz, Enterprise 8,333 Kz per month)."],
-    orders: ["Record your first sale", "Create a real order in the Orders module only after the payment provider and product availability have been verified."],
-    collect: ["Collect your first payment", "Mark an order as paid once the money arrives — revenue charts and income tables update instantly."],
-    agents: ["Agents complete their first cycle", "The autonomous bots run on GitHub Actions (daily 06:00 UTC + hourly). Their first real runs appear here and in the AI Agents module."],
+    clients: [
+      "Register your first client",
+      "Add a real client in the Clients module (Starter 1,250 Kz, Professional 2,916 Kz, Enterprise 8,333 Kz per month).",
+    ],
+    orders: [
+      "Record your first sale",
+      "Create a real order in the Orders module only after the payment provider and product availability have been verified.",
+    ],
+    collect: [
+      "Collect your first payment",
+      "Mark an order as paid once the money arrives — revenue charts and income tables update instantly.",
+    ],
+    agents: [
+      "Agents complete their first cycle",
+      "The autonomous bots run on GitHub Actions (daily 06:00 UTC + hourly). Their first real runs appear here and in the AI Agents module.",
+    ],
   },
   cards: {
     leads: "Leads captured",
@@ -43,11 +55,13 @@ export const dash = {
     title: "Live activity",
     sub: "Real Supabase activity only",
     verified: "Verified data",
-    empty: "The autonomous agents report here the moment they run — lead scoring, daily insights and incident triage, straight from the real activity log.",
+    empty:
+      "The autonomous agents report here the moment they run — lead scoring, daily insights and incident triage, straight from the real activity log.",
   },
   orders: {
     latest: "Latest orders",
-    empty: "Sales appear here the moment real orders are recorded — with payment reference, method and collection status.",
+    empty:
+      "Sales appear here the moment real orders are recorded — with payment reference, method and collection status.",
     form: "Order",
     client: "Client",
     walkin: "— Walk-in —",
@@ -61,7 +75,13 @@ export const dash = {
     thStatus: "Status",
     thAction: "Action",
     markPaid: "Mark paid",
-    methods: { multicaixa: "Multicaixa Express", paypay: "PayPay", card: "Card", wire_usd: "International wire — USD (Lead Bank)", wire_eur: "International transfer — EUR (Banking Circle)" },
+    methods: {
+      multicaixa: "Multicaixa Express",
+      paypay: "PayPay",
+      card: "Card",
+      wire_usd: "International wire — USD (Lead Bank)",
+      wire_eur: "International transfer — EUR (Banking Circle)",
+    },
   },
   leadsTab: {
     company: "Company",
@@ -70,7 +90,8 @@ export const dash = {
     score: "Score",
     nextAction: "Next action",
     status: "Status",
-    empty: "No leads yet — every real submission from the public lead form lands here instantly, scored and prioritized by the agents.",
+    empty:
+      "No leads yet — every real submission from the public lead form lands here instantly, scored and prioritized by the agents.",
     aiTag: "AI",
   },
   statusLead: { new: "new", contacted: "contacted", qualified: "qualified", won: "won", lost: "lost" },
@@ -105,7 +126,8 @@ export const dash = {
     email: "Billing email",
     plan: "Plan",
     create: "Create client",
-    empty: "No clients yet — create the first one above and the plan cards, MRR pie and income tables come alive with real subscriptions.",
+    empty:
+      "No clients yet — create the first one above and the plan cards, MRR pie and income tables come alive with real subscriptions.",
     perMonth: "/mo",
   },
   agents: {
@@ -118,9 +140,11 @@ export const dash = {
     learnDesc: "Stores evidence from won/lost outcomes",
     act: "Act",
     actDesc: "Qualifies, drafts and logs next actions",
-    safety: "Safety boundary: no unsolicited messages, purchases or public posts. Human approval is required for actions outside connected, consented channels.",
+    safety:
+      "Safety boundary: no unsolicited messages, purchases or public posts. Human approval is required for actions outside connected, consented channels.",
     promptTitle: "Prompt runtime",
-    promptBody: "Stable instructions and tool contracts are separated from per-run records. Dynamic context is refreshed by hour and contains only verified account data.",
+    promptBody:
+      "Stable instructions and tool contracts are separated from per-run records. Dynamic context is refreshed by hour and contains only verified account data.",
     tools: "Tools:",
     cacheKey: "Cache key:",
     bytes: "Context bytes:",
@@ -142,20 +166,39 @@ export const dash = {
   eco: {
     title: "How the ecosystem works — live",
     sub: "One continuous loop: every stage reads and writes the same real database. No step is simulated.",
-    capture: ["Capture", "The public lead form and marketing channels push every prospect into the leads table — instantly visible via realtime."],
-    qualify: ["Qualify", "The Lead Qualifier bot scores every new lead 0-100 using AI plus its own learned channel-conversion bias, and writes the next best action."],
-    convert: ["Convert", "Hot leads become clients (Starter / Professional / Enterprise plans), registered here with their monthly recurring revenue."],
-    collect: ["Collect", "Every sale creates an order with a payment reference. Marking it paid moves the money into revenue charts and income tables."],
-    learn: ["Learn", "Bots persist what they learn (which channels convert, which fixes worked) into agent_memory — every future decision uses it."],
-    loopNote: "The loop closes: Learn feeds back into Qualify — each agent run scores new leads with everything learned so far.",
+    capture: [
+      "Capture",
+      "The public lead form and marketing channels push every prospect into the leads table — instantly visible via realtime.",
+    ],
+    qualify: [
+      "Qualify",
+      "The Lead Qualifier bot scores every new lead 0-100 using AI plus its own learned channel-conversion bias, and writes the next best action.",
+    ],
+    convert: [
+      "Convert",
+      "Hot leads become clients (Starter / Professional / Enterprise plans), registered here with their monthly recurring revenue.",
+    ],
+    collect: [
+      "Collect",
+      "Every sale creates an order with a payment reference. Marking it paid moves the money into revenue charts and income tables.",
+    ],
+    learn: [
+      "Learn",
+      "Bots persist what they learn (which channels convert, which fixes worked) into agent_memory — every future decision uses it.",
+    ],
+    loopNote:
+      "The loop closes: Learn feeds back into Qualify — each agent run scores new leads with everything learned so far.",
     realtime: "Supabase realtime",
-    realtimeBody: "Every lead, sale, payment and bot run is pushed to this page the moment it happens — no refresh needed.",
+    realtimeBody:
+      "Every lead, sale, payment and bot run is pushed to this page the moment it happens — no refresh needed.",
     agentsCard: "Autonomous agents",
     awaitingFirst: "awaiting first run",
     cc: "This command center",
-    ccBody: "Static app (Vite + React) reading your real Supabase project. Deployed automatically on every push — same data on every device.",
+    ccBody:
+      "Static app (Vite + React) reading your real Supabase project. Deployed automatically on every push — same data on every device.",
     channels: "Global growth channels",
-    channelsSub: "Organic discovery is ready to plan; sending and publishing stay disabled until each account is authorized.",
+    channelsSub:
+      "Organic discovery is ready to plan; sending and publishing stay disabled until each account is authorized.",
     consent: "Consent-first",
     chSeo: "Website + SEO",
     chSeoDesc: "Lead magnets, landing pages and search metadata",
@@ -168,7 +211,8 @@ export const dash = {
     statusPlanning: "Planning",
     statusNotConnected: "Not connected",
     learned: "What the agents have learned",
-    learnedEmpty: "Nothing learned yet — this is expected on a cold start. The first bot runs and decided deals will populate this panel with real, earned knowledge.",
+    learnedEmpty:
+      "Nothing learned yet — this is expected on a cold start. The first bot runs and decided deals will populate this panel with real, earned knowledge.",
     runsShort: "runs ·",
     updated: "updated",
     memoryEntries: "memory entries ·",
@@ -203,8 +247,15 @@ export const dash = {
     deliv: "Internal deliverables",
     delivItems: ["Product promise", "Offer outline", "SEO metadata", "Lead magnet draft"],
     delivNote: "Available after evidence and review gates pass.",
-    delivFoot: "Publishing, Shopify, email and social actions are disabled until their official integrations are authorized.",
-    sources: { leads: "leads", clients: "clients", orders: "orders", activity: "activity", agent_memory: "agent memory" },
+    delivFoot:
+      "Publishing, Shopify, email and social actions are disabled until their official integrations are authorized.",
+    sources: {
+      leads: "leads",
+      clients: "clients",
+      orders: "orders",
+      activity: "activity",
+      agent_memory: "agent memory",
+    },
     risksDict: {
       "no-evidence": ["Insufficient evidence", "Connect or load real records before claiming market demand."],
       market: ["Target market incomplete", "Define audience and customer problem before assembly."],
@@ -222,7 +273,8 @@ export const dash = {
     feedError: "Source unavailable right now — try refreshing.",
     feedEmpty: "Waiting for the first read from the public feed…",
     updated: "updated",
-    sources: "Keyless public sources: OpenSky Network (air traffic) · USGS (seismology) · NASA EONET (natural events). If a source fails or is rate-limited it shows as unavailable — this module never simulates data.",
+    sources:
+      "Keyless public sources: OpenSky Network (air traffic) · USGS (seismology) · NASA EONET (natural events). If a source fails or is rate-limited it shows as unavailable — this module never simulates data.",
   },
   common: { none: "—" },
 };

@@ -14,7 +14,8 @@ export const leadForm = {
   send: "Request free automation audit",
   sending: "Sending…",
   doneTitle: "Request received!",
-  doneBody: "Your request is now a real lead in our system. Qualification will only happen after an authorized agent and a verifiable data source are available.",
+  doneBody:
+    "Your request is now a real lead in our system. Qualification will only happen after an authorized agent and a verifiable data source are available.",
   dbError: "The database is not connected yet — follow the setup steps on the dashboard.",
   retry: "Could not submit — please try again.",
 };

@@ -28,7 +28,8 @@ export const ops = {
     product_operational: "Product operational",
   },
   skillsTitle: "Ecosystem skills (skills.sh)",
-  skillsSub: "The Skills Scout searches the commands and prompts each agent needs and delivers them to the agent's memory",
+  skillsSub:
+    "The Skills Scout searches the commands and prompts each agent needs and delivers them to the agent's memory",
   skillsAgent: "Agent",
   skillsFound: "Skills found",
   skillsRecommended: "Recommended",

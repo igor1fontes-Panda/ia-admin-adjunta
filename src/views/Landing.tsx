@@ -37,9 +37,30 @@ export function Landing() {
   const tAny = useTAny();
 
   const plans = [
-    { name: "Starter", price: "12.500 Kz", users: t("pricing.users.starter"), features: tAny("pricing.starter.features") as string[], highlight: false, cta: t("pricing.starter.cta") },
-    { name: "Professional", price: "29.160 Kz", users: t("pricing.users.professional"), features: tAny("pricing.professional.features") as string[], highlight: true, cta: t("pricing.professional.cta") },
-    { name: "Enterprise", price: "83.330 Kz", users: t("pricing.users.enterprise"), features: tAny("pricing.enterprise.features") as string[], highlight: false, cta: t("pricing.enterprise.cta") },
+    {
+      name: "Starter",
+      price: "12.500 Kz",
+      users: t("pricing.users.starter"),
+      features: tAny("pricing.starter.features") as string[],
+      highlight: false,
+      cta: t("pricing.starter.cta"),
+    },
+    {
+      name: "Professional",
+      price: "29.160 Kz",
+      users: t("pricing.users.professional"),
+      features: tAny("pricing.professional.features") as string[],
+      highlight: true,
+      cta: t("pricing.professional.cta"),
+    },
+    {
+      name: "Enterprise",
+      price: "83.330 Kz",
+      users: t("pricing.users.enterprise"),
+      features: tAny("pricing.enterprise.features") as string[],
+      highlight: false,
+      cta: t("pricing.enterprise.cta"),
+    },
   ];
 
   const labItems = ((tAny("lab.items") as Array<[string, string, string]>) ?? []).filter(Array.isArray);
@@ -125,11 +146,13 @@ export function Landing() {
       {/* Ecosystem */}
       <section id="ecosystem" className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
         <div className="card grid gap-6 border-cyan-400/20 p-6 sm:grid-cols-3">
-          {([
-            [t("eco.market"), t("eco.marketDesc")],
-            [t("eco.agents"), t("eco.agentsDesc")],
-            [t("eco.projects"), t("eco.projectsDesc")],
-          ] as Array<[string, string]>).map(([title, desc]) => (
+          {(
+            [
+              [t("eco.market"), t("eco.marketDesc")],
+              [t("eco.agents"), t("eco.agentsDesc")],
+              [t("eco.projects"), t("eco.projectsDesc")],
+            ] as Array<[string, string]>
+          ).map(([title, desc]) => (
             <div key={title} className="border-l border-fuchsia-400/40 pl-4">
               <p className="section-kicker text-xs font-semibold text-fuchsia-300">{title}</p>
               <p className="mt-2 text-sm text-zinc-400">{desc}</p>
@@ -149,11 +172,17 @@ export function Landing() {
               <h2 className="mt-4 text-3xl font-bold text-zinc-50 sm:text-4xl">{t("lab.title")}</h2>
               <p className="mt-3 max-w-2xl text-zinc-400">{t("lab.sub")}</p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-emerald-300"><Sparkles size={14} /> {t("lab.active")}</div>
+            <div className="flex items-center gap-2 text-xs text-emerald-300">
+              <Sparkles size={14} /> {t("lab.active")}
+            </div>
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {labItems.map(([name, desc, label], index) => (
-              <motion.div key={name} whileHover={{ y: -4 }} className={`group rounded-2xl border p-4 ${index === 5 ? "border-cyan-300/60 bg-cyan-300/[0.08] shadow-[0_0_30px_rgba(34,211,238,0.12)]" : "border-white/10 bg-white/[0.03]"}`}>
+              <motion.div
+                key={name}
+                whileHover={{ y: -4 }}
+                className={`group rounded-2xl border p-4 ${index === 5 ? "border-cyan-300/60 bg-cyan-300/[0.08] shadow-[0_0_30px_rgba(34,211,238,0.12)]" : "border-white/10 bg-white/[0.03]"}`}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-semibold text-zinc-100">{name}</h3>
                   <span className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</span>
@@ -170,12 +199,10 @@ export function Landing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
-              <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">
-                {t("how.badge")}
-              </span>
+              <span className="badge border border-gold-500/30 bg-gold-500/10 text-gold-300">{t("how.badge")}</span>
               <h2 className="mt-4 text-3xl font-bold text-zinc-50 sm:text-4xl">{t("how.title")}</h2>
               <ol className="mt-8 space-y-6">
-                {(((tAny("how.steps") as Array<[string, string]>) ?? [])).filter(Array.isArray).map(([step, desc], i) => (
+                {((tAny("how.steps") as Array<[string, string]>) ?? []).filter(Array.isArray).map(([step, desc], i) => (
                   <li key={step} className="flex gap-4">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-500/15 text-sm font-bold text-gold-400">
                       {i + 1}
@@ -196,9 +223,7 @@ export function Landing() {
                 </span>
                 {t("how.liveTag")}
               </div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                {t("how.previewLabel")}
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{t("how.previewLabel")}</p>
               <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-zinc-400">
                 <p className="font-semibold text-zinc-200">{t("how.previewTitle")}</p>
                 <p className="mt-1">{t("how.previewBody")}</p>
@@ -226,13 +251,9 @@ export function Landing() {
               className={`card relative p-6 ${p.highlight ? "border-gold-500/50 glow-gold" : ""}`}
             >
               {p.highlight ? (
-                <span className="badge absolute -top-3 left-6 bg-gold-500 text-ink-950">
-                  {t("pricing.popular")}
-                </span>
+                <span className="badge absolute -top-3 left-6 bg-gold-500 text-ink-950">{t("pricing.popular")}</span>
               ) : null}
-              <p className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                {p.name}
-              </p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-zinc-400">{p.name}</p>
               <p className="mt-3">
                 <span className="text-3xl font-extrabold text-zinc-50">{p.price}</span>
                 <span className="text-sm text-zinc-400">{t("pricing.period")}</span>

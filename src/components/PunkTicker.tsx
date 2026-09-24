@@ -9,10 +9,7 @@ const ITEMS = [
 
 export function PunkTicker() {
   return (
-    <div
-      className="overflow-hidden border-y border-gold-500/25 bg-ink-900/90 py-2.5 backdrop-blur"
-      aria-hidden="true"
-    >
+    <div className="overflow-hidden border-y border-gold-500/25 bg-ink-900/90 py-2.5 backdrop-blur" aria-hidden="true">
       <div className="punk-ticker gap-10">
         {[0, 1].map((copy) => (
           <div key={copy} className="flex shrink-0 gap-10">

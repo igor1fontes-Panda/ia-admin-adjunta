@@ -29,7 +29,10 @@ export const storeReady = neonReady || supabaseReady;
 export const storeLabel = neonReady ? "neon" : supabaseReady ? "supabase" : "none";
 
 /** Generic read: returns an array of rows from the active store. */
-export async function storeSelect(table, { columns = "*", orderBy = "created_at", ascending = false, limit = 200, eq = null } = {}) {
+export async function storeSelect(
+  table,
+  { columns = "*", orderBy = "created_at", ascending = false, limit = 200, eq = null } = {},
+) {
   if (sql) {
     const cols = columns === "*" ? "*" : columns;
     const order = `order by ${orderBy} ${ascending ? "asc" : "desc"}`;
@@ -55,10 +58,7 @@ export async function storeInsert(table, row) {
     const values = Object.values(row);
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(", ");
     const quoted = keys.map((k) => `"${k}"`).join(", ");
-    const inserted = await sql(
-      `insert into ${table} (${quoted}) values (${placeholders}) returning *`,
-      values,
-    );
+    const inserted = await sql(`insert into ${table} (${quoted}) values (${placeholders}) returning *`, values);
     return inserted ?? [];
   }
   if (supabase) {
@@ -75,10 +75,7 @@ export async function storeUpdate(table, id, patch) {
     const keys = Object.keys(patch);
     if (keys.length === 0) return [];
     const sets = keys.map((k, i) => `"${k}" = $${i + 2}`).join(", ");
-    const updated = await sql(
-      `update ${table} set ${sets} where id = $1 returning *`,
-      [id, ...Object.values(patch)],
-    );
+    const updated = await sql(`update ${table} set ${sets} where id = $1 returning *`, [id, ...Object.values(patch)]);
     return updated ?? [];
   }
   if (supabase) {
@@ -102,9 +99,7 @@ export async function dbRemember(agent, key, value) {
     return true;
   }
   if (supabase) {
-    const { error } = await supabase
-      .from("agent_memory")
-      .upsert({ agent, key, value, updated_at });
+    const { error } = await supabase.from("agent_memory").upsert({ agent, key, value, updated_at });
     if (error) throw new Error(`supabase upsert agent_memory: ${error.message}`);
     return true;
   }
@@ -115,7 +110,11 @@ export async function dbRemember(agent, key, value) {
 export async function dbRecall(agent = null) {
   try {
     const rows = agent
-      ? await storeSelect("agent_memory", { columns: "agent, key, value", orderBy: "updated_at", eq: { column: "agent", value: agent } })
+      ? await storeSelect("agent_memory", {
+          columns: "agent, key, value",
+          orderBy: "updated_at",
+          eq: { column: "agent", value: agent },
+        })
       : await storeSelect("agent_memory", { columns: "agent, key, value", orderBy: "updated_at", limit: 500 });
     const out = {};
     for (const row of rows ?? []) {

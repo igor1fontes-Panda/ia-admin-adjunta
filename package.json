@@ -17,6 +17,8 @@
     "coverage": "vitest run --coverage",
     "audit:python": "python3 -m venv .venv-pip-audit && .venv-pip-audit/bin/python -m pip install -q -r requirements-dev.txt && .venv-pip-audit/bin/python -m pip_audit -r requirements.txt",
     "lint": "eslint src",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
     "typecheck": "tsc -b --noEmit",
     "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
     "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",

@@ -115,9 +115,7 @@ export function PaymentDetails({ detailed = false }: { detailed?: boolean }) {
         <AccountCard acc={EUR_ACCOUNT} />
       </div>
 
-      {detailed ? (
-        <p className="mt-4 text-xs text-zinc-500">{t("pay.detailedNote")}</p>
-      ) : null}
+      {detailed ? <p className="mt-4 text-xs text-zinc-500">{t("pay.detailedNote")}</p> : null}
     </div>
   );
 }

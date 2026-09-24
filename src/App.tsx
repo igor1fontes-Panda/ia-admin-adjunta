@@ -1,11 +1,5 @@
 import { lazy, Suspense } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
@@ -41,7 +35,12 @@ export default function App() {
 
 function AppFrame() {
   const location = useLocation();
-  const pageTone = location.pathname === "/dashboard" ? "page-dashboard" : location.pathname === "/auth" ? "page-auth" : "page-landing";
+  const pageTone =
+    location.pathname === "/dashboard"
+      ? "page-dashboard"
+      : location.pathname === "/auth"
+        ? "page-auth"
+        : "page-landing";
 
   return (
     <div className={`app-shell ${pageTone} flex min-h-screen flex-col`}>

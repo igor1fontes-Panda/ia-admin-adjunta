@@ -44,9 +44,7 @@ function ClerkBridge({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const value: BridgeAuth = {
     session:
-      isSignedIn && user
-        ? { email: user.primaryEmailAddress?.emailAddress ?? "", name: user.fullName ?? "" }
-        : null,
+      isSignedIn && user ? { email: user.primaryEmailAddress?.emailAddress ?? "", name: user.fullName ?? "" } : null,
     isPending: !isLoaded,
     signOut: async () => {
       await signOut();

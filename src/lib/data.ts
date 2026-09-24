@@ -17,7 +17,10 @@ import { CLERK_ENABLED, getClerkToken } from "./clerk-bridge";
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...((init?.headers as Record<string, string>) ?? {}) };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
   // Clerk mode: authenticate API calls with the session JWT (verified
   // server-side as a fallback identity in api/lib/http.ts).
   if (CLERK_ENABLED) {
@@ -124,7 +127,12 @@ export async function markOrderPaid(id: string): Promise<void> {
 
 // ---- Public lead capture (landing page form) ----
 
-export async function submitLead(input: { company: string; contact_name: string; email: string; niche: string }): Promise<void> {
+export async function submitLead(input: {
+  company: string;
+  contact_name: string;
+  email: string;
+  niche: string;
+}): Promise<void> {
   await api("/leads", { method: "POST", body: JSON.stringify(input) });
 }
 

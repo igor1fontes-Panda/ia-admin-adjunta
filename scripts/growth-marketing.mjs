@@ -67,12 +67,20 @@ function funnelSnapshot(leadRows, orderRows, clientRows) {
 function detectBottleneck(snap) {
   if (snap.leads.total === 0) return { stage: "traffic", ratio: 0, note: "no leads captured yet" };
   const decided = snap.leads.won + snap.leads.lost;
-  if (snap.leads.new > 0 && decided === 0) return { stage: "qualification", ratio: 0, note: "leads waiting, no decided outcomes yet" };
-  if (snap.leads.contacted > 0 && snap.leads.qualified === 0) return { stage: "nurture", ratio: 0, note: "contacted but nobody qualified" };
-  if (snap.leads.qualified > 0 && snap.leads.won === 0) return { stage: "closing", ratio: 0, note: "qualified but zero won deals" };
+  if (snap.leads.new > 0 && decided === 0)
+    return { stage: "qualification", ratio: 0, note: "leads waiting, no decided outcomes yet" };
+  if (snap.leads.contacted > 0 && snap.leads.qualified === 0)
+    return { stage: "nurture", ratio: 0, note: "contacted but nobody qualified" };
+  if (snap.leads.qualified > 0 && snap.leads.won === 0)
+    return { stage: "closing", ratio: 0, note: "qualified but zero won deals" };
   const winRate = decided > 0 ? snap.leads.won / decided : 0;
   if (winRate < 0.3) return { stage: "closing", ratio: winRate, note: `win rate only ${(winRate * 100).toFixed(0)}%` };
-  if (snap.ordersPending > snap.ordersPaid) return { stage: "collection", ratio: snap.ordersPaid / (snap.ordersPaid + snap.ordersPending), note: "more pending than paid orders" };
+  if (snap.ordersPending > snap.ordersPaid)
+    return {
+      stage: "collection",
+      ratio: snap.ordersPaid / (snap.ordersPaid + snap.ordersPending),
+      note: "more pending than paid orders",
+    };
   return { stage: "scale", ratio: winRate, note: "funnel healthy — scale what works" };
 }
 
@@ -119,15 +127,29 @@ try {
   log("📈 growth-marketing starting", { supabase: supabaseReady, gemini: geminiReady, blackbox: blackboxReady });
 
   if (!supabaseReady) {
-    log("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — cannot read real funnel data. Add repo secrets to enable real runs.");
+    log(
+      "⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured — cannot read real funnel data. Add repo secrets to enable real runs.",
+    );
     process.exit(0);
   }
 
   // 1) OBSERVE — real funnel rows
-  const [{ data: leadRows, error: leadErr }, { data: orderRows, error: orderErr }, { data: clientRows, error: clientErr }] = await Promise.all([
-    supabase.from("leads").select("channel, status, niche, created_at").order("created_at", { ascending: false }).limit(500),
+  const [
+    { data: leadRows, error: leadErr },
+    { data: orderRows, error: orderErr },
+    { data: clientRows, error: clientErr },
+  ] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("channel, status, niche, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase.from("orders").select("status, amount, created_at").order("created_at", { ascending: false }).limit(500),
-    supabase.from("clients").select("plan, mrr, status, created_at").order("created_at", { ascending: false }).limit(500),
+    supabase
+      .from("clients")
+      .select("plan, mrr, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
   ]);
   if (leadErr) throw new Error(`fetch leads: ${leadErr.message}`);
   if (orderErr) log(`orders fetch failed (continuing with leads only): ${orderErr.message}`);
@@ -180,8 +202,12 @@ try {
       lastPlay ? `Previous play (repeat only if it was working): ${JSON.stringify(lastPlay)}` : "No previous play.",
       delta ? `Funnel delta since last run: ${JSON.stringify(delta)}` : "",
       `Current bottleneck: ${JSON.stringify(bottleneck)}`,
-      marketBrief && typeof marketBrief === "object" ? `Academy market brief from the AI Teacher (latest lesson — apply it): ${JSON.stringify(marketBrief)}` : "",
-      mission && typeof mission === "object" ? `Today's mission assigned by the AI Manager (respect the directive and priorities): ${JSON.stringify(mission)}` : "",
+      marketBrief && typeof marketBrief === "object"
+        ? `Academy market brief from the AI Teacher (latest lesson — apply it): ${JSON.stringify(marketBrief)}`
+        : "",
+      mission && typeof mission === "object"
+        ? `Today's mission assigned by the AI Manager (respect the directive and priorities): ${JSON.stringify(mission)}`
+        : "",
     ]
       .filter(Boolean)
       .join("\n");

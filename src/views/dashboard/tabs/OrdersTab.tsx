@@ -31,7 +31,9 @@ export function OrdersTab({
           <label className="label">{t("dash.orders.client")}</label>
           <select name="client_id" className="input">
             {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
             <option value="">{t("dash.orders.walkin")}</option>
           </select>
@@ -114,4 +116,3 @@ export function OrdersTab({
     </div>
   );
 }
-

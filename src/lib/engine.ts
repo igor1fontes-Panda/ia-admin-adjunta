@@ -1,4 +1,14 @@
-import type { Activity, Client, Lead, Metric, Order, ProductPackEvidence, ProductPackRisk, AgentPromptContext, AgentPromptPlan } from "../types";
+import type {
+  Activity,
+  Client,
+  Lead,
+  Metric,
+  Order,
+  ProductPackEvidence,
+  ProductPackRisk,
+  AgentPromptContext,
+  AgentPromptPlan,
+} from "../types";
 
 // ---------- Analytics (all pure functions over REAL rows) ----------
 
@@ -6,7 +16,14 @@ export type SeriesPoint = { label: string; value: number };
 export type RevenuePoint = { label: string; paid: number; pending: number };
 export type FunnelStage = { stage: string; count: number };
 export type IncomeRow = { source: string; paid: number; pending: number; orders: number; sharePct: number };
-export type AgentRow = { name: string; schedule: string; runs: number; lastRun: string | null; lastMessage: string; stale: boolean };
+export type AgentRow = {
+  name: string;
+  schedule: string;
+  runs: number;
+  lastRun: string | null;
+  lastMessage: string;
+  stale: boolean;
+};
 export type Pulse = { leadsToday: number; ordersToday: number; collectedToday: number; botRunsToday: number };
 
 // ---------- AI Academy (teacher agent + student curriculum) ----------
@@ -172,7 +189,10 @@ export function opsState(memory: MemoryEntry[], deliveries: DeliveryRow[]): OpsS
   const managed = new Set<string>(MANAGED_AGENTS);
   const pick = (key: string): MissionRow[] =>
     memory
-      .filter((m) => m.key === key && managed.has(m.agent) && m.value && typeof m.value === "object" && !Array.isArray(m.value))
+      .filter(
+        (m) =>
+          m.key === key && managed.has(m.agent) && m.value && typeof m.value === "object" && !Array.isArray(m.value),
+      )
       .map((m) => ({ agent: m.agent, value: m.value as Record<string, unknown>, updated_at: m.updated_at }));
 
   const missions = pick("mission");
@@ -185,9 +205,7 @@ export function opsState(memory: MemoryEntry[], deliveries: DeliveryRow[]): OpsS
     qaPending: deliveries.filter((d) => d.qa_status === "pending").length,
     qaPassed: deliveries.filter((d) => d.qa_status === "passed").length,
     qaFailed: deliveries.filter((d) => d.qa_status === "failed").length,
-    scoutLastRun: skills.length
-      ? skills.map((s) => s.updated_at).sort()[skills.length - 1] ?? null
-      : null,
+    scoutLastRun: skills.length ? (skills.map((s) => s.updated_at).sort()[skills.length - 1] ?? null) : null,
   };
 }
 
@@ -242,7 +260,15 @@ export function revenuePerDay(orders: Order[], days = 14): RevenuePoint[] {
 /** Sales pipeline funnel from real lead statuses. */
 export function pipelineFunnel(leads: Lead[]): FunnelStage[] {
   const stageOf = (s: Lead["status"]): string | null =>
-    s === "new" ? "Captured" : s === "contacted" ? "Contacted" : s === "qualified" ? "Qualified" : s === "won" ? "Won" : null;
+    s === "new"
+      ? "Captured"
+      : s === "contacted"
+        ? "Contacted"
+        : s === "qualified"
+          ? "Qualified"
+          : s === "won"
+            ? "Won"
+            : null;
   const order: Array<"Captured" | "Contacted" | "Qualified" | "Won"> = ["Captured", "Contacted", "Qualified", "Won"];
   const counts = new Map<string, number>(order.map((s) => [s, 0]));
   for (const l of leads) {
@@ -294,7 +320,9 @@ export function mrrByPlan(clients: Client[]): SeriesPoint[] {
   const plans = ["starter", "professional", "enterprise"] as const;
   return plans.map((p) => ({
     label: p,
-    value: clients.filter((c) => c.plan === p && (c.status === "active" || c.status === "trialing")).reduce((s, c) => s + c.mrr, 0),
+    value: clients
+      .filter((c) => c.plan === p && (c.status === "active" || c.status === "trialing"))
+      .reduce((s, c) => s + c.mrr, 0),
   }));
 }
 
@@ -308,7 +336,12 @@ export function agentStatus(activity: Activity[]): AgentRow[] {
     { name: "Lead Qualifier", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Lead qualifier") },
     { name: "Insight Engine", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Insight engine") },
     { name: "Error Handler", schedule: "hourly", match: (m) => m.startsWith("Error handler") },
-    { name: "Growth & Marketing", schedule: "daily 06:00 UTC", match: (m) => m.startsWith("Growth & marketing") || m.startsWith("Growth & Marketing") || m.startsWith("Growth agent") },
+    {
+      name: "Growth & Marketing",
+      schedule: "daily 06:00 UTC",
+      match: (m) =>
+        m.startsWith("Growth & marketing") || m.startsWith("Growth & Marketing") || m.startsWith("Growth agent"),
+    },
   ];
   const now = Date.now();
   return defs.map(({ name, schedule, match }) => {
@@ -318,7 +351,9 @@ export function agentStatus(activity: Activity[]): AgentRow[] {
       schedule,
       runs: activity.filter((a) => a.kind === "bot" && match(a.message)).length,
       lastRun: last?.created_at ?? null,
-      lastMessage: last ? last.message.replace(/ ?\|\|\| AUDIO_BRIEFING_URL=\S+/, "") : "No runs recorded yet — waiting for the scheduled GitHub Actions job",
+      lastMessage: last
+        ? last.message.replace(/ ?\|\|\| AUDIO_BRIEFING_URL=\S+/, "")
+        : "No runs recorded yet — waiting for the scheduled GitHub Actions job",
       stale: last === undefined || now - +new Date(last.created_at) > 36 * 3600000,
     };
   });
@@ -347,12 +382,10 @@ export function computeMetrics(leads: Lead[], clients: Client[], orders: Order[]
   };
 }
 
-export function scoreLead(lead: {
-  score: number;
-  status: Lead["status"];
-  channel: string;
-  niche: string;
-}): { tier: "hot" | "warm" | "cold"; action: string } {
+export function scoreLead(lead: { score: number; status: Lead["status"]; channel: string; niche: string }): {
+  tier: "hot" | "warm" | "cold";
+  action: string;
+} {
   let score = lead.score;
   if (lead.channel === "referral") score += 8;
   if (lead.channel === "linkedin") score += 4;
@@ -408,7 +441,12 @@ export function todayPulse(leads: Lead[], orders: Order[], activity: Activity[])
  * actual state of the database (no fake checkmarks). A step is "done" only
  * when real data proves it. The first unfinished step is the next action.
  */
-export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[], activity: Activity[]): OnboardingStep[] {
+export function onboardingSteps(
+  leads: Lead[],
+  clients: Client[],
+  orders: Order[],
+  activity: Activity[],
+): OnboardingStep[] {
   const has = (arr: unknown[]) => arr.length > 0;
   const agents = agentStatus(activity);
   return [
@@ -421,13 +459,15 @@ export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[
     {
       id: "clients",
       label: "Register your first client",
-      description: "Add a real client in the Clients tab (Starter 1.250 Kz, Professional 2.916 Kz, Enterprise 8.333 Kz per month).",
+      description:
+        "Add a real client in the Clients tab (Starter 1.250 Kz, Professional 2.916 Kz, Enterprise 8.333 Kz per month).",
       done: has(clients),
     },
     {
       id: "orders",
       label: "Record your first sale",
-      description: "Create a real order in the Orders tab only after the payment provider and product availability have been verified.", 
+      description:
+        "Create a real order in the Orders tab only after the payment provider and product availability have been verified.",
       done: has(orders),
     },
     {
@@ -439,13 +479,19 @@ export function onboardingSteps(leads: Lead[], clients: Client[], orders: Order[
     {
       id: "agents",
       label: "Agents complete their first cycle",
-      description: "The autonomous bots run on GitHub Actions (daily 06:00 UTC + hourly). Their first real runs appear here and in the AI Agents tab.",
+      description:
+        "The autonomous bots run on GitHub Actions (daily 06:00 UTC + hourly). Their first real runs appear here and in the AI Agents tab.",
       done: has(agents.filter((a) => a.runs > 0)),
     },
   ];
 }
 
-export function productPackEvidence(leads: Lead[], clients: Client[], orders: Order[], activity: Activity[]): ProductPackEvidence[] {
+export function productPackEvidence(
+  leads: Lead[],
+  clients: Client[],
+  orders: Order[],
+  activity: Activity[],
+): ProductPackEvidence[] {
   const verifiedAt = new Date().toISOString();
   const freshness = (dates: string[]): ProductPackEvidence["freshness"] => {
     if (!dates.length) return "unavailable";
@@ -453,10 +499,50 @@ export function productPackEvidence(leads: Lead[], clients: Client[], orders: Or
     return age < 7 * 86400000 ? "fresh" : age < 30 * 86400000 ? "aging" : "stale";
   };
   const evidence: ProductPackEvidence[] = [
-    { source: "leads", recordCount: leads.length, recordIds: leads.map((lead) => lead.id), observedSignal: leads.length ? `${leads.length} real lead records are available for pattern review.` : "No lead records are available.", confidence: leads.length >= 10 ? "high" : leads.length >= 3 ? "medium" : "low", freshness: freshness(leads.map((lead) => lead.created_at)), verifiedAt },
-    { source: "clients", recordCount: clients.length, recordIds: clients.map((client) => client.id), observedSignal: clients.length ? `${clients.length} real client records can inform buyer-fit review.` : "No client records are available.", confidence: clients.length >= 5 ? "high" : clients.length ? "medium" : "low", freshness: freshness(clients.map((client) => client.created_at)), verifiedAt },
-    { source: "orders", recordCount: orders.length, recordIds: orders.map((order) => order.id), observedSignal: orders.length ? `${orders.filter((order) => order.status === "paid").length} paid order records can inform offer evidence.` : "No order records are available.", confidence: orders.length >= 5 ? "high" : orders.length ? "medium" : "low", freshness: freshness(orders.map((order) => order.created_at)), verifiedAt },
-    { source: "activity", recordCount: activity.length, recordIds: activity.map((item) => item.id), observedSignal: activity.length ? `${activity.length} activity records are available for operational context.` : "No activity records are available.", confidence: activity.length >= 10 ? "high" : activity.length ? "medium" : "low", freshness: freshness(activity.map((item) => item.created_at)), verifiedAt },
+    {
+      source: "leads",
+      recordCount: leads.length,
+      recordIds: leads.map((lead) => lead.id),
+      observedSignal: leads.length
+        ? `${leads.length} real lead records are available for pattern review.`
+        : "No lead records are available.",
+      confidence: leads.length >= 10 ? "high" : leads.length >= 3 ? "medium" : "low",
+      freshness: freshness(leads.map((lead) => lead.created_at)),
+      verifiedAt,
+    },
+    {
+      source: "clients",
+      recordCount: clients.length,
+      recordIds: clients.map((client) => client.id),
+      observedSignal: clients.length
+        ? `${clients.length} real client records can inform buyer-fit review.`
+        : "No client records are available.",
+      confidence: clients.length >= 5 ? "high" : clients.length ? "medium" : "low",
+      freshness: freshness(clients.map((client) => client.created_at)),
+      verifiedAt,
+    },
+    {
+      source: "orders",
+      recordCount: orders.length,
+      recordIds: orders.map((order) => order.id),
+      observedSignal: orders.length
+        ? `${orders.filter((order) => order.status === "paid").length} paid order records can inform offer evidence.`
+        : "No order records are available.",
+      confidence: orders.length >= 5 ? "high" : orders.length ? "medium" : "low",
+      freshness: freshness(orders.map((order) => order.created_at)),
+      verifiedAt,
+    },
+    {
+      source: "activity",
+      recordCount: activity.length,
+      recordIds: activity.map((item) => item.id),
+      observedSignal: activity.length
+        ? `${activity.length} activity records are available for operational context.`
+        : "No activity records are available.",
+      confidence: activity.length >= 10 ? "high" : activity.length ? "medium" : "low",
+      freshness: freshness(activity.map((item) => item.created_at)),
+      verifiedAt,
+    },
   ];
   return evidence;
 }
@@ -464,10 +550,37 @@ export function productPackEvidence(leads: Lead[], clients: Client[], orders: Or
 export function productPackRisks(evidence: ProductPackEvidence[], hasTargetMarket: boolean): ProductPackRisk[] {
   const risks: ProductPackRisk[] = [];
   const totalRecords = evidence.reduce((sum, item) => sum + item.recordCount, 0);
-  if (!totalRecords) risks.push({ id: "no-evidence", label: "Insufficient evidence", detail: "Connect or load real records before claiming market demand.", severity: "high", blocking: true });
-  if (!hasTargetMarket) risks.push({ id: "market", label: "Target market incomplete", detail: "Define audience and customer problem before assembly.", severity: "medium", blocking: true });
-  if (evidence.some((item) => item.freshness === "stale")) risks.push({ id: "stale", label: "Stale evidence", detail: "Some records are older than 30 days and need review.", severity: "medium", blocking: true });
-  risks.push({ id: "channels", label: "External channels gated", detail: "Email, Shopify and social publishing require authorization.", severity: "low", blocking: false });
+  if (!totalRecords)
+    risks.push({
+      id: "no-evidence",
+      label: "Insufficient evidence",
+      detail: "Connect or load real records before claiming market demand.",
+      severity: "high",
+      blocking: true,
+    });
+  if (!hasTargetMarket)
+    risks.push({
+      id: "market",
+      label: "Target market incomplete",
+      detail: "Define audience and customer problem before assembly.",
+      severity: "medium",
+      blocking: true,
+    });
+  if (evidence.some((item) => item.freshness === "stale"))
+    risks.push({
+      id: "stale",
+      label: "Stale evidence",
+      detail: "Some records are older than 30 days and need review.",
+      severity: "medium",
+      blocking: true,
+    });
+  risks.push({
+    id: "channels",
+    label: "External channels gated",
+    detail: "Email, Shopify and social publishing require authorization.",
+    severity: "low",
+    blocking: false,
+  });
   return risks;
 }
 
@@ -480,7 +593,12 @@ const AGENT_STATIC_SYSTEM = [
   "Return concise reasoning with source IDs and freshness when making a recommendation.",
 ].join("\\n");
 
-const AGENT_TOOLS = ["inspect_verified_records", "assemble_product_pack", "record_learning", "prepare_approval_request"] as const;
+const AGENT_TOOLS = [
+  "inspect_verified_records",
+  "assemble_product_pack",
+  "record_learning",
+  "prepare_approval_request",
+] as const;
 
 function contextClock(date = new Date()): string {
   return date.toISOString().slice(0, 13);
@@ -501,14 +619,38 @@ export function buildAgentPromptPlan(input: {
     sessionId: input.sessionId,
     currentTask: input.currentTask,
     facts: [
-      ...input.leads.slice(0, 20).map((lead) => ({ key: `lead:${lead.id}`, value: `${lead.company} · ${lead.niche} · ${lead.status}`, source: "leads", observedAt: lead.created_at, confidence: "medium" as const })),
-      ...input.orders.slice(0, 20).map((order) => ({ key: `order:${order.id}`, value: `${order.status} · ${order.amount} ${order.currency}`, source: "orders", observedAt: order.created_at, confidence: order.status === "paid" ? "high" as const : "medium" as const })),
+      ...input.leads.slice(0, 20).map((lead) => ({
+        key: `lead:${lead.id}`,
+        value: `${lead.company} · ${lead.niche} · ${lead.status}`,
+        source: "leads",
+        observedAt: lead.created_at,
+        confidence: "medium" as const,
+      })),
+      ...input.orders.slice(0, 20).map((order) => ({
+        key: `order:${order.id}`,
+        value: `${order.status} · ${order.amount} ${order.currency}`,
+        source: "orders",
+        observedAt: order.created_at,
+        confidence: order.status === "paid" ? ("high" as const) : ("medium" as const),
+      })),
     ],
-    recordCounts: { leads: input.leads.length, clients: input.clients.length, orders: input.orders.length, activity: input.activity.length, memory: input.memoryCount },
+    recordCounts: {
+      leads: input.leads.length,
+      clients: input.clients.length,
+      orders: input.orders.length,
+      activity: input.activity.length,
+      memory: input.memoryCount,
+    },
     contextClock: contextClock(),
   };
   const dynamicBytes = JSON.stringify(dynamicContext).length;
-  return { staticSystem: AGENT_STATIC_SYSTEM, dynamicContext, tools: [...AGENT_TOOLS], cacheKey: `agent:${input.agent}:static:v1`, cacheableBytes: AGENT_STATIC_SYSTEM.length + JSON.stringify(AGENT_TOOLS).length + dynamicBytes };
+  return {
+    staticSystem: AGENT_STATIC_SYSTEM,
+    dynamicContext,
+    tools: [...AGENT_TOOLS],
+    cacheKey: `agent:${input.agent}:static:v1`,
+    cacheableBytes: AGENT_STATIC_SYSTEM.length + JSON.stringify(AGENT_TOOLS).length + dynamicBytes,
+  };
 }
 
 export function timeAgo(iso: string): string {

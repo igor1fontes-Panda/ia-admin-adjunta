@@ -9,11 +9,22 @@ export const pricing = {
     cta: "Start with Starter",
   },
   professional: {
-    features: ["Lead hunter swarm (24/7)", "Sales automaton + pitches", "Client command center", "Priority WhatsApp support", "Unlimited automation flows"],
+    features: [
+      "Lead hunter swarm (24/7)",
+      "Sales automaton + pitches",
+      "Client command center",
+      "Priority WhatsApp support",
+      "Unlimited automation flows",
+    ],
     cta: "Go Professional",
   },
   enterprise: {
-    features: ["Everything in Professional", "Custom AI agents for your niche", "Dedicated success manager", "SLA 99.98% + audit logs"],
+    features: [
+      "Everything in Professional",
+      "Custom AI agents for your niche",
+      "Dedicated success manager",
+      "SLA 99.98% + audit logs",
+    ],
     cta: "Talk to sales",
   },
 };

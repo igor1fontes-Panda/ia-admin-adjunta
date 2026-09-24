@@ -50,7 +50,9 @@ type Widen<T> = T extends string
   : T extends number
     ? number
     : T extends readonly unknown[]
-      ? { [K in keyof T]: Widen<T[K]> } extends infer M ? { [K in keyof M]: M[K] } : never
+      ? { [K in keyof T]: Widen<T[K]> } extends infer M
+        ? { [K in keyof M]: M[K] }
+        : never
       : T extends object
         ? { [K in keyof T]: Widen<T[K]> }
         : T;
