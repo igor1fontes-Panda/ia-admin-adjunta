@@ -26,7 +26,11 @@ export function ClientsTab({
       </div>
 
       {showNew ? (
-        <form onSubmit={onNew} className="card mb-6 grid gap-4 p-6 sm:grid-cols-3">
+        <form
+          onSubmit={onNew}
+          noValidate
+          className="card mb-6 grid gap-4 p-6 sm:grid-cols-3"
+        >
           <div>
             <label className="label">{t("dash.clientsTab.name")}</label>
             <input name="name" required className="input" placeholder="Acme Lda" />

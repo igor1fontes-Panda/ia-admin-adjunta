@@ -50,12 +50,13 @@ export type OrderInput = z.infer<typeof orderInputSchema>;
 
 /** Parse a FormData into a validated ClientInput; throws a readable Error. */
 export function parseClientForm(fd: FormData): ClientInput {
-  const raw = {
+  const result = clientInputSchema.safeParse({
     name: String(fd.get("name") ?? ""),
     email: String(fd.get("email") ?? ""),
     plan: String(fd.get("plan") ?? "starter"),
-  };
-  return clientInputSchema.parse(raw);
+  });
+  if (!result.success) throw new Error(firstIssue(result.error));
+  return result.data;
 }
 
 /** Parse a FormData into a validated OrderInput; throws a readable Error.
@@ -65,11 +66,12 @@ export function parseOrderForm(fd: FormData): OrderInput {
   const amountRaw = String(fd.get("amount") ?? "").trim();
   const clientId = String(fd.get("client_id") ?? "").trim();
   const clientName = String(fd.get("client_name") ?? "").trim();
-  const raw = {
+  const result = orderInputSchema.safeParse({
     client_id: clientId === "" ? null : clientId,
     client_name: clientName === "" && clientId === "" ? "Walk-in" : clientName,
     amount: amountRaw === "" ? Number.NaN : Number(amountRaw),
     method: String(fd.get("method") ?? ""),
-  };
-  return orderInputSchema.parse(raw);
+  });
+  if (!result.success) throw new Error(firstIssue(result.error));
+  return result.data;
 }
