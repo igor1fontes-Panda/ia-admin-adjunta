@@ -18,8 +18,8 @@ const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_U
 if (!connectionString) {
   console.error(
     "db:smoke: DATABASE_URL is not set.\n" +
-    "  Provide the Neon pooled connection string (postgresql://…-pooler….aws.neon.tech/neondb?sslmode=require)\n" +
-    "  via the environment or inline: DATABASE_URL='…' bun run db:smoke"
+      "  Provide the Neon pooled connection string (postgresql://…-pooler….aws.neon.tech/neondb?sslmode=require)\n" +
+      "  via the environment or inline: DATABASE_URL='…' bun run db:smoke",
   );
   process.exit(1);
 }

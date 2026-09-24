@@ -18,15 +18,16 @@ public config is baked into `src/lib/data.ts`.
 ## 2. Autonomous AI Bots — `ai-bots.yml`
 
 **Triggers:**
+
 - `0 6 * * *` daily 06:00 UTC → Lead Qualifier + Insight Engine
 - `0 * * * *` hourly → Error Handler
 - Manual dispatch (choose `lead-hunter`, `error-handler`, `insight`, or `all`)
 
-| Bot | Script | What it does |
-|---|---|---|
-| **Lead Qualifier** | `scripts/lead-hunter.mjs` | Reads real unscored leads, measures real won/lost conversion per channel, persists a channel bias to `agent_memory`, scores each lead 0-100 (AI when configured, adaptive rules otherwise) and writes the next best action back to Supabase. |
-| **Error Handler** | `scripts/error-handler.mjs` | Scans real incident messages from the last 24h, triages them (AI when configured), and accumulates incident signatures → known fixes in `agent_memory`. |
-| **Insight Engine** | `ai_engine.py` | Reads real leads/clients/orders + agent memory, posts one data-grounded growth insight to `activity_log`. Optionally generates a Hume AI voice briefing stored in the `briefings` bucket. |
+| Bot                | Script                      | What it does                                                                                                                                                                                                                                 |
+| ------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Lead Qualifier** | `scripts/lead-hunter.mjs`   | Reads real unscored leads, measures real won/lost conversion per channel, persists a channel bias to `agent_memory`, scores each lead 0-100 (AI when configured, adaptive rules otherwise) and writes the next best action back to Supabase. |
+| **Error Handler**  | `scripts/error-handler.mjs` | Scans real incident messages from the last 24h, triages them (AI when configured), and accumulates incident signatures → known fixes in `agent_memory`.                                                                                      |
+| **Insight Engine** | `ai_engine.py`              | Reads real leads/clients/orders + agent memory, posts one data-grounded growth insight to `activity_log`. Optionally generates a Hume AI voice briefing stored in the `briefings` bucket.                                                    |
 
 Without AI keys the bots still run — they use deterministic rule-scoring on
 real data and never fabricate anything.
@@ -56,9 +57,9 @@ Add in **GitHub → Settings → Secrets and variables → Actions**
 
 ### Bots (required for autonomous runs)
 
-| Secret | Where to get it |
-|---|---|
-| `SUPABASE_URL` | Supabase → Project Settings → API (the `https://…supabase.co` URL) |
+| Secret                      | Where to get it                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Supabase → Project Settings → API (the `https://…supabase.co` URL)                                                        |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same page — `sb_secret_…` (new projects) or the `service_role` JWT (legacy). **Server-side only — never in the browser.** |
 
 Without these, bot jobs exit 0 with a clear "not configured" message — they
@@ -66,11 +67,11 @@ never fabricate data.
 
 ### AI layer (optional but recommended)
 
-| Secret | Where to get it |
-|---|---|
-| `GEMINI_API_KEY` | Free key: https://aistudio.google.com → Get API key |
+| Secret             | Where to get it                                                    |
+| ------------------ | ------------------------------------------------------------------ |
+| `GEMINI_API_KEY`   | Free key: https://aistudio.google.com → Get API key                |
 | `BLACKBOX_API_KEY` | Optional 2nd provider (OpenAI-compatible): https://app.blackbox.ai |
-| `HUME_API_KEY` | Optional voice briefings: https://app.hume.ai/keys |
+| `HUME_API_KEY`     | Optional voice briefings: https://app.hume.ai/keys                 |
 
 Gemini model fallback chain (newest first): `gemini-3.6-flash` →
 `gemini-3.8-flash` → `gemini-2.5-flash` → `gemini-2.0-flash`. Override with
@@ -78,10 +79,10 @@ the `GEMINI_MODEL` env var.
 
 ### Optional deploy/monitoring
 
-| Name | Type | Purpose |
-|---|---|---|
-| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | secrets | Enable `deploy.yml` |
-| `SITE_URL` | **repo variable** | Enable the 6-hour health check |
+| Name                                                   | Type              | Purpose                        |
+| ------------------------------------------------------ | ----------------- | ------------------------------ |
+| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` | secrets           | Enable `deploy.yml`            |
+| `SITE_URL`                                             | **repo variable** | Enable the 6-hour health check |
 
 ### Dashboard env (Vite — repo variables are enough, values are public-by-design)
 

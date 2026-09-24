@@ -67,7 +67,7 @@ export default async function handler(req: any, res: any) {
   }
 
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-    const session = await hydrateEventResource(event) as Stripe.Checkout.Session;
+    const session = (await hydrateEventResource(event)) as Stripe.Checkout.Session;
     if (session.payment_status !== "paid" && event.type === "checkout.session.completed") {
       return res.status(200).json({ received: true });
     }

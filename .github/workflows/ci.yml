@@ -51,6 +51,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Formatting check (Prettier)
+        run: npm run format:check
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -81,4 +84,39 @@ jobs:
             echo "- Node: `$(node --version)`"
             echo "- npm: `$(npm --version)`"
             echo "- Result: `${{ job.status }}`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  fresh-clone-smoke:
+    # Proves a clean machine can install, build and test with ZERO manual
+    # setup and no live Supabase/Neon/Gemini credentials (mock data on).
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Clean install
+        run: npm ci
+
+      - name: Build with mock data (no credentials)
+        run: npm run build
+        env:
+          VITE_MOCK_DATA: "true"
+
+      - name: Unit tests (no credentials)
+        run: npm test
+        env:
+          VITE_MOCK_DATA: "true"
+
+      - name: Smoke summary
+        if: always()
+        run: |
+          {
+            echo "## Fresh-clone smoke"
+            echo "- Commit: `${GITHUB_SHA:0:12}`"
+            echo "- Result: `${{ job.status }}` — npm ci && VITE_MOCK_DATA=true npm run build && npm test passed without any secrets"
           } >> "$GITHUB_STEP_SUMMARY"

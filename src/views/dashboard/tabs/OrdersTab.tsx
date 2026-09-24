@@ -25,12 +25,15 @@ export function OrdersTab({
   };
   return (
     <div className="mt-8 space-y-6">
-      <form onSubmit={onNew} className="card grid gap-4 p-6 sm:grid-cols-4">
+      {/* noValidate: the zod boundary in Dashboard owns the error messaging. */}
+      <form onSubmit={onNew} noValidate className="card grid gap-4 p-6 sm:grid-cols-4">
         <div className="sm:col-span-2">
           <label className="label">{t("dash.orders.client")}</label>
           <select name="client_id" className="input">
             {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
             <option value="">{t("dash.orders.walkin")}</option>
           </select>
@@ -113,4 +116,3 @@ export function OrdersTab({
     </div>
   );
 }
-

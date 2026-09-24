@@ -26,12 +26,14 @@ const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackb
 const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
 
 /** Free-tier model chain: newest first, safest fallback last (deduplicated). */
-const MODEL_CHAIN = [...new Set([
-  process.env.GEMINI_MODEL || "gemini-3.6-flash",
-  "gemini-3.8-flash",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-])];
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
 
 /**
  * Structured logging for bots: one JSON line per event with
@@ -45,11 +47,8 @@ const MODEL_CHAIN = [...new Set([
  */
 function emit(level, bot, args) {
   const last = args.at(-1);
-  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last)
-    ? last
-    : null;
-  const msgParts = (fields ? args.slice(0, -1) : args)
-    .map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
   const line = {
     level,
     ts: new Date().toISOString(),
@@ -100,15 +99,46 @@ export class ShimQuery {
     this._single = false;
     this._maybe = false;
   }
-  select(cols = "*") { this._columns = cols; return this; }
-  eq(col, val) { this._filters.push([col, val]); return this; }
-  order(col, opts = {}) { this._orderBy = col; this._ascending = opts.ascending === true; return this; }
-  limit(n) { this._limit = n; return this; }
-  insert(values) { this._mode = "insert"; this._payload = values; return this; }
-  update(patch) { this._mode = "update"; this._payload = patch; return this; }
-  upsert(row) { this._mode = "upsert"; this._payload = row; return this; }
-  single() { this._single = true; return this; }
-  maybeSingle() { this._maybe = true; return this; }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
   then(resolve, reject) {
     return execShim(this).then(resolve, reject);
   }
@@ -136,7 +166,10 @@ async function execShim(q) {
       return { data: null, error: { message: String(e?.message ?? e) } };
     }
   }
-  return { data: null, error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." } };
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
 }
 
 async function execNeon(q) {
@@ -221,8 +254,14 @@ export async function verifyBotReadiness() {
     neon: neonReady,
     model: geminiReady || blackboxReady,
   };
-  if (!checks.supabase) return { ready: false, checks, message: "No data store configured (DATABASE_URL for Neon); no real-data operation can run." };
-  if (!checks.model) return { ready: false, checks, message: "No approved AI provider is configured; no inference will run." };
+  if (!checks.supabase)
+    return {
+      ready: false,
+      checks,
+      message: "No data store configured (DATABASE_URL for Neon); no real-data operation can run.",
+    };
+  if (!checks.model)
+    return { ready: false, checks, message: "No approved AI provider is configured; no inference will run." };
   const { error } = await supabase.from("activity_log").select("id").limit(1);
   if (error) {
     const diagnosis = diagnoseSupabaseError(error.message);

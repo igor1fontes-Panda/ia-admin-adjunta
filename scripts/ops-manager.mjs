@@ -85,13 +85,20 @@ function bestSellers(leadRows, orderRows) {
   const won = {};
   for (const l of leadRows) if (l.status === "won") won[l.niche || "unknown"] = (won[l.niche || "unknown"] ?? 0) + 1;
   const volume = {};
-  for (const o of orderRows) if (o.status === "paid") {
-    const key = o.client_name || "walk-in";
-    volume[key] = (volume[key] ?? 0) + (Number(o.amount) || 0);
-  }
+  for (const o of orderRows)
+    if (o.status === "paid") {
+      const key = o.client_name || "walk-in";
+      volume[key] = (volume[key] ?? 0) + (Number(o.amount) || 0);
+    }
   return {
-    niches: Object.entries(won).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, c]) => ({ pack: n, won: c })),
-    clients: Object.entries(volume).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, v]) => ({ client: c, revenue: v })),
+    niches: Object.entries(won)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([n, c]) => ({ pack: n, won: c })),
+    clients: Object.entries(volume)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([c, v]) => ({ client: c, revenue: v })),
   };
 }
 
@@ -111,14 +118,31 @@ try {
   }
 
   // 1) OBSERVE — the whole real operation
-  const [{ data: leadRows, error: leadErr }, { data: orderRows, error: orderErr }, { data: clientRows, error: clientErr }, { data: deliveryRows, error: delErr }] = await Promise.all([
-    supabase.from("leads").select("channel, status, niche, created_at").order("created_at", { ascending: false }).limit(500),
-    supabase.from("orders").select("id, client_id, client_name, amount, status, method, created_at").order("created_at", { ascending: false }).limit(500),
+  const [
+    { data: leadRows, error: leadErr },
+    { data: orderRows, error: orderErr },
+    { data: clientRows, error: clientErr },
+    { data: deliveryRows, error: delErr },
+  ] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("channel, status, niche, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("orders")
+      .select("id, client_id, client_name, amount, status, method, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase.from("clients").select("id, name, email, plan, mrr, status").limit(500),
-    supabase.from("delivery_status").select("order_id, qa_status").limit(500).then(
-      (r) => r,
-      () => ({ data: [], error: null }),
-    ),
+    supabase
+      .from("delivery_status")
+      .select("order_id, qa_status")
+      .limit(500)
+      .then(
+        (r) => r,
+        () => ({ data: [], error: null }),
+      ),
   ]);
   if (leadErr) throw new Error(`fetch leads: ${leadErr.message}`);
   if (orderErr) throw new Error(`fetch orders: ${orderErr.message}`);
@@ -151,7 +175,13 @@ try {
       const plan = planForAmount(Number(o.amount) || 0);
       const { data: created, error: insErr } = await supabase
         .from("clients")
-        .insert({ name: o.client_name, email: `client+${o.id.slice(0, 8)}@sales.local`, plan, mrr: Number(o.amount) || 0, status: "active" })
+        .insert({
+          name: o.client_name,
+          email: `client+${o.id.slice(0, 8)}@sales.local`,
+          plan,
+          mrr: Number(o.amount) || 0,
+          status: "active",
+        })
         .select("id")
         .single();
       if (!insErr && created) {

@@ -28,7 +28,7 @@ const [{ count: total }] = await sql`SELECT count(*)::int AS count FROM leads`;
 console.log(`✅ Read-back from Neon: ${total} lead(s) total, newest ${rows.length}:`);
 for (const r of rows) {
   console.log(
-    `   ${String(r.id).slice(0, 8)} | ${r.company} | ${r.contact_name} <${r.email}> | ${r.niche}/${r.channel} | ${r.status} | score ${r.score}`
+    `   ${String(r.id).slice(0, 8)} | ${r.company} | ${r.contact_name} <${r.email}> | ${r.niche}/${r.channel} | ${r.status} | score ${r.score}`,
   );
 }
 console.log("✅ READ-BACK OK — data retrieved from the database.");

@@ -24,10 +24,19 @@ export function CheckoutButton({ plan, label, primary = false }: { plan: string;
 
   return (
     <div>
-      <button type="button" onClick={startCheckout} disabled={loading} className={`${primary ? "btn-primary" : "btn-ghost"} w-full disabled:cursor-wait disabled:opacity-60`}>
+      <button
+        type="button"
+        onClick={startCheckout}
+        disabled={loading}
+        className={`${primary ? "btn-primary" : "btn-ghost"} w-full disabled:cursor-wait disabled:opacity-60`}
+      >
         {loading ? "Opening secure checkout…" : label}
       </button>
-      {error ? <p role="alert" className="mt-2 text-xs text-amber-300">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="mt-2 text-xs text-amber-300">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

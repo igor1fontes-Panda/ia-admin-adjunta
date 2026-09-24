@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core"
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -8,7 +8,7 @@ export const user = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-})
+});
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -18,14 +18,18 @@ export const session = pgTable("session", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   ipAddress: text("ipAddress"),
   userAgent: text("userAgent"),
-  userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
-})
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
   accountId: text("accountId").notNull(),
   providerId: text("providerId").notNull(),
-  userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
   accessToken: text("accessToken"),
   refreshToken: text("refreshToken"),
   idToken: text("idToken"),
@@ -35,7 +39,7 @@ export const account = pgTable("account", {
   password: text("password"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-})
+});
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -44,7 +48,7 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
-})
+});
 
-export const appUsers = user
-export const authTables = { user, session, account, verification }
+export const appUsers = user;
+export const authTables = { user, session, account, verification };

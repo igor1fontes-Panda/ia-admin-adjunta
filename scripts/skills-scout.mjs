@@ -161,10 +161,15 @@ try {
     };
     await dbRemember(agent, "skill_entry", entry);
     taught += 1;
-    log(`scouted for ${agent}: ${Object.keys(found).length} queries, top skill: ${topSkill ? `${topSkill.source}/${topSkill.id} (${topSkill.installs} installs)` : "none"}`);
+    log(
+      `scouted for ${agent}: ${Object.keys(found).length} queries, top skill: ${topSkill ? `${topSkill.source}/${topSkill.id} (${topSkill.installs} installs)` : "none"}`,
+    );
   }
 
-  await dbInsertActivity("bot", `Skills scout: searched skills.sh for ${taught} agent(s) — latest techniques recorded in each agent's memory.`).catch((e) => {
+  await dbInsertActivity(
+    "bot",
+    `Skills scout: searched skills.sh for ${taught} agent(s) — latest techniques recorded in each agent's memory.`,
+  ).catch((e) => {
     const diag = diagnoseSupabaseError(e?.message);
     log(diag ?? `could not log activity: ${e?.message}`);
   });

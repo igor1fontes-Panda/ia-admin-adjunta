@@ -43,10 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Self-hosted mode: load the auth stack lazily so this function only pays
   // for it when it actually runs (and bundlers don't trace it in proxy mode).
-  const [{ auth }, { toNodeHandler }] = await Promise.all([
-    import("../../server/auth"),
-    import("better-auth/node"),
-  ]);
+  const [{ auth }, { toNodeHandler }] = await Promise.all([import("../../server/auth"), import("better-auth/node")]);
   if (!auth) {
     return res.status(503).json({
       error:
@@ -72,8 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  */
 async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream: string) {
   // Collect the raw request body once (Vercel parses JSON into req.body).
-  const rawBody =
-    typeof req.body === "string" ? req.body : req.body === undefined ? "" : JSON.stringify(req.body);
+  const rawBody = typeof req.body === "string" ? req.body : req.body === undefined ? "" : JSON.stringify(req.body);
 
   const url = `${upstream}${(req.url ?? "/").replace(/^\/api\/auth/, "")}`;
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -82,8 +78,17 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
   // baseURL and rejects our domain with INVALID_HOSTNAME — the upstream must
   // see its own host, not the one the edge layer injected.
   const stripped = [
-    "host", "connection", "content-length", "transfer-encoding", "cookie", "origin",
-    "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port", "forwarded", "x-real-ip",
+    "host",
+    "connection",
+    "content-length",
+    "transfer-encoding",
+    "cookie",
+    "origin",
+    "x-forwarded-host",
+    "x-forwarded-proto",
+    "x-forwarded-port",
+    "forwarded",
+    "x-real-ip",
   ];
   for (const [name, value] of Object.entries(req.headers ?? {})) {
     const v = Array.isArray(value) ? value.join(", ") : value;
@@ -111,9 +116,7 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
     res.status(upstreamRes.status);
 
     // Copy response cookies one-by-one so multiple set-cookie headers survive.
-    const cookies = typeof upstreamRes.headers.getSetCookie === "function"
-      ? upstreamRes.headers.getSetCookie()
-      : [];
+    const cookies = typeof upstreamRes.headers.getSetCookie === "function" ? upstreamRes.headers.getSetCookie() : [];
     for (const cookie of cookies) res.append("Set-Cookie", cookie);
 
     // Session continuity + caching correctness across the proxy.

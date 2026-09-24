@@ -1,5 +1,17 @@
 import { motion } from "framer-motion";
-import { Activity as ActivityIcon, ArrowRight, BarChart3, Bot, CheckCircle2, Circle, CircleDollarSign, Target, TrendingUp, Users, Zap } from "lucide-react";
+import {
+  Activity as ActivityIcon,
+  ArrowRight,
+  BarChart3,
+  Bot,
+  CheckCircle2,
+  Circle,
+  CircleDollarSign,
+  Target,
+  TrendingUp,
+  Users,
+  Zap,
+} from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Activity, Client, Lead, Metric, Order } from "../../../types";
 import { formatKz, leadsPerDay, timeAgo, type OnboardingStep, type Pulse } from "../../../lib/engine";
@@ -29,23 +41,61 @@ export function Overview({
   const t = useT();
   const tAny = useTAny();
   const cards = [
-    { label: t("dash.cards.leads"), value: String(metrics.leads), icon: Target, tone: "text-emerald-400", tab: "leads" as Tab },
-    { label: t("dash.cards.qualified"), value: String(metrics.qualifiedLeads), icon: TrendingUp, tone: "text-gold-400", tab: "leads" as Tab },
-    { label: t("dash.cards.clients"), value: String(metrics.activeClients), icon: Users, tone: "text-sky-400", tab: "clients" as Tab },
-    { label: t("dash.cards.mrr"), value: formatKz(metrics.mrr), icon: CircleDollarSign, tone: "text-gold-400", tab: "charts" as Tab },
-    { label: t("dash.cards.revenue"), value: formatKz(metrics.revenue30d), icon: CircleDollarSign, tone: "text-emerald-400", tab: "orders" as Tab },
-    { label: t("dash.cards.win"), value: `${metrics.winRate}%`, icon: ActivityIcon, tone: "text-sky-400", tab: "charts" as Tab },
+    {
+      label: t("dash.cards.leads"),
+      value: String(metrics.leads),
+      icon: Target,
+      tone: "text-emerald-400",
+      tab: "leads" as Tab,
+    },
+    {
+      label: t("dash.cards.qualified"),
+      value: String(metrics.qualifiedLeads),
+      icon: TrendingUp,
+      tone: "text-gold-400",
+      tab: "leads" as Tab,
+    },
+    {
+      label: t("dash.cards.clients"),
+      value: String(metrics.activeClients),
+      icon: Users,
+      tone: "text-sky-400",
+      tab: "clients" as Tab,
+    },
+    {
+      label: t("dash.cards.mrr"),
+      value: formatKz(metrics.mrr),
+      icon: CircleDollarSign,
+      tone: "text-gold-400",
+      tab: "charts" as Tab,
+    },
+    {
+      label: t("dash.cards.revenue"),
+      value: formatKz(metrics.revenue30d),
+      icon: CircleDollarSign,
+      tone: "text-emerald-400",
+      tab: "orders" as Tab,
+    },
+    {
+      label: t("dash.cards.win"),
+      value: `${metrics.winRate}%`,
+      icon: ActivityIcon,
+      tone: "text-sky-400",
+      tab: "charts" as Tab,
+    },
   ];
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-8 space-y-8">
       {/* Live pulse — what the business did TODAY (real rows, real zeros) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {([
-          [t("dash.today.leads"), pulse.leadsToday, Target, "text-emerald-400"],
-          [t("dash.today.sales"), pulse.ordersToday, CircleDollarSign, "text-gold-400"],
-          [t("dash.today.collected"), formatKz(pulse.collectedToday), TrendingUp, "text-emerald-400"],
-          [t("dash.today.runs"), pulse.botRunsToday, Bot, "text-sky-400"],
-        ] as Array<[string, string | number, typeof Target, string]>).map(([label, value, Icon, tone]) => (
+        {(
+          [
+            [t("dash.today.leads"), pulse.leadsToday, Target, "text-emerald-400"],
+            [t("dash.today.sales"), pulse.ordersToday, CircleDollarSign, "text-gold-400"],
+            [t("dash.today.collected"), formatKz(pulse.collectedToday), TrendingUp, "text-emerald-400"],
+            [t("dash.today.runs"), pulse.botRunsToday, Bot, "text-sky-400"],
+          ] as Array<[string, string | number, typeof Target, string]>
+        ).map(([label, value, Icon, tone]) => (
           <div key={label} className="card flex items-center gap-3 p-4">
             <span className={`flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 ${tone}`}>
               <Icon size={18} />
@@ -71,7 +121,15 @@ export function Overview({
               const label = Array.isArray(entry) ? entry[0] : s.label;
               const description = Array.isArray(entry) ? entry[1] : s.description;
               const targetTab: Tab | null =
-                s.id === "leads" ? "leads" : s.id === "clients" ? "clients" : s.id === "orders" || s.id === "collect" ? "orders" : s.id === "agents" ? "agents" : null;
+                s.id === "leads"
+                  ? "leads"
+                  : s.id === "clients"
+                    ? "clients"
+                    : s.id === "orders" || s.id === "collect"
+                      ? "orders"
+                      : s.id === "agents"
+                        ? "agents"
+                        : null;
               return (
                 <li key={s.id} className="flex items-start gap-3">
                   <span
@@ -89,7 +147,10 @@ export function Overview({
                       <p className="mt-0.5 text-xs text-zinc-400">
                         {description}
                         {targetTab ? (
-                          <button onClick={() => onGoTo(targetTab)} className="ml-1.5 inline-flex items-center font-semibold text-cyan-300 hover:underline">
+                          <button
+                            onClick={() => onGoTo(targetTab)}
+                            className="ml-1.5 inline-flex items-center font-semibold text-cyan-300 hover:underline"
+                          >
                             {t("nav.cc")} <ArrowRight size={11} className="inline" />
                           </button>
                         ) : null}
@@ -136,12 +197,30 @@ export function Overview({
               </defs>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis allowDecimals={false} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} width={28} />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
               <Tooltip
-                contentStyle={{ background: "#131316", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#fafafa" }}
+                contentStyle={{
+                  background: "#131316",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 12,
+                  color: "#fafafa",
+                }}
                 labelStyle={{ color: "#fafafa" }}
               />
-              <Area type="monotone" dataKey="value" name={t("dash.charts.leadsLegend")} stroke="#eab308" strokeWidth={2} fill="url(#leadFill)" />
+              <Area
+                type="monotone"
+                dataKey="value"
+                name={t("dash.charts.leadsLegend")}
+                stroke="#eab308"
+                strokeWidth={2}
+                fill="url(#leadFill)"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -231,4 +310,3 @@ export function Overview({
     </motion.div>
   );
 }
-

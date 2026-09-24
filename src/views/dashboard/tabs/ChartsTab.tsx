@@ -14,7 +14,15 @@ import {
   YAxis,
 } from "recharts";
 import { useT } from "../../../lib/i18n";
-import { formatKz, incomeByClient, incomeByMethod, mrrByPlan, pipelineFunnel, revenuePerDay, type IncomeRow } from "../../../lib/engine";
+import {
+  formatKz,
+  incomeByClient,
+  incomeByMethod,
+  mrrByPlan,
+  pipelineFunnel,
+  revenuePerDay,
+  type IncomeRow,
+} from "../../../lib/engine";
 import type { Client, Lead, Order } from "../../../types";
 
 // ---------- Analytics (charts, funnel, income) ----------
@@ -68,7 +76,10 @@ function IncomeTable({ rows, title }: { rows: IncomeRow[]; title: string }) {
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-gold-500" style={{ width: `${Math.min(100, r.sharePct)}%` }} />
+                      <div
+                        className="h-full rounded-full bg-gold-500"
+                        style={{ width: `${Math.min(100, r.sharePct)}%` }}
+                      />
                     </div>
                     <span className="font-mono text-xs text-zinc-400">{r.sharePct}%</span>
                   </div>
@@ -104,8 +115,12 @@ export function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: O
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-semibold text-zinc-50">{t("dash.charts.volume")}</h3>
           <div className="flex gap-4 text-xs text-zinc-400">
-            <span>{t("dash.charts.collected")} <b className="text-emerald-300">{formatKz(totalPaid)}</b></span>
-            <span>{t("dash.charts.awaiting")} <b className="text-amber-300">{formatKz(totalPending)}</b></span>
+            <span>
+              {t("dash.charts.collected")} <b className="text-emerald-300">{formatKz(totalPaid)}</b>
+            </span>
+            <span>
+              {t("dash.charts.awaiting")} <b className="text-amber-300">{formatKz(totalPending)}</b>
+            </span>
           </div>
         </div>
         <div className="mt-4 h-64">
@@ -113,11 +128,29 @@ export function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: O
             <BarChart data={revenue} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} width={70} tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} />
+              <YAxis
+                tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                width={70}
+                tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
+              />
               <Tooltip {...ChartTooltipStyle()} formatter={(value) => formatKz(Number(value))} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="paid" name={t("dash.charts.collectedLegend")} stackId="rev" fill="#34d399" radius={[0, 0, 0, 0]} />
-              <Bar dataKey="pending" name={t("dash.charts.awaitingLegend")} stackId="rev" fill="#eab308" radius={[6, 6, 0, 0]} />
+              <Bar
+                dataKey="paid"
+                name={t("dash.charts.collectedLegend")}
+                stackId="rev"
+                fill="#34d399"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="pending"
+                name={t("dash.charts.awaitingLegend")}
+                stackId="rev"
+                fill="#eab308"
+                radius={[6, 6, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -131,8 +164,22 @@ export function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: O
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnel} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fill: "#a1a1aa", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="stage" tickFormatter={funnelLabel} tick={{ fill: "#e4e4e7", fontSize: 12 }} tickLine={false} axisLine={false} width={86} />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fill: "#a1a1aa", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="stage"
+                  tickFormatter={funnelLabel}
+                  tick={{ fill: "#e4e4e7", fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={86}
+                />
                 <Tooltip {...ChartTooltipStyle()} labelFormatter={(label) => funnelLabel(String(label))} />
                 <Bar dataKey="count" name={t("dash.charts.leadsLegend")} radius={[0, 6, 6, 0]}>
                   {funnel.map((_, i) => (
@@ -175,4 +222,3 @@ export function ChartsTab({ leads, orders, clients }: { leads: Lead[]; orders: O
     </motion.div>
   );
 }
-

@@ -6,9 +6,9 @@ name: Autonomous AI Bots
 #  - insight engine: daily data-grounded growth insight (Python GenAI SDK)
 on:
   schedule:
-    - cron: "30 5 * * *"     # AI Manager assigns missions + Skills Scout — daily 05:30 UTC (before the shift)
-    - cron: "0 6 * * *"      # lead qualifier + insight + growth + teacher — daily 06:00 UTC
-    - cron: "0 * * * *"      # error handler (incl. delivery QA) — hourly
+    - cron: "30 5 * * *" # AI Manager assigns missions + Skills Scout — daily 05:30 UTC (before the shift)
+    - cron: "0 6 * * *" # lead qualifier + insight + growth + teacher — daily 06:00 UTC
+    - cron: "0 * * * *" # error handler (incl. delivery QA) — hourly
   workflow_dispatch:
     inputs:
       bot:

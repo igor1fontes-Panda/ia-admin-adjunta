@@ -9,13 +9,22 @@ import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { clients } from "../db/schema";
 import { auth } from "../server/auth";
-import { badRequest, dbUnavailable, getSessionUser, serverError, unauthorized } from "./lib/http";
+import {
+  apiSchemas,
+  badRequest,
+  dbUnavailable,
+  getSessionUser,
+  parseBody,
+  serverError,
+  unauthorized,
+} from "./lib/http";
 
 const PLANS = { starter: "1250.00", professional: "2916.00", enterprise: "8333.00" } as const;
 type Plan = keyof typeof PLANS;
 const CLIENT_STATUSES = ["active", "trialing", "churned"] as const;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {    if (!isDbConfigured || !db) return dbUnavailable(res);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!isDbConfigured || !db) return dbUnavailable(res);
 
   try {
     const user = await getSessionUser(req, auth);
@@ -27,15 +36,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST") {
-      const body = bodyOf(req);
-      const name = str(body.name).trim();
-      const email = str(body.email).trim().toLowerCase();
-      const plan = str(body.plan) as Plan;
-      if (!name || !email) return badRequest(res, "name and email are required.");
-      if (!(plan in PLANS)) return badRequest(res, "plan must be starter, professional or enterprise.");
+      const parsed = parseBody(res, apiSchemas.clientCreate, bodyOf(req));
+      if (!parsed) return;
       const [row] = await db
         .insert(clients)
-        .values({ name, email, plan, mrr: PLANS[plan], status: "active" })
+        .values({
+          name: parsed.name,
+          email: parsed.email,
+          plan: parsed.plan,
+          mrr: PLANS[parsed.plan],
+          status: "active",
+        })
         .returning();
       return res.status(201).json(row);
     }

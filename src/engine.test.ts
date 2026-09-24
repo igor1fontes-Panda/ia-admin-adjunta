@@ -59,7 +59,11 @@ describe("computeMetrics", () => {
     const m = computeMetrics(
       [lead({ status: "won", score: 91 }), lead({ status: "new" }), lead({ status: "qualified" })],
       [client({ mrr: 1000 }), client({ mrr: 2500, status: "trialing" }), client({ mrr: 9000, status: "churned" })],
-      [order({ amount: 29160 }), order({ amount: 10000, status: "pending" }), order({ amount: 5000, created_at: new Date(Date.now() - 40 * 86400000).toISOString() })],
+      [
+        order({ amount: 29160 }),
+        order({ amount: 10000, status: "pending" }),
+        order({ amount: 5000, created_at: new Date(Date.now() - 40 * 86400000).toISOString() }),
+      ],
     );
     expect(m.leads).toBe(3);
     expect(m.qualifiedLeads).toBe(2);
@@ -140,11 +144,14 @@ describe("pipelineFunnel", () => {
 describe("revenuePerDay", () => {
   it("splits paid and pending per day", () => {
     const today = new Date().toISOString();
-    const pts = revenuePerDay([
-      order({ amount: 1000, status: "paid", created_at: today }),
-      order({ amount: 500, status: "pending", created_at: today }),
-      order({ amount: 7000, status: "paid", created_at: new Date(Date.now() - 30 * 86400000).toISOString() }),
-    ], 7);
+    const pts = revenuePerDay(
+      [
+        order({ amount: 1000, status: "paid", created_at: today }),
+        order({ amount: 500, status: "pending", created_at: today }),
+        order({ amount: 7000, status: "paid", created_at: new Date(Date.now() - 30 * 86400000).toISOString() }),
+      ],
+      7,
+    );
     const todayPt = pts[pts.length - 1];
     expect(todayPt.paid).toBe(1000);
     expect(todayPt.pending).toBe(500);
@@ -217,11 +224,7 @@ describe("todayPulse", () => {
       const earlierToday = new Date(now.getTime() - 2 * 3600_000).toISOString();
       const pulse = todayPulse(
         [lead({}), lead({ id: "l2", created_at: "2020-01-01T00:00:00Z" })],
-        [
-          order({}),
-          order({ id: "o2", status: "pending" }),
-          order({ id: "o3", created_at: "2020-01-01T00:00:00Z" }),
-        ],
+        [order({}), order({ id: "o2", status: "pending" }), order({ id: "o3", created_at: "2020-01-01T00:00:00Z" })],
         [activity({}), activity({ id: "a2", created_at: earlierToday })],
       );
       expect(pulse.leadsToday).toBe(1);
@@ -286,7 +289,14 @@ describe("academyState", () => {
   it("agents with prior learnings graduate to in_training", () => {
     const s = academyState(
       [],
-      [{ agent: "lead_qualifier", key: "channel_bias", value: { bias: { linkedin: 4 } }, updated_at: new Date().toISOString() }],
+      [
+        {
+          agent: "lead_qualifier",
+          key: "channel_bias",
+          value: { bias: { linkedin: 4 } },
+          updated_at: new Date().toISOString(),
+        },
+      ],
     );
     const lq = s.students.find((st) => st.slug === "lead_qualifier")!;
     expect(lq.graduation).toBe("in_training");
@@ -300,8 +310,18 @@ describe("academyState", () => {
     const s = academyState(
       [activity({ message: `${TEACHER_PREFIX}: class session complete — 4/4 students` })],
       [
-        { agent: "growth_marketing", key: "market_brief", value: { instruction: "focus on fintech" }, updated_at: new Date().toISOString() },
-        { agent: "error_handler", key: "market_brief", value: { instruction: "watch lead surge" }, updated_at: new Date().toISOString() },
+        {
+          agent: "growth_marketing",
+          key: "market_brief",
+          value: { instruction: "focus on fintech" },
+          updated_at: new Date().toISOString(),
+        },
+        {
+          agent: "error_handler",
+          key: "market_brief",
+          value: { instruction: "watch lead surge" },
+          updated_at: new Date().toISOString(),
+        },
       ],
     );
     expect(s.teacherRuns).toBe(1);
@@ -359,7 +379,12 @@ describe("opsState", () => {
     const now = new Date().toISOString();
     const s = opsState(
       [
-        { agent: "lead_qualifier", key: "mission", value: { objective: "qualify", bottleneck: "closing" }, updated_at: now },
+        {
+          agent: "lead_qualifier",
+          key: "mission",
+          value: { objective: "qualify", bottleneck: "closing" },
+          updated_at: now,
+        },
         { agent: "lead_qualifier", key: "channel_bias", value: {}, updated_at: now }, // not a mission
         { agent: "growth_marketing", key: "skill_entry", value: { ecosystem: "skills.sh" }, updated_at: now },
         { agent: "rogue_agent", key: "mission", value: {}, updated_at: now }, // ignored: not managed
@@ -375,12 +400,15 @@ describe("opsState", () => {
   });
 
   it("counts delivery QA statuses from real rows", () => {
-    const s = opsState([], [
-      delivery({ id: "d1", qa_status: "passed" }),
-      delivery({ id: "d2", qa_status: "passed" }),
-      delivery({ id: "d3", qa_status: "failed" }),
-      delivery({ id: "d4" }),
-    ]);
+    const s = opsState(
+      [],
+      [
+        delivery({ id: "d1", qa_status: "passed" }),
+        delivery({ id: "d2", qa_status: "passed" }),
+        delivery({ id: "d3", qa_status: "failed" }),
+        delivery({ id: "d4" }),
+      ],
+    );
     expect(s.qaPassed).toBe(2);
     expect(s.qaFailed).toBe(1);
     expect(s.qaPending).toBe(1);
@@ -409,7 +437,10 @@ describe("opsState — qa status normalization edge cases", () => {
     const rows = [delivery({ id: "d1", qa_status: "pending" })];
     const before = opsState([], rows);
     expect(before.qaPending).toBe(1);
-    const after = opsState([], rows.map((r) => ({ ...r, qa_status: "passed" as const })));
+    const after = opsState(
+      [],
+      rows.map((r) => ({ ...r, qa_status: "passed" as const })),
+    );
     expect(after.qaPending).toBe(0);
     expect(after.qaPassed).toBe(1);
     expect(after.qaFailed).toBe(0);

@@ -1,11 +1,11 @@
 import { useState } from "react";
-  import { Link, useLocation, useNavigate } from "react-router-dom";
-  import { Bot, Mail, Lock, ShieldAlert, MailCheck } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Bot, Mail, Lock, ShieldAlert, MailCheck } from "lucide-react";
 import { authSignIn, authSignUp, authResendVerification } from "../lib/data";
 import { NEON_AUTH } from "../lib/auth-client";
 import { CLERK_ENABLED, ClerkSignIn, ClerkSignUp } from "../lib/clerk-bridge";
-  import { useT } from "../lib/i18n";
-  import { errorMessage } from "../lib/errors";
+import { useT } from "../lib/i18n";
+import { errorMessage } from "../lib/errors";
 
 export function Auth() {
   const navigate = useNavigate();
@@ -13,8 +13,8 @@ export function Auth() {
   const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
   const t = useT();
 
-  const [mode, setMode] = useState<"signin" | "signup">(
-    () => (new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin"),
+  const [mode, setMode] = useState<"signin" | "signup">(() =>
+    new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin",
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,9 +31,21 @@ export function Auth() {
       <div className="grid-bg flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-16">
         <div className="card w-full max-w-md p-8 glow-gold">
           {mode === "signin" ? (
-            <ClerkSignIn routing="path" path="/auth" signUpUrl="/auth?mode=signup" forceRedirectUrl="/dashboard" fallbackRedirectUrl="/dashboard" />
+            <ClerkSignIn
+              routing="path"
+              path="/auth"
+              signUpUrl="/auth?mode=signup"
+              forceRedirectUrl="/dashboard"
+              fallbackRedirectUrl="/dashboard"
+            />
           ) : (
-            <ClerkSignUp routing="path" path="/auth" signInUrl="/auth?mode=signin" forceRedirectUrl="/dashboard" fallbackRedirectUrl="/dashboard" />
+            <ClerkSignUp
+              routing="path"
+              path="/auth"
+              signInUrl="/auth?mode=signin"
+              forceRedirectUrl="/dashboard"
+              fallbackRedirectUrl="/dashboard"
+            />
           )}
         </div>
       </div>
@@ -117,7 +129,9 @@ export function Auth() {
         <form onSubmit={submit} className="mt-6 space-y-4">
           {mode === "signup" ? (
             <div>
-              <label className="label" htmlFor="name">{t("leadForm.name")}</label>
+              <label className="label" htmlFor="name">
+                {t("leadForm.name")}
+              </label>
               <input
                 id="name"
                 type="text"
@@ -129,7 +143,9 @@ export function Auth() {
             </div>
           ) : null}
           <div>
-            <label className="label" htmlFor="email">{t("auth.email")}</label>
+            <label className="label" htmlFor="email">
+              {t("auth.email")}
+            </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
               <input
@@ -144,7 +160,9 @@ export function Auth() {
             </div>
           </div>
           <div>
-            <label className="label" htmlFor="password">{t("auth.password")}</label>
+            <label className="label" htmlFor="password">
+              {t("auth.password")}
+            </label>
             <div className="relative">
               <Lock size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
               <input
@@ -182,7 +200,11 @@ export function Auth() {
             {resent ? (
               <p className="mt-2 text-xs font-medium text-emerald-300">{t("auth.resent")}</p>
             ) : (
-              <button onClick={resend} disabled={busy} className="mt-3 text-xs font-semibold text-sky-300 underline-offset-2 hover:underline">
+              <button
+                onClick={resend}
+                disabled={busy}
+                className="mt-3 text-xs font-semibold text-sky-300 underline-offset-2 hover:underline"
+              >
                 {t("auth.resend")}
               </button>
             )}
@@ -193,20 +215,14 @@ export function Auth() {
           {mode === "signin" ? (
             <>
               {t("auth.noAccount")}{" "}
-              <button
-                className="font-semibold text-gold-400 hover:underline"
-                onClick={() => setMode("signup")}
-              >
+              <button className="font-semibold text-gold-400 hover:underline" onClick={() => setMode("signup")}>
                 {t("auth.signupLink")}
               </button>
             </>
           ) : (
             <>
               {t("auth.hasAccount")}{" "}
-              <button
-                className="font-semibold text-gold-400 hover:underline"
-                onClick={() => setMode("signin")}
-              >
+              <button className="font-semibold text-gold-400 hover:underline" onClick={() => setMode("signin")}>
                 {t("auth.signinLink")}
               </button>
             </>
@@ -214,7 +230,9 @@ export function Auth() {
         </p>
 
         <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link to="/" className="hover:text-zinc-300">{t("auth.back")}</Link>
+          <Link to="/" className="hover:text-zinc-300">
+            {t("auth.back")}
+          </Link>
         </p>
       </div>
     </div>

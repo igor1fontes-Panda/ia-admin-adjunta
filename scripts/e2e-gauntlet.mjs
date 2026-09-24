@@ -13,21 +13,34 @@ await import("./dev-server.mjs");
 await new Promise((resolve, reject) => {
   const t = setTimeout(() => reject(new Error("server did not start")), 15000);
   const probe = async () => {
-    try { await fetch(`${BASE}/`); clearTimeout(t); resolve(); } catch { setTimeout(probe, 150); }
+    try {
+      await fetch(`${BASE}/`);
+      clearTimeout(t);
+      resolve();
+    } catch {
+      setTimeout(probe, 150);
+    }
   };
   probe();
 });
 
 const results = [];
 async function check(name, fn) {
-  try { results.push([name, await fn(), null]); }
-  catch (e) { results.push([name, null, e.message]); }
+  try {
+    results.push([name, await fn(), null]);
+  } catch (e) {
+    results.push([name, null, e.message]);
+  }
 }
 
 async function hit(path, init) {
   const res = await fetch(`${BASE}${path}`, init);
   let body = null;
-  try { body = await res.json(); } catch { body = await res.text(); }
+  try {
+    body = await res.json();
+  } catch {
+    body = await res.text();
+  }
   return { status: res.status, body };
 }
 
@@ -35,7 +48,7 @@ async function hit(path, init) {
 await check("SPA index served (200 HTML)", async () => {
   const r = await fetch(`${BASE}/`);
   const html = await r.text();
-  if (r.status !== 200 || !html.includes("<div id=\"root\">")) throw new Error(`status ${r.status}`);
+  if (r.status !== 200 || !html.includes('<div id="root">')) throw new Error(`status ${r.status}`);
   return r.status;
 });
 
@@ -77,8 +90,12 @@ await check("GET /api/auth/get-session → auth handler responds", async () => {
 let failed = 0;
 console.log("");
 for (const [name, ok, err] of results) {
-  if (ok === null) { failed++; console.log(`❌ ${name}\n   ↳ ${err}`); }
-  else console.log(`✅ ${name} → ${ok}`);
+  if (ok === null) {
+    failed++;
+    console.log(`❌ ${name}\n   ↳ ${err}`);
+  } else console.log(`✅ ${name} → ${ok}`);
 }
-console.log(failed === 0 ? "\nGAUNTLET PASS — full stack verified end-to-end." : `\nGAUNTLET FAIL — ${failed} probe(s) failed.`);
+console.log(
+  failed === 0 ? "\nGAUNTLET PASS — full stack verified end-to-end." : `\nGAUNTLET FAIL — ${failed} probe(s) failed.`,
+);
 process.exit(failed === 0 ? 0 : 1);

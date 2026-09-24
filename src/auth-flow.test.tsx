@@ -33,20 +33,23 @@ import { PreferencesProvider } from "./lib/i18n";
 //  - auth calls target the app's same-origin AUTH_BASE (cookie based)
 //  - EMAIL_NOT_VERIFIED must surface the verification panel, not an error wall
 //  - navigation only happens on a real session
-vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-  const url = String(input);
-  const method = (init?.method ?? "GET").toUpperCase();
-  if (url.includes("/sign-in/email") && method === "POST") {
-    return new Response(JSON.stringify({ message: "EMAIL_NOT_VERIFIED" }), { status: 401 });
-  }
-  if (url.includes("/sign-up/email") && method === "POST") {
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
-  }
-  if (url.includes("/send-verification-email") && method === "POST") {
-    return new Response(JSON.stringify({ status: true }), { status: 200 });
-  }
-  return new Response(JSON.stringify({ error: `unexpected ${method} ${url}` }), { status: 404 });
-}));
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    const method = (init?.method ?? "GET").toUpperCase();
+    if (url.includes("/sign-in/email") && method === "POST") {
+      return new Response(JSON.stringify({ message: "EMAIL_NOT_VERIFIED" }), { status: 401 });
+    }
+    if (url.includes("/sign-up/email") && method === "POST") {
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+    if (url.includes("/send-verification-email") && method === "POST") {
+      return new Response(JSON.stringify({ status: true }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ error: `unexpected ${method} ${url}` }), { status: 404 });
+  }),
+);
 
 function renderAuth() {
   return render(

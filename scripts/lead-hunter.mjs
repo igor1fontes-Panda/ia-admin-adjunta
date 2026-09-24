@@ -20,12 +20,11 @@ import {
   dbRemember,
   dbUpdateLead,
   diagnoseStoreError,
-  createLogger,
   storeLabel,
   storeReady,
   storeSelect,
 } from "./bot-db.mjs";
-import { askAI, parseJsonObject } from "./bot-lib.mjs";
+import { askAI, createLogger, parseJsonObject } from "./bot-lib.mjs";
 
 const log = createLogger("lead-hunter");
 
@@ -44,7 +43,9 @@ try {
   log("🎯 lead-hunter starting", { store: storeLabel });
 
   if (!storeReady) {
-    log("⚠️  No data store configured (DATABASE_URL for Neon, or legacy Supabase secrets) — nothing real to qualify. Nothing simulated.");
+    log(
+      "⚠️  No data store configured (DATABASE_URL for Neon, or legacy Supabase secrets) — nothing real to qualify. Nothing simulated.",
+    );
     process.exit(0);
   }
 
@@ -66,7 +67,9 @@ try {
 
   if (unscored.length === 0) {
     log("✅ nothing to qualify — every lead already processed.");
-    await dbInsertActivity("bot", "Lead qualifier ran: all leads already scored — no new leads to process.").catch(() => {});
+    await dbInsertActivity("bot", "Lead qualifier ran: all leads already scored — no new leads to process.").catch(
+      () => {},
+    );
     process.exit(0);
   }
 
@@ -113,8 +116,17 @@ try {
       }
     }
 
-    const score = aiScore !== null ? Math.round(aiScore * 0.7 + (base + channelBoost) * 0.3) : Math.min(Math.max(base + channelBoost, 0), 100);
-    const nextAction = action ?? (score >= 70 ? "Send proposal within 24h" : score >= 50 ? "Schedule demo this week" : "Nurture via email sequence");
+    const score =
+      aiScore !== null
+        ? Math.round(aiScore * 0.7 + (base + channelBoost) * 0.3)
+        : Math.min(Math.max(base + channelBoost, 0), 100);
+    const nextAction =
+      action ??
+      (score >= 70
+        ? "Send proposal within 24h"
+        : score >= 50
+          ? "Schedule demo this week"
+          : "Nurture via email sequence");
     const status = score >= 80 ? "qualified" : lead.status;
 
     await dbUpdateLead(lead.id, { score, ai_action: nextAction, ...(status !== lead.status ? { status } : {}) });
@@ -122,7 +134,10 @@ try {
     log(`scored ${lead.company}: ${score} → ${nextAction}`);
   }
 
-  await dbInsertActivity("bot", `Lead qualifier: scored ${scored} new lead(s) using ${decided > 0 ? "learned channel conversion from real outcomes" : "neutral priors (no decided deals yet)"}.`);
+  await dbInsertActivity(
+    "bot",
+    `Lead qualifier: scored ${scored} new lead(s) using ${decided > 0 ? "learned channel conversion from real outcomes" : "neutral priors (no decided deals yet)"}.`,
+  );
   log(`✅ lead-hunter done in ${((Date.now() - started) / 1000).toFixed(1)}s — ${scored} scored`);
   process.exit(0);
 } catch (e) {

@@ -26,18 +26,18 @@ npm run build
 - One feature or fix per commit, **paired with the tests that pin its
   behavior**. Test-less behavior changes are review blockers.
 - Never mix formatting, refactors and features in the same commit.
-- Commit messages: lowercase imperative, subject line states the *why*.
+- Commit messages: lowercase imperative, subject line states the _why_.
 
 ## Commit authorship: humans vs AI agents
 
 This repository is developed with the help of AI coding agents. To keep
 review honest, every commit must make its authorship unambiguous:
 
-| Author | How it must appear | How to tell at a glance |
-|---|---|---|
-| Human | `Co-Authored-By:` absent, or only other humans listed | `git log --format='%an %ce'` shows the developer |
-| AI agent (Codebuff, v0, Copilot, …) | agent named in the commit body or `Co-Authored-By:` trailer (e.g. `Co-Authored-By: Codebuff <noreply@codebuff.com>`) | trailer/`Generated with …` line in the body |
-| Bots (vercel[bot], dependabot) | automated platform commits | author email is the bot's |
+| Author                              | How it must appear                                                                                                   | How to tell at a glance                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Human                               | `Co-Authored-By:` absent, or only other humans listed                                                                | `git log --format='%an %ce'` shows the developer |
+| AI agent (Codebuff, v0, Copilot, …) | agent named in the commit body or `Co-Authored-By:` trailer (e.g. `Co-Authored-By: Codebuff <noreply@codebuff.com>`) | trailer/`Generated with …` line in the body      |
+| Bots (vercel[bot], dependabot)      | automated platform commits                                                                                           | author email is the bot's                        |
 
 Rules for reviewers and maintainers:
 

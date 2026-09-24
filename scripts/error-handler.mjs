@@ -45,7 +45,9 @@ try {
     .from("activity_log")
     .select("message, created_at")
     .gte("created_at", since)
-    .or("message.ilike.%error%,message.ilike.%fail%,message.ilike.%fatal%,message.ilike.%unregistered%,message.ilike.%denied%,message.ilike.%timeout%");
+    .or(
+      "message.ilike.%error%,message.ilike.%fail%,message.ilike.%fatal%,message.ilike.%unregistered%,message.ilike.%denied%,message.ilike.%timeout%",
+    );
   if (error) {
     const diag = diagnoseSupabaseError(error.message);
     throw new Error(`query failed: ${error.message}${diag ? ` | ${diag}` : ""}`);
@@ -54,8 +56,7 @@ try {
   const list = incidents ?? [];
 
   // Group real incidents by simple signature (first words of the message)
-  const signatureOf = (m) =>
-    m.toLowerCase().replace(/\d+/g, "#").split(/\s+/).slice(0, 6).join(" ");
+  const signatureOf = (m) => m.toLowerCase().replace(/\d+/g, "#").split(/\s+/).slice(0, 6).join(" ");
   const sigCounts = {};
   for (const i of list) {
     const sig = signatureOf(i.message);
@@ -151,9 +152,11 @@ try {
         // Check 3 — amount consistent with the pack tier
         const amount = Number(d.amount) || 0;
         const tierOk =
-          d.pack === "enterprise" ? amount >= 8333
-          : d.pack === "professional" ? amount >= 2916 && amount < 8333
-          : amount > 0 && amount < 2916;
+          d.pack === "enterprise"
+            ? amount >= 8333
+            : d.pack === "professional"
+              ? amount >= 2916 && amount < 8333
+              : amount > 0 && amount < 2916;
         checks.amount_matches_pack = tierOk;
         // Check 4 — product operational (only enforced when SITE_URL is configured)
         checks.product_operational = productOperational !== false;
@@ -167,7 +170,10 @@ try {
             verified_at: new Date().toISOString(),
             notes: passed
               ? "QA passed: paid order, client registered, amount consistent, product operational."
-              : `QA failed: ${Object.entries(checks).filter(([, ok]) => !ok).map(([k]) => k).join(", ")}.`,
+              : `QA failed: ${Object.entries(checks)
+                  .filter(([, ok]) => !ok)
+                  .map(([k]) => k)
+                  .join(", ")}.`,
             updated_at: new Date().toISOString(),
           })
           .eq("id", d.id);

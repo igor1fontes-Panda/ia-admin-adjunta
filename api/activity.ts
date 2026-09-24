@@ -15,11 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const user = await getSessionUser(req, auth);
     if (!user) return unauthorized(res);
-    const rows = await db
-      .select()
-      .from(activityLog)
-      .orderBy(desc(activityLog.created_at))
-      .limit(50);
+    const rows = await db.select().from(activityLog).orderBy(desc(activityLog.created_at)).limit(50);
     return res.status(200).json(rows.filter((r) => !/^Database initialized/i.test(r.message)));
   } catch (error) {
     return serverError(res, error);

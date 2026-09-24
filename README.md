@@ -8,30 +8,30 @@
 
 ## What actually exists here
 
-| Piece | Status | Where |
-|---|---|---|
-| Landing page + pricing (AOA) + **public lead-capture form** | ✅ Working | `src/pages/Landing.tsx`, `src/components/LeadForm.tsx` |
-| Auth (real Supabase sessions) | ✅ Working | `src/pages/Auth.tsx` |
-| Admin dashboard (leads, clients, orders, activity) | ✅ Working | `src/pages/Dashboard.tsx` |
-| Business engine (metrics, lead scoring) | ✅ Unit-tested | `src/lib/engine.ts` |
-| Production DB schema + RLS | ✅ Ready | `supabase/migrations/0001_init.sql` |
-| **Agent learning memory** (`agent_memory` table) | ✅ Ready | `supabase/migrations/0002_agent_memory.sql` |
-| **Lead Qualifier bot** (self-learning, daily) | ✅ Autonomous | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml` |
-| **Error Handler bot** (self-learning, hourly) | ✅ Autonomous | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml` |
-| **Insight Engine** (memory-aware analyst, daily) | ✅ Autonomous | `ai_engine.py` + `.github/workflows/ai-bots.yml` |
-| **Growth & Marketing agent** (daily campaign plan from real funnel data) | ✅ Autonomous | `scripts/growth-marketing.mjs` + `.github/workflows/ai-bots.yml` |
-| **AI Teacher agent** (Academy — trains the other agents from real market data) | ✅ Autonomous | `scripts/teacher-agent.mjs` + `.github/workflows/ai-bots.yml` |
-| **AI Manager** (commands the AI team: daily missions + automatic pack-sales registration) | ✅ Autonomous | `scripts/ops-manager.mjs` + `.github/workflows/ai-bots.yml` |
-| **Skills Scout** (fetches the skills each agent needs from the skills.sh ecosystem) | ✅ Autonomous | `scripts/skills-scout.mjs` + `.github/workflows/ai-bots.yml` |
-| **Delivery QA** (every sold pack verified as functional for the client) | ✅ Autonomous | `scripts/error-handler.mjs` + `supabase/migrations/0005_delivery_qa.sql` |
-| **Operations module** (missions, QA table, ecosystem skills) | ✅ Working | Dashboard → "Operações" |
-| **AI Academy submenu** (curriculum, market briefs, graduation per agent) | ✅ Working | Dashboard → AI Agents → "Academia IA" |
-| **Interface PT/EN** (persistent language switch, PT default) | ✅ Working | `src/lib/i18n.ts` + `Header` language pills |
-| **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider) | ✅ Wired | `scripts/bot-lib.mjs`, `ai_engine.py` |
-| **Voice briefings** (Hume AI TTS, optional) | ✅ Wired | `scripts/hume_voice.py` + `ai_engine.py` |
-| CI (typecheck, tests, build) | ✅ On push | `.github/workflows/ci.yml` |
-| **Supabase db push** (migrations apply automatically on merge to main) | ✅ Ready | `.github/workflows/supabase-migrations.yml` |
-| Site health monitoring | ✅ Every 6h | `.github/workflows/deploy-status.yml` |
+| Piece                                                                                     | Status         | Where                                                                    |
+| ----------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------ |
+| Landing page + pricing (AOA) + **public lead-capture form**                               | ✅ Working     | `src/pages/Landing.tsx`, `src/components/LeadForm.tsx`                   |
+| Auth (real Supabase sessions)                                                             | ✅ Working     | `src/pages/Auth.tsx`                                                     |
+| Admin dashboard (leads, clients, orders, activity)                                        | ✅ Working     | `src/pages/Dashboard.tsx`                                                |
+| Business engine (metrics, lead scoring)                                                   | ✅ Unit-tested | `src/lib/engine.ts`                                                      |
+| Production DB schema + RLS                                                                | ✅ Ready       | `supabase/migrations/0001_init.sql`                                      |
+| **Agent learning memory** (`agent_memory` table)                                          | ✅ Ready       | `supabase/migrations/0002_agent_memory.sql`                              |
+| **Lead Qualifier bot** (self-learning, daily)                                             | ✅ Autonomous  | `scripts/lead-hunter.mjs` + `.github/workflows/ai-bots.yml`              |
+| **Error Handler bot** (self-learning, hourly)                                             | ✅ Autonomous  | `scripts/error-handler.mjs` + `.github/workflows/ai-bots.yml`            |
+| **Insight Engine** (memory-aware analyst, daily)                                          | ✅ Autonomous  | `ai_engine.py` + `.github/workflows/ai-bots.yml`                         |
+| **Growth & Marketing agent** (daily campaign plan from real funnel data)                  | ✅ Autonomous  | `scripts/growth-marketing.mjs` + `.github/workflows/ai-bots.yml`         |
+| **AI Teacher agent** (Academy — trains the other agents from real market data)            | ✅ Autonomous  | `scripts/teacher-agent.mjs` + `.github/workflows/ai-bots.yml`            |
+| **AI Manager** (commands the AI team: daily missions + automatic pack-sales registration) | ✅ Autonomous  | `scripts/ops-manager.mjs` + `.github/workflows/ai-bots.yml`              |
+| **Skills Scout** (fetches the skills each agent needs from the skills.sh ecosystem)       | ✅ Autonomous  | `scripts/skills-scout.mjs` + `.github/workflows/ai-bots.yml`             |
+| **Delivery QA** (every sold pack verified as functional for the client)                   | ✅ Autonomous  | `scripts/error-handler.mjs` + `supabase/migrations/0005_delivery_qa.sql` |
+| **Operations module** (missions, QA table, ecosystem skills)                              | ✅ Working     | Dashboard → "Operações"                                                  |
+| **AI Academy submenu** (curriculum, market briefs, graduation per agent)                  | ✅ Working     | Dashboard → AI Agents → "Academia IA"                                    |
+| **Interface PT/EN** (persistent language switch, PT default)                              | ✅ Working     | `src/lib/i18n.ts` + `Header` language pills                              |
+| **Blackbox AI fallback** (OpenAI-compatible, optional 2nd provider)                       | ✅ Wired       | `scripts/bot-lib.mjs`, `ai_engine.py`                                    |
+| **Voice briefings** (Hume AI TTS, optional)                                               | ✅ Wired       | `scripts/hume_voice.py` + `ai_engine.py`                                 |
+| CI (typecheck, tests, build)                                                              | ✅ On push     | `.github/workflows/ci.yml`                                               |
+| **Supabase db push** (migrations apply automatically on merge to main)                    | ✅ Ready       | `.github/workflows/supabase-migrations.yml`                              |
+| Site health monitoring                                                                    | ✅ Every 6h    | `.github/workflows/deploy-status.yml`                                    |
 
 ## Quick start
 
@@ -70,12 +70,15 @@ one valid lead, client, order, and activity item without contacting Supabase.
    - For voice briefings (optional): create a **public** storage bucket named `briefings` (Supabase → Storage → New bucket).
 
    **Or use the Supabase CLI** (installed as a devDependency; no local Docker needed for link/push):
+
    ```bash
    npx supabase link --project-ref aebdqztoolszdzfbdlbp   # needs SUPABASE_ACCESS_TOKEN (Supabase → Account → Access Tokens)
    npx supabase migration new my-change                   # creates supabase/migrations/<timestamp>_my-change.sql
    npx supabase db push                                   # applies all pending migrations to the linked project
    ```
+
    `supabase/config.toml` is committed; CLI local state is git-ignored. This SPA uses the plain `@supabase/supabase-js` client in `src/lib/data.ts` (no server-side session middleware needed).
+
 2. Set environment variables (never commit them) — the full list the repo reads lives in [README.env-vars.md](README.env-vars.md):
    - Dashboard (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — new projects show `sb_publishable_…` keys; legacy projects show a JWT anon key. Both work. (Also set `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` for server-side consumers such as `@supabase/server`.)
    - Bots (GitHub repo secrets): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — new projects show `sb_secret_…` (set it as `SUPABASE_SECRET_KEY`; both names are accepted); legacy show the service_role JWT. Either works. Add these in **GitHub → Settings → Secrets and variables → Actions** (the Freebuff credential cannot manage repo secrets).
@@ -168,7 +171,7 @@ add`). Daily, for each agent:
 2. Searches `https://skills.sh/api/search` and records the real skills
    found (source repo, install counts).
 3. Fetches the top skill's actual instructions via `npx skills use <source>
-   --skill <id>` (read-only, no repo changes).
+--skill <id>` (read-only, no repo changes).
 4. Writes a `skill_entry` into the agent's memory so the next run uses the
    new commands and prompts — autonomously.
 
@@ -176,11 +179,11 @@ Nothing is sent anywhere; the Scout only appends knowledge to memory.
 
 ## Pricing (live in the app)
 
-| Plan | Price | Users |
-|---|---|---|
-| Starter | 12.500 Kz/month | 10 |
-| Professional | 29.160 Kz/month | 50 |
-| Enterprise | 83.330 Kz/month | Unlimited |
+| Plan         | Price           | Users     |
+| ------------ | --------------- | --------- |
+| Starter      | 12.500 Kz/month | 10        |
+| Professional | 29.160 Kz/month | 50        |
+| Enterprise   | 83.330 Kz/month | Unlimited |
 
 Payments: Multicaixa Express & PayPay (reference generated per order), 30-day money-back guarantee.
 
@@ -219,8 +222,11 @@ Supabase → Project Settings → API and use the full value.
 ```bash
 npm run dev               # dev server
 npm run build             # production build → dist/
-npm test                  # unit tests (engine)
+npm test                  # unit tests (engine, API boundaries, views)
 npm run typecheck         # tsc --noEmit
+npm run lint              # eslint src
+npm run format:check      # prettier --check . (CI-enforced)
+npm run format            # prettier --write .
 npm run bot:leads         # qualify real leads locally (needs Supabase secrets)
 npm run bot:error-handler # triage incidents locally
 npm run bot:growth        # daily growth & marketing plan (needs Supabase secrets)
@@ -229,6 +235,20 @@ npm run bot:manager       # AI Manager — assigns daily missions + registers so
 npm run bot:skills        # Skills Scout — searches skills.sh and delivers new techniques per agent (needs Supabase secrets)
 npm run bot:insight       # daily AI insight (needs python3 -m pip install -r requirements.txt)
 ```
+
+### Fresh-clone smoke (zero manual setup)
+
+CI runs a dedicated `fresh-clone-smoke` job that proves a clean machine can
+install, build and test **without any live Supabase/Neon/Gemini credentials**:
+
+```bash
+npm ci
+VITE_MOCK_DATA=true npm run build
+VITE_MOCK_DATA=true npm test
+```
+
+If this job fails on a fresh clone, the README setup is broken — fix it before
+shipping features.
 
 The AI layer uses the official Google GenAI SDKs. Python (`ai_engine.py`):
 
@@ -261,9 +281,9 @@ landing, auth, dashboard modules, forms, and footers. The dictionary lives in
 
 ## Security model
 
-- **RLS everywhere**: authenticated users = full business access; anonymous users can *only* insert leads (public lead capture), never read.
+- **RLS everywhere**: authenticated users = full business access; anonymous users can _only_ insert leads (public lead capture), never read.
 - **Service-role key lives only in GitHub secrets / server env** — bots bypass RLS server-side; it never reaches the browser.
-- Anon key in the browser is safe *because* RLS is enforced — do not skip step 1.
+- Anon key in the browser is safe _because_ RLS is enforced — do not skip step 1.
 
 ## Hosting
 

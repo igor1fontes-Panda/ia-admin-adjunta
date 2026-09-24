@@ -9,12 +9,21 @@ import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { deliveryStatus, orders } from "../db/schema";
 import { auth } from "../server/auth";
-import { badRequest, dbUnavailable, getSessionUser, serverError, unauthorized } from "./lib/http";
+import {
+  apiSchemas,
+  badRequest,
+  dbUnavailable,
+  getSessionUser,
+  parseBody,
+  serverError,
+  unauthorized,
+} from "./lib/http";
 
 const ORDER_STATUSES = ["pending", "paid", "refunded"] as const;
 const METHODS = ["multicaixa", "paypay", "card", "wire_usd", "wire_eur"] as const;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {    if (!isDbConfigured || !db) return dbUnavailable(res);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!isDbConfigured || !db) return dbUnavailable(res);
 
   try {
     const user = await getSessionUser(req, auth);
@@ -26,15 +35,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST") {
-      const body = bodyOf(req);
-      const clientName = str(body.client_name).trim() || "Walk-in";
-      const amount = Number(body.amount);
-      const method = str(body.method) || "multicaixa";
-      const clientId = str(body.client_id).trim() || null;
-      if (!Number.isFinite(amount) || amount <= 0) return badRequest(res, "amount must be a positive number.");
-      if (!(METHODS as readonly string[]).includes(method)) {
-        return badRequest(res, `method must be one of ${METHODS.join(", ")}.`);
-      }
+      const raw = bodyOf(req);
+      const parsed = parseBody(res, apiSchemas.orderCreate, {
+        client_id: str(raw.client_id).trim() || null,
+        client_name: str(raw.client_name).trim() || "Walk-in",
+        amount: Number(raw.amount),
+        method: str(raw.method) || "multicaixa",
+      });
+      if (!parsed) return;
+      const clientName = parsed.client_name;
+      const amount = parsed.amount;
+      const method = parsed.method;
+      const clientId = parsed.client_id;
       const reference = `manual-${crypto.randomUUID()}`;
       const [row] = await db
         .insert(orders)

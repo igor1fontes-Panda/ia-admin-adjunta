@@ -33,7 +33,10 @@ describe("i18n dictionary parity", () => {
       expect(mirror, `en is missing ${key}`).toBeDefined();
       if (typeof value === "string") expect(typeof mirror).toBe("string");
       if (typeof value === "number") expect(typeof mirror).toBe("number");
-      if (Array.isArray(value)) expect(Array.isArray(mirror) && (mirror as unknown[]).length, `array length mismatch at ${key}`).toBe(value.length);
+      if (Array.isArray(value))
+        expect(Array.isArray(mirror) && (mirror as unknown[]).length, `array length mismatch at ${key}`).toBe(
+          value.length,
+        );
     }
   });
 

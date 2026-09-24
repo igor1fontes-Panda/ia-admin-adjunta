@@ -13,9 +13,11 @@ import { db, isDbConfigured } from "../db";
 import { leads } from "../db/schema";
 import { auth } from "../server/auth";
 import {
+  apiSchemas,
   badRequest,
   dbUnavailable,
   getSessionUser,
+  parseBody,
   serverError,
   unauthorized,
 } from "./lib/http";
@@ -35,27 +37,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST") {
-      const body = (typeof req.body === "string" ? safeJson(req.body) : req.body || {}) as Record<string, unknown>;
-      const company = str(body.company).trim();
-      const contact = str(body.contact_name).trim();
-      const email = str(body.email).trim().toLowerCase();
-      const niche = str(body.niche).trim() || "SaaS";
-
-      if (!company || !contact || !email) {
-        return badRequest(res, "company, contact_name and email are required.");
-      }
-      if (!/^\S+@\S+\.\S+$/.test(email)) return badRequest(res, "Invalid email address.");
+      const raw: Record<string, unknown> =
+        typeof req.body === "string" ? safeJson(req.body) : ((req.body as Record<string, unknown>) ?? {});
+      const parsed = parseBody(res, apiSchemas.leadCreate, raw);
+      if (!parsed) return;
+      const company = parsed.company;
+      const contact = parsed.contact_name;
+      const email = parsed.email;
+      const niche = parsed.niche;
 
       // If a session exists, the signed-in admin may set privileged fields.
       const user = await getSessionUser(req, auth);
       const privileged = user !== null;
-      const rawScore = Number(body.score);
+      const rawScore = Number(raw.score);
       const score = privileged
         ? Number.isFinite(rawScore)
           ? Math.min(Math.max(Math.round(rawScore), 0), 100)
           : 50
         : Math.min(Number.isFinite(rawScore) ? Math.max(Math.round(rawScore), 0) : 50, 60);
-      const status: LeadStatus = privileged && isLeadStatus(body.status) ? body.status : "new";
+      const rawStatus = bodyStatus(raw);
+      const status: LeadStatus = privileged && isLeadStatus(rawStatus) ? rawStatus : "new";
 
       const [row] = await db
         .insert(leads)
@@ -67,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           channel: "website",
           score,
           status,
-          ai_action: privileged ? (str(body.ai_action).trim() || null) : null,
+          ai_action: privileged ? str(raw.ai_action).trim() || null : null,
         })
         .returning();
       return res.status(201).json(row);
@@ -94,6 +95,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
+function bodyStatus(body: Record<string, unknown>): unknown {
+  return body.status;
+}
 function isLeadStatus(v: unknown): v is LeadStatus {
   return typeof v === "string" && (LEAD_STATUSES as readonly string[]).includes(v);
 }
@@ -105,5 +109,5 @@ function safeJson(s: string): Record<string, unknown> {
   }
 }
 function bodyOf(req: VercelRequest): unknown {
-  return typeof req.body === "string" ? safeJson(req.body) : req.body ?? {};
+  return typeof req.body === "string" ? safeJson(req.body) : (req.body ?? {});
 }
