@@ -4,6 +4,7 @@ node_modules
 isolate
 .agents
 .claude
+agent
 package-lock.json
 src/convex/_generated
 tsconfig.tsbuildinfo
