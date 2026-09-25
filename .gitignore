@@ -35,3 +35,7 @@ __pycache__/
 *.pyc
 .venv-pip-audit/
 .clerk/
+
+# Machine-local agent-skill install artifacts (symlinks/copies created by `npx skills add`)
+.claude/
+agent/
