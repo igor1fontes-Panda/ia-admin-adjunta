@@ -2,6 +2,10 @@ node_modules/
 dist/
 coverage/
 
+# Next.js build output and generated types (npm run build:next)
+.next/
+next-env.d.ts
+
 # Coverage reports (generated locally by `npm run coverage`)
 coverage/
 
