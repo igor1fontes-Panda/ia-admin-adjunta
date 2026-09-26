@@ -1,6 +1,10 @@
 import { betterAuth } from "better-auth";
 import { pool } from "./db";
 
+// pool is null when DATABASE_URL is unset (credential-less build / cold start);
+// better-auth accepts the union and the API surface answers 503 until configured.
+const database = pool ?? undefined;
+
 const baseURL =
   process.env.BETTER_AUTH_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) ??
@@ -8,7 +12,7 @@ const baseURL =
   process.env.V0_RUNTIME_URL;
 
 export const auth = betterAuth({
-  database: pool,
+  database,
   baseURL,
   emailAndPassword: { enabled: true, autoSignIn: true },
   trustedOrigins: [
