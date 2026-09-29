@@ -45,7 +45,7 @@
     "@google/genai": "^2.23.0",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/server": "^1.7.0",
-    "@supabase/supabase-js": "^2.45.1",
+    "@supabase/supabase-js": "^2.117.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-react": "^6.1.1",
