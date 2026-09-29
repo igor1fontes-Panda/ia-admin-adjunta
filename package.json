@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.5",
-    "@clerk/backend": "^3.18.1",
+    "@clerk/backend": "^3.20.1",
     "@clerk/react": "^6.16.1",
     "@google/genai": "^2.23.0",
     "@neondatabase/serverless": "^1.1.0",
