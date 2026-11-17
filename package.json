@@ -39,7 +39,7 @@
     "esbuild": "^0.25.12"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.7.5",
+    "@better-auth/drizzle-adapter": "^1.7.24",
     "@clerk/backend": "^3.18.1",
     "@clerk/react": "^6.16.1",
     "@google/genai": "^2.23.0",
