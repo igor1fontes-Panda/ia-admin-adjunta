@@ -4,7 +4,7 @@
  *   POST  /api/orders        — create with generated payment reference
  *   PATCH /api/orders?id=…   — update status (mark paid / refunded)
  */
-import type { VercelRequest, VercelResponse } from "./lib/http";
+import type { VercelRequest, VercelResponse } from "../lib/api-http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { deliveryStatus, orders } from "../db/schema";
@@ -17,7 +17,7 @@ import {
   parseBody,
   serverError,
   unauthorized,
-} from "./lib/http";
+} from "../lib/api-http";
 
 const ORDER_STATUSES = ["pending", "paid", "refunded"] as const;
 const METHODS = ["multicaixa", "paypay", "card", "wire_usd", "wire_eur"] as const;
