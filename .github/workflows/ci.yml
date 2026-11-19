@@ -52,7 +52,13 @@ jobs:
         run: npm run lint
 
       - name: Formatting check (Prettier)
-        run: npm run format:check
+        run: |
+          if ! npx prettier --check api/stripe/webhook.ts; then
+            npx prettier api/stripe/webhook.ts > /tmp/stripe-webhook.formatted.ts
+            diff -u api/stripe/webhook.ts /tmp/stripe-webhook.formatted.ts || true
+            exit 1
+          fi
+          npm run format:check
 
       - name: Typecheck
         run: npm run typecheck
