@@ -67,6 +67,16 @@ export function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): V
     path.endsWith("/send-verification-email") ||
     path.endsWith("/resend-verification-email");
   const isEmailChange = path.endsWith("/change-email") || path.endsWith("/update-user");
+  const usesAlternateIdentity =
+    typeof body.provider === "string" ||
+    typeof body.username === "string" ||
+    typeof body.phoneNumber === "string";
+
+  // This is an email/password-only administrator account. Apply the body
+  // allowlist even if an upstream rewrite changes the visible request path.
+  if (usesAlternateIdentity || (email && email !== ADMIN_EMAIL) || (newEmail && newEmail !== ADMIN_EMAIL)) {
+    return res.status(403).json({ error: "This application is restricted to its authorized administrator." });
+  }
 
   // Do not expose alternative identity providers or signup methods.
   if ((path.includes("/sign-up/") && !isEmailSignUp) || (path.includes("/sign-in/") && !isEmailSignIn)) {
