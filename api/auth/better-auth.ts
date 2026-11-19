@@ -52,7 +52,7 @@ function requestBody(req: VercelRequest): Record<string, unknown> {
 function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): VercelResponse | null {
   let path = "/";
   try {
-    path = new URL(req.url ?? "/", "http://localhost").pathname.toLowerCase().replace(/\\/+$/, "");
+    path = new URL(req.url ?? "/", "http://localhost").pathname.toLowerCase().replace(/\/+$/, "");
   } catch {
     return res.status(400).json({ error: "Invalid authentication route." });
   }
