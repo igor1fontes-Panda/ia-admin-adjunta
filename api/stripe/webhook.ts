@@ -34,15 +34,10 @@ function getSignature(req: any): string | undefined {
 function isMinimalResource(value: unknown): value is { id: string; object?: string } {
   if (!value || typeof value !== "object") return false;
   const resource = value as { id?: unknown; object?: unknown };
-  return (
-    typeof resource.id === "string" &&
-    (resource.object === undefined || typeof resource.object === "string")
-  );
+  return typeof resource.id === "string" && (resource.object === undefined || typeof resource.object === "string");
 }
 
-async function hydrateEventResource(
-  event: Stripe.Event,
-): Promise<Stripe.Event["data"]["object"]> {
+async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["data"]["object"]> {
   const resource = event.data.object;
   if (!isMinimalResource(resource)) return resource;
 
@@ -54,7 +49,9 @@ async function hydrateEventResource(
 }
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
     return res.status(503).json({ error: "Stripe webhook is not configured." });
   }
@@ -67,11 +64,7 @@ export default async function handler(req: any, res: any) {
     const payload = await rawBody(req);
     const signature = getSignature(req);
     if (!signature) throw new Error("Missing stripe-signature header.");
-    event = stripeClient().webhooks.constructEvent(
-      payload,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
+    event = stripeClient().webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -81,23 +74,14 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ received: true });
   }
 
-  if (
-    event.type === "checkout.session.completed" ||
-    event.type === "checkout.session.async_payment_succeeded"
-  ) {
+  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const session = (await hydrateEventResource(event)) as Stripe.Checkout.Session;
-    if (
-      session.payment_status !== "paid" &&
-      event.type === "checkout.session.completed"
-    ) {
+    if (session.payment_status !== "paid" && event.type === "checkout.session.completed") {
       return res.status(200).json({ received: true });
     }
 
     const amount = ((session.amount_total || 0) / 100).toFixed(2);
-    const customerName =
-      session.customer_details?.name ||
-      session.customer_details?.email ||
-      "Stripe customer";
+    const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
     const currency = session.currency?.toUpperCase() || "EUR";
 
     try {
@@ -119,12 +103,7 @@ export default async function handler(req: any, res: any) {
           .onConflictDoNothing({ target: orders.reference })
           .returning({ id: orders.id });
 
-        const [order] = await tx
-          .select()
-          .from(orders)
-          .where(eq(orders.reference, session.id))
-          .for("update")
-          .limit(1);
+        const [order] = await tx.select().from(orders).where(eq(orders.reference, session.id)).for("update").limit(1);
         if (!order) throw new Error("Stripe order could not be persisted.");
 
         const [existingDelivery] = await tx
