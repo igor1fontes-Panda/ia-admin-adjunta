@@ -31,7 +31,7 @@ import type { Auth } from "../../server/auth";
 export type AuthUser = { id: string; email: string; name: string };
 
 /** Single principal allowed to access the administrative workspace. */
-export const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "igor1fontes@gmail.com").trim().toLowerCase();
+export const ADMIN_EMAIL = "igor1fontes@gmail.com";
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   return typeof email === "string" && email.trim().toLowerCase() === ADMIN_EMAIL;
