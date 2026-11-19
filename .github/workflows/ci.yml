@@ -44,7 +44,7 @@ jobs:
           npm update --package-lock-only --ignore-scripts
           fix_status=$?
           set -e
-          echo "npm audit fix exit code: $fix_status"
+          echo "npm update exit code: $fix_status"
           if git diff --quiet -- package.json package-lock.json; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
