@@ -26,7 +26,7 @@
  *    (DATABASE_URL + BETTER_AUTH_SECRET), loaded lazily. Null-safe: 503
  *    when the database is not configured.
  */
-import type { VercelRequest, VercelResponse } from "../lib/http";
+import type { VercelRequest, VercelResponse } from "../../lib/api-http";
 import { ADMIN_EMAIL } from "../../shared/admin";
 
 export const config = { runtime: "nodejs" };
