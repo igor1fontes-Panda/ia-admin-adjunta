@@ -79,7 +79,10 @@ function isTrustedOrigin(value: string): boolean {
   } catch {
     return false;
   }
-  if (parsed.origin !== value || !["https:", ...(process.env.NODE_ENV === "development" ? ["http:"] : [])].includes(parsed.protocol)) {
+  if (
+    parsed.origin !== value ||
+    !["https:", ...(process.env.NODE_ENV === "development" ? ["http:"] : [])].includes(parsed.protocol)
+  ) {
     return false;
   }
 

@@ -63,7 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         patch.status = body.status;
       }
       if (typeof body.plan === "string") {
-        if (!Object.hasOwn(PLANS, body.plan)) return badRequest(res, "plan must be starter, professional or enterprise.");
+        if (!Object.hasOwn(PLANS, body.plan))
+          return badRequest(res, "plan must be starter, professional or enterprise.");
         patch.plan = body.plan as Plan;
         patch.mrr = PLANS[body.plan as Plan];
       }
