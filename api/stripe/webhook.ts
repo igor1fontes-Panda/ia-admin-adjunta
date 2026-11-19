@@ -37,9 +37,7 @@ function isMinimalResource(value: unknown): value is { id: string; object?: stri
   return typeof resource.id === "string" && (resource.object === undefined || typeof resource.object === "string");
 }
 
-async function hydrateEventResource(
-  event: Stripe.Event,
-): Promise<Stripe.Event["data"]["object"]> {
+async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["data"]["object"]> {
   const resource = event.data.object;
   if (!isMinimalResource(resource)) return resource;
 
@@ -66,11 +64,7 @@ export default async function handler(req: any, res: any) {
     const payload = await rawBody(req);
     const signature = getSignature(req);
     if (!signature) throw new Error("Missing stripe-signature header.");
-    event = stripeClient().webhooks.constructEvent(
-      payload,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
+    event = stripeClient().webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -109,12 +103,7 @@ export default async function handler(req: any, res: any) {
           .onConflictDoNothing({ target: orders.reference })
           .returning({ id: orders.id });
 
-        const [order] = await tx
-          .select()
-          .from(orders)
-          .where(eq(orders.reference, session.id))
-          .for("update")
-          .limit(1);
+        const [order] = await tx.select().from(orders).where(eq(orders.reference, session.id)).for("update").limit(1);
         if (!order) throw new Error("Stripe order could not be persisted.");
 
         const [existingDelivery] = await tx
@@ -144,9 +133,7 @@ export default async function handler(req: any, res: any) {
       // A 5xx response asks Stripe to retry; the database transaction ensures
       // retries cannot leave duplicate or partially written records.
       console.error("[stripe] failed to persist checkout:", error);
-      return res
-        .status(500)
-        .json({ error: "Unable to record the completed checkout." });
+      return res.status(500).json({ error: "Unable to record the completed checkout." });
     }
   }
 
