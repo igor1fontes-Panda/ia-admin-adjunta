@@ -20,7 +20,9 @@ export const config = { api: { bodyParser: false } };
 
 async function rawBody(req: any): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
   return Buffer.concat(chunks);
 }
 
@@ -32,10 +34,15 @@ function getSignature(req: any): string | undefined {
 function isMinimalResource(value: unknown): value is { id: string; object?: string } {
   if (!value || typeof value !== "object") return false;
   const resource = value as { id?: unknown; object?: unknown };
-  return typeof resource.id === "string" && (resource.object === undefined || typeof resource.object === "string");
+  return (
+    typeof resource.id === "string" &&
+    (resource.object === undefined || typeof resource.object === "string")
+  );
 }
 
-async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["data"]["object"]> {
+async function hydrateEventResource(
+  event: Stripe.Event,
+): Promise<Stripe.Event["data"]["object"]> {
   const resource = event.data.object;
   if (!isMinimalResource(resource)) return resource;
 
@@ -60,7 +67,11 @@ export default async function handler(req: any, res: any) {
     const payload = await rawBody(req);
     const signature = getSignature(req);
     if (!signature) throw new Error("Missing stripe-signature header.");
-    event = stripeClient().webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripeClient().webhooks.constructEvent(
+      payload,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+    );
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -70,14 +81,23 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ received: true });
   }
 
-  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
     const session = (await hydrateEventResource(event)) as Stripe.Checkout.Session;
-    if (session.payment_status !== "paid" && event.type === "checkout.session.completed") {
+    if (
+      session.payment_status !== "paid" &&
+      event.type === "checkout.session.completed"
+    ) {
       return res.status(200).json({ received: true });
     }
 
     const amount = ((session.amount_total || 0) / 100).toFixed(2);
-    const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
+    const customerName =
+      session.customer_details?.name ||
+      session.customer_details?.email ||
+      "Stripe customer";
     const currency = session.currency?.toUpperCase() || "EUR";
 
     try {
