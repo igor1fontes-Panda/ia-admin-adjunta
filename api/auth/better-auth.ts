@@ -69,10 +69,7 @@ export function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): V
   const isEmailChange = path.endsWith("/change-email") || path.endsWith("/update-user");
 
   // Do not expose alternative identity providers or signup methods.
-  if (
-    (path.includes("/sign-up/") && !isEmailSignUp) ||
-    (path.includes("/sign-in/") && !isEmailSignIn)
-  ) {
+  if ((path.includes("/sign-up/") && !isEmailSignUp) || (path.includes("/sign-in/") && !isEmailSignIn)) {
     return res.status(403).json({ error: "Only the authorized administrator can access this application." });
   }
 
