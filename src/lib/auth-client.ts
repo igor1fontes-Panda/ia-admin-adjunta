@@ -13,6 +13,9 @@
  */
 import { createAuthClient } from "better-auth/react";
 
+/** Public identifier of the only account permitted to enter the admin workspace. */
+export const ADMIN_EMAIL = "igor1fontes@gmail.com";
+
 const configuredAuthUrl = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined)?.trim();
 
 // Managed Neon Auth is active when the SERVER has the endpoint configured.
