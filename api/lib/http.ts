@@ -30,6 +30,13 @@ import type { Auth } from "../../server/auth";
 
 export type AuthUser = { id: string; email: string; name: string };
 
+/** Single principal allowed to access the administrative workspace. */
+export const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "igor1fontes@gmail.com").trim().toLowerCase();
+
+export function isAdminEmail(email: string | null | undefined): boolean {
+  return typeof email === "string" && email.trim().toLowerCase() === ADMIN_EMAIL;
+}
+
 /** Returns the signed-in user for this request, or null.
  * `auth` may be null when DATABASE_URL is not configured (null-safe server).
  * Identity sources, in order: self-hosted Better Auth session cookie, then
@@ -46,6 +53,7 @@ export async function getSessionUser(req: VercelRequest, auth: Auth | null): Pro
         headers: fromNodeHeaders(req.headers),
       });
       if (session?.user) {
+        if (!isAdminEmail(session.user.email)) return null;
         return { id: session.user.id, email: session.user.email, name: session.user.name };
       }
     } catch {
@@ -54,7 +62,8 @@ export async function getSessionUser(req: VercelRequest, auth: Auth | null): Pro
   }
   try {
     const { verifyClerkUser } = await import("../../server/clerk");
-    return await verifyClerkUser(req);
+    const clerkUser = await verifyClerkUser(req);
+    return clerkUser && isAdminEmail(clerkUser.email) ? clerkUser : null;
   } catch {
     return null;
   }
