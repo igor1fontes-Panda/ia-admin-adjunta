@@ -22,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const q = neon(connectionString);
       await q`select 1`;
       dbOk = true;
-    } catch (e) {
+    } catch {
       dbError = "database_unavailable";
     }
   }
