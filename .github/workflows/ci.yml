@@ -16,9 +16,15 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -26,6 +32,41 @@ jobs:
           cache: npm
 
       - name: Install
+        run: npm ci
+
+      # One-time, tightly scoped remediation on the dedicated security PR.
+      # npm scripts are disabled while npm resolves advisory fixes.
+      - name: Refresh vulnerable npm dependency lockfile
+        id: audit-fix
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'security/remediate-dependencies-')
+        run: |
+          set +e
+          npm audit fix --ignore-scripts
+          fix_status=$?
+          set -e
+          echo "npm audit fix exit code: $fix_status"
+          if git diff --quiet -- package.json package-lock.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit refreshed dependency lockfile and dispatch clean verification
+        if: steps.audit-fix.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "fix(security): refresh vulnerable npm dependencies"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
+          git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          gh workflow run ci.yml --ref "${GITHUB_HEAD_REF}"
+
+      - name: Reinstall from refreshed lockfile
+        if: steps.audit-fix.outputs.changed == 'true'
         run: npm ci
 
       - name: Python bots syntax and offline tests
