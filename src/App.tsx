@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
 import { useSessionBridge, SessionProvider } from "./lib/clerk-bridge";
 import { PreferencesProvider } from "./lib/i18n";
+import { ADMIN_EMAIL } from "./lib/auth-client";
 import "./theme.css";
 
 const Landing = lazy(() => import("./views/Landing").then((m) => ({ default: m.Landing })));
@@ -83,7 +84,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (!session) {
+  if (!session || session.email.trim().toLowerCase() !== ADMIN_EMAIL) {
     return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
   return <>{children}</>;

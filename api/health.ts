@@ -7,6 +7,11 @@ import type { VercelRequest, VercelResponse } from "./lib/http";
 import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+  res.setHeader("Cache-Control", "no-store");
   const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
   const authReady = Boolean(process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET);
 
@@ -17,8 +22,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const q = neon(connectionString);
       await q`select 1`;
       dbOk = true;
-    } catch (e) {
-      dbError = e instanceof Error ? e.message : "connection failed";
+    } catch {
+      dbError = "database_unavailable";
     }
   }
 

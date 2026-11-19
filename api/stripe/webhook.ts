@@ -1,16 +1,20 @@
 /**
  * Stripe webhook — records paid orders in Neon Postgres (Drizzle).
  *
- * Parity with POST /api/orders: a paid checkout creates the order (status
- * "paid") and registers the pack for delivery QA. Upsert on the unique
- * `reference` column makes webhook retries idempotent.
+ * Paid checkouts create an order and register the pack for delivery QA.
+ * The order row is locked while related records are written, making retries
+ * idempotent and preventing partial writes when a transaction fails.
  */
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../../db";
 import { activityLog, deliveryStatus, orders } from "../../db/schema";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+function stripeClient(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("Stripe is not configured.");
+  return new Stripe(key);
+}
 
 export const config = { api: { bodyParser: false } };
 
@@ -36,7 +40,7 @@ async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["
   if (!isMinimalResource(resource)) return resource;
 
   if (event.type.startsWith("setup_intent.")) {
-    return stripe.setupIntents.retrieve(resource.id);
+    return stripeClient().setupIntents.retrieve(resource.id);
   }
 
   return resource;
@@ -56,7 +60,7 @@ export default async function handler(req: any, res: any) {
     const payload = await rawBody(req);
     const signature = getSignature(req);
     if (!signature) throw new Error("Missing stripe-signature header.");
-    event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripeClient().webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -76,38 +80,62 @@ export default async function handler(req: any, res: any) {
     const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
     const currency = session.currency?.toUpperCase() || "EUR";
 
-    // Idempotent upsert — Stripe retries webhooks, the reference is unique.
-    const [order] = await db
-      .insert(orders)
-      .values({
-        client_id: null,
-        client_name: customerName,
-        amount,
-        currency,
-        method: "stripe",
-        status: "paid",
-        reference: session.id,
-      })
-      .onConflictDoUpdate({
-        target: orders.reference,
-        set: { status: "paid", amount },
-      })
-      .returning();
+    try {
+      await db.transaction(async (tx) => {
+        // Insert first so the unique reference constraint serializes concurrent
+        // deliveries for this checkout session. A conflict means this order was
+        // already created; the row lock below serializes its related writes.
+        const [insertedOrder] = await tx
+          .insert(orders)
+          .values({
+            client_id: null,
+            client_name: customerName,
+            amount,
+            currency,
+            method: "stripe",
+            status: "paid",
+            reference: session.id,
+          })
+          .onConflictDoNothing({ target: orders.reference })
+          .returning({ id: orders.id });
 
-    // Mirror the Ops Manager behaviour: register the sold pack for delivery QA.
-    await db.insert(deliveryStatus).values({
-      client_id: null,
-      order_id: order.id,
-      client_name: customerName,
-      pack: "stripe",
-      method: "stripe",
-      amount,
-    });
+        const [order] = await tx
+          .select()
+          .from(orders)
+          .where(eq(orders.reference, session.id))
+          .for("update")
+          .limit(1);
+        if (!order) throw new Error("Stripe order could not be persisted.");
 
-    await db.insert(activityLog).values({
-      kind: "sale",
-      message: `Stripe: paid order ${order.reference} from ${customerName} (${amount} ${currency}).`,
-    });
+        const [existingDelivery] = await tx
+          .select({ id: deliveryStatus.id })
+          .from(deliveryStatus)
+          .where(eq(deliveryStatus.order_id, order.id))
+          .limit(1);
+        if (!existingDelivery) {
+          await tx.insert(deliveryStatus).values({
+            client_id: null,
+            order_id: order.id,
+            client_name: customerName,
+            pack: "stripe",
+            method: "stripe",
+            amount,
+          });
+        }
+
+        if (insertedOrder) {
+          await tx.insert(activityLog).values({
+            kind: "sale",
+            message: `Stripe: paid order ${order.reference} from ${customerName} (${amount} ${currency}).`,
+          });
+        }
+      });
+    } catch (error) {
+      // A 5xx response asks Stripe to retry; the database transaction ensures
+      // retries cannot leave duplicate or partially written records.
+      console.error("[stripe] failed to persist checkout:", error);
+      return res.status(500).json({ error: "Unable to record the completed checkout." });
+    }
   }
 
   return res.status(200).json({ received: true });

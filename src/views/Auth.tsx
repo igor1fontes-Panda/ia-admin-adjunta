@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bot, Mail, Lock, ShieldAlert, MailCheck } from "lucide-react";
 import { authSignIn, authSignUp, authResendVerification } from "../lib/data";
-import { NEON_AUTH } from "../lib/auth-client";
+import { ADMIN_EMAIL, NEON_AUTH } from "../lib/auth-client";
 import { CLERK_ENABLED, ClerkSignIn, ClerkSignUp } from "../lib/clerk-bridge";
 import { useT } from "../lib/i18n";
 import { errorMessage } from "../lib/errors";
@@ -14,9 +14,9 @@ export function Auth() {
   const t = useT();
 
   const [mode, setMode] = useState<"signin" | "signup">(() =>
-    new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin",
+    new URLSearchParams(location.search).get("mode") === "signup" ? "signup" : "signin",
   );
-  const [email, setEmail] = useState("");
+  const [email] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -153,12 +153,14 @@ export function Auth() {
                 type="email"
                 required
                 className="input pl-10"
-                placeholder="you@company.com"
+                placeholder={ADMIN_EMAIL}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                readOnly
+                aria-label="Authorized administrator email"
               />
             </div>
           </div>
+          <p className="text-xs text-zinc-500">Acesso reservado ao administrador: {ADMIN_EMAIL}</p>
           <div>
             <label className="label" htmlFor="password">
               {t("auth.password")}

@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install
@@ -46,7 +46,7 @@ jobs:
           echo "✅ Python dependencies clean"
 
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=low
 
       - name: Lint
         run: npm run lint
@@ -80,10 +80,10 @@ jobs:
         run: |
           {
             echo "## CI summary"
-            echo "- Commit: `${GITHUB_SHA:0:12}`"
-            echo "- Node: `$(node --version)`"
-            echo "- npm: `$(npm --version)`"
-            echo "- Result: `${{ job.status }}`"
+            echo "- Commit: ${GITHUB_SHA:0:12}"
+            echo "- Node: $(node --version)"
+            echo "- npm: $(npm --version)"
+            echo "- Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   fresh-clone-smoke:
@@ -96,7 +96,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Clean install
@@ -117,6 +117,6 @@ jobs:
         run: |
           {
             echo "## Fresh-clone smoke"
-            echo "- Commit: `${GITHUB_SHA:0:12}`"
-            echo "- Result: `${{ job.status }}` — npm ci && VITE_MOCK_DATA=true npm run build && npm test passed without any secrets"
+            echo "- Commit: ${GITHUB_SHA:0:12}"
+            echo "- Result: ${{ job.status }} — npm ci && VITE_MOCK_DATA=true npm run build && npm test passed without any secrets"
           } >> "$GITHUB_STEP_SUMMARY"
