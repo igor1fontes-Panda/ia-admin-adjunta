@@ -67,16 +67,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  *  - Response set-cookie headers are copied back one-by-one so the browser
  *    stores them on OUR origin — keeping the whole flow same-origin.
  */
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Only accept browser requests originating from this deployment's configured site origins. */
+function isTrustedOrigin(value: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return false;
+  }
+  if (parsed.origin !== value || !["https:", ...(process.env.NODE_ENV === "development" ? ["http:"] : [])].includes(parsed.protocol)) {
+    return false;
+  }
+
+  const configured = [
+    process.env.BETTER_AUTH_URL,
+    process.env.PUBLIC_SITE_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.V0_RUNTIME_URL,
+  ];
+  if (process.env.NODE_ENV === "development") {
+    configured.push("http://localhost:3000", "http://localhost:5173");
+  }
+
+  const allowed = new Set<string>();
+  for (const candidate of configured) {
+    if (!candidate) continue;
+    try {
+      allowed.add(new URL(candidate).origin);
+    } catch {
+      // Ignore malformed optional environment values.
+    }
+  }
+  return allowed.has(parsed.origin);
+}
+
 async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream: string) {
+  const method = (req.method ?? "POST").toUpperCase();
+  if (method === "OPTIONS") {
+    // No cross-origin access is needed: the SPA calls this same-origin endpoint.
+    return res.status(204).end();
+  }
+  if (!["GET", "HEAD", "POST"].includes(method)) {
+    res.setHeader("Allow", "GET, HEAD, POST, OPTIONS");
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+
+  const origin = headerValue(req.headers?.origin);
+  if ((origin && !isTrustedOrigin(origin)) || (!origin && !["GET", "HEAD"].includes(method))) {
+    return res.status(403).json({ error: "Untrusted request origin." });
+  }
+
   // Collect the raw request body once (Vercel parses JSON into req.body).
   const rawBody = typeof req.body === "string" ? req.body : req.body === undefined ? "" : JSON.stringify(req.body);
-
-  const url = `${upstream}${(req.url ?? "/").replace(/^\/api\/auth/, "")}`;
+  const url = `${upstream}${(req.url ?? "/").replace(/^\\/api\\/auth/, "")}`;
   const headers: Record<string, string> = { "content-type": "application/json" };
-  // Hop-by-hop + host-identity headers. x-forwarded-*/forwarded MUST be
-  // stripped: Better Auth validates the request host against its configured
-  // baseURL and rejects our domain with INVALID_HOSTNAME — the upstream must
-  // see its own host, not the one the edge layer injected.
+  // Hop-by-hop + host-identity headers. The upstream receives its own trusted
+  // Origin only after the caller's browser Origin has passed our allowlist.
   const stripped = [
     "host",
     "connection",
@@ -97,38 +148,23 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
     if (stripped.includes(lower)) continue;
     headers[lower] = v;
   }
-  // Forward the caller's session cookies to the managed endpoint.
-  const cookieHeader = req.headers?.cookie;
-  if (typeof cookieHeader === "string" && cookieHeader) headers.cookie = cookieHeader;
-  // Synthetic trusted origin (localhost is pre-approved by Neon Auth).
+  const cookieHeader = headerValue(req.headers?.cookie);
+  if (cookieHeader) headers.cookie = cookieHeader;
   headers.origin = "http://localhost:5173";
 
-  const method = req.method ?? "POST";
   try {
     const upstreamRes = await fetch(url, {
       method,
       headers,
-      // fetch() forbids bodies on GET/HEAD/OPTIONS.
-      body: ["GET", "HEAD", "OPTIONS"].includes(method) ? undefined : rawBody || "{}",
+      body: ["GET", "HEAD"].includes(method) ? undefined : rawBody || "{}",
     });
-
     const text = await upstreamRes.text();
     res.status(upstreamRes.status);
-
-    // Copy response cookies one-by-one so multiple set-cookie headers survive.
     const cookies = typeof upstreamRes.headers.getSetCookie === "function" ? upstreamRes.headers.getSetCookie() : [];
     for (const cookie of cookies) res.append("Set-Cookie", cookie);
-
-    // Session continuity + caching correctness across the proxy.
-    const ct = upstreamRes.headers.get("content-type");
-    if (ct) res.setHeader("Content-Type", ct);
+    const contentType = upstreamRes.headers.get("content-type");
+    if (contentType) res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "no-store");
-    res.setHeader("Access-Control-Allow-Origin", req.headers?.origin ?? "*");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Headers", "content-type");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-
-    if (method === "OPTIONS") return res.status(204).end();
     return res.end(text);
   } catch (error) {
     console.error("[auth] proxy error:", error);
