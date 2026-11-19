@@ -50,11 +50,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const user = await getSessionUser(req, auth);
       const privileged = user !== null;
       const rawScore = Number(raw.score);
+      // Public callers cannot influence internal lead scoring.
       const score = privileged
         ? Number.isFinite(rawScore)
           ? Math.min(Math.max(Math.round(rawScore), 0), 100)
           : 50
-        : Math.min(Number.isFinite(rawScore) ? Math.max(Math.round(rawScore), 0) : 50, 60);
+        : 50;
       const rawStatus = bodyStatus(raw);
       const status: LeadStatus = privileged && isLeadStatus(rawStatus) ? rawStatus : "new";
 
