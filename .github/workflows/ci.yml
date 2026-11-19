@@ -51,11 +51,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Temporary formatter preview for admin security changes
-        run: |
-          npx prettier --write api/auth/better-auth.ts api/lib/http.test.ts
-          git diff -- api/auth/better-auth.ts api/lib/http.test.ts
-
       - name: Formatting check (Prettier)
         run: npm run format:check
 
