@@ -52,7 +52,13 @@ jobs:
         run: npm run lint
 
       - name: Formatting check (Prettier)
-        run: npm run format:check
+        run: |
+          if ! npx prettier --check api/lib/http.test.ts; then
+            npx prettier api/lib/http.test.ts > /tmp/http-test.formatted.ts
+            diff -u api/lib/http.test.ts /tmp/http-test.formatted.ts || true
+            exit 1
+          fi
+          npm run format:check
 
       - name: Typecheck
         run: npm run typecheck
