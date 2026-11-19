@@ -90,7 +90,7 @@ describe("auth flow (same-origin client + server proxy)", () => {
     renderAuth();
     await submitCredentials();
     expect(await screen.findByText(/Verifica o teu email/i)).toBeInTheDocument();
-    expect(await screen.findByText(/igor1fontes@gmail.com/)).toBeInTheDocument();
+    expect(screen.getByText("igor1fontes@gmail.com", { selector: "span" })).toBeInTheDocument();
     // Panel replaces navigation — dashboard is never reached unverified.
     expect(screen.queryByText("dashboard-reached")).not.toBeInTheDocument();
   });
