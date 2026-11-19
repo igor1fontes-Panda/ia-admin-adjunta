@@ -53,9 +53,9 @@ jobs:
 
       - name: Formatting check (Prettier)
         run: |
-          if ! npx prettier --check db-null-safety.test.ts; then
-            npx prettier db-null-safety.test.ts > /tmp/db-null-safety.formatted.ts
-            diff -u db-null-safety.test.ts /tmp/db-null-safety.formatted.ts || true
+          if ! npx prettier --check api/auth/better-auth.ts; then
+            npx prettier api/auth/better-auth.ts > /tmp/better-auth.formatted.ts
+            diff -u api/auth/better-auth.ts /tmp/better-auth.formatted.ts || true
             exit 1
           fi
           npm run format:check
