@@ -35,7 +35,7 @@ function neonAuthUrl(): string {
   return (process.env.VITE_NEON_AUTH_URL || "").trim().replace(/\/$/, "");
 }
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "igor1fontes@gmail.com").trim().toLowerCase();
+const ADMIN_EMAIL = "igor1fontes@gmail.com";
 
 function requestBody(req: VercelRequest): Record<string, unknown> {
   if (typeof req.body === "string") {
