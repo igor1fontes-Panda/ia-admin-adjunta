@@ -54,7 +54,9 @@ async function hydrateEventResource(
 }
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
     return res.status(503).json({ error: "Stripe webhook is not configured." });
   }
@@ -154,7 +156,9 @@ export default async function handler(req: any, res: any) {
       // A 5xx response asks Stripe to retry; the database transaction ensures
       // retries cannot leave duplicate or partially written records.
       console.error("[stripe] failed to persist checkout:", error);
-      return res.status(500).json({ error: "Unable to record the completed checkout." });
+      return res
+        .status(500)
+        .json({ error: "Unable to record the completed checkout." });
     }
   }
 
