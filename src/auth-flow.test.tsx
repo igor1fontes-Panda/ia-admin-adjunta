@@ -108,7 +108,6 @@ describe("auth flow (same-origin client + server proxy)", () => {
     expect((resendCall?.[1] as RequestInit).method).toBe("POST");
   });
 
-
   it("allows only the administrator to bootstrap the account", async () => {
     renderAuth("/auth?mode=signup");
     const { userEvent } = await import("@testing-library/user-event");
