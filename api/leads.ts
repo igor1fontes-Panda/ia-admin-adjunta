@@ -7,7 +7,7 @@
  * hardening the old Supabase trigger provided. No session => no write access
  * to any other table.
  */
-import type { VercelRequest, VercelResponse } from "./lib/http";
+import type { VercelRequest, VercelResponse } from "../lib/api-http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { leads } from "../db/schema";
@@ -20,7 +20,7 @@ import {
   parseBody,
   serverError,
   unauthorized,
-} from "./lib/http";
+} from "../lib/api-http";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "won", "lost"] as const;
 type LeadStatus = (typeof LEAD_STATUSES)[number];
