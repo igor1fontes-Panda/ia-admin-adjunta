@@ -52,13 +52,7 @@ jobs:
         run: npm run lint
 
       - name: Formatting check (Prettier)
-        run: |
-          if ! npx prettier --check api/auth/better-auth.ts; then
-            npx prettier api/auth/better-auth.ts > /tmp/better-auth.formatted.ts
-            diff -u api/auth/better-auth.ts /tmp/better-auth.formatted.ts || true
-            exit 1
-          fi
-          npm run format:check
+        run: npm run format:check
 
       - name: Typecheck
         run: npm run typecheck
