@@ -14,7 +14,7 @@ export function Auth() {
   const t = useT();
 
   const [mode, setMode] = useState<"signin" | "signup">(() =>
-    new URLSearchParams(window.location.search).get("mode") === "signup" ? "signup" : "signin",
+    new URLSearchParams(location.search).get("mode") === "signup" ? "signup" : "signin",
   );
   const [email] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
