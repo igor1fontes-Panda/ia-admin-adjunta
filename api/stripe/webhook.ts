@@ -10,7 +10,11 @@ import { eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../../db";
 import { activityLog, deliveryStatus, orders } from "../../db/schema";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+function stripeClient(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("Stripe is not configured.");
+  return new Stripe(key);
+}
 
 export const config = { api: { bodyParser: false } };
 
@@ -36,7 +40,7 @@ async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["
   if (!isMinimalResource(resource)) return resource;
 
   if (event.type.startsWith("setup_intent.")) {
-    return stripe.setupIntents.retrieve(resource.id);
+    return stripeClient().setupIntents.retrieve(resource.id);
   }
 
   return resource;
@@ -56,7 +60,7 @@ export default async function handler(req: any, res: any) {
     const payload = await rawBody(req);
     const signature = getSignature(req);
     if (!signature) throw new Error("Missing stripe-signature header.");
-    event = stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
+    event = stripeClient().webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch {
     return res.status(400).json({ error: "Invalid Stripe webhook signature." });
   }
@@ -77,6 +81,12 @@ export default async function handler(req: any, res: any) {
     const currency = session.currency?.toUpperCase() || "EUR";
 
     // Idempotent upsert — Stripe retries webhooks, the reference is unique.
+    const [existingOrder] = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.reference, session.id))
+      .limit(1);
+
     const [order] = await db
       .insert(orders)
       .values({
@@ -94,20 +104,29 @@ export default async function handler(req: any, res: any) {
       })
       .returning();
 
-    // Mirror the Ops Manager behaviour: register the sold pack for delivery QA.
-    await db.insert(deliveryStatus).values({
+    // Stripe retries events. Avoid duplicating delivery and activity rows for an existing order.
+    const [existingDelivery] = await db
+      .select({ id: deliveryStatus.id })
+      .from(deliveryStatus)
+      .where(eq(deliveryStatus.order_id, order.id))
+      .limit(1);
+    if (!existingDelivery) {
+      await db.insert(deliveryStatus).values({
       client_id: null,
       order_id: order.id,
       client_name: customerName,
       pack: "stripe",
       method: "stripe",
-      amount,
-    });
+        amount,
+      });
+    }
 
-    await db.insert(activityLog).values({
-      kind: "sale",
-      message: `Stripe: paid order ${order.reference} from ${customerName} (${amount} ${currency}).`,
-    });
+    if (!existingOrder) {
+      await db.insert(activityLog).values({
+        kind: "sale",
+        message: `Stripe: paid order ${order.reference} from ${customerName} (${amount} ${currency}).`,
+      });
+    }
   }
 
   return res.status(200).json({ received: true });
