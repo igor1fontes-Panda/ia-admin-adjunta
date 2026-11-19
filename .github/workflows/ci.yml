@@ -36,12 +36,12 @@ jobs:
 
       # One-time, tightly scoped remediation on the dedicated security PR.
       # npm scripts are disabled while npm resolves advisory fixes.
-      - name: Refresh vulnerable npm dependency lockfile
+      - name: Refresh npm lockfile within declared semver ranges
         id: audit-fix
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'security/remediate-dependencies-')
         run: |
           set +e
-          npm audit fix --ignore-scripts
+          npm update --package-lock-only --ignore-scripts
           fix_status=$?
           set -e
           echo "npm audit fix exit code: $fix_status"
@@ -121,10 +121,10 @@ jobs:
         run: |
           {
             echo "## CI summary"
-            echo "- Commit: `${GITHUB_SHA:0:12}`"
-            echo "- Node: `$(node --version)`"
-            echo "- npm: `$(npm --version)`"
-            echo "- Result: `${{ job.status }}`"
+            echo "- Commit: ${GITHUB_SHA:0:12}"
+            echo "- Node: $(node --version)"
+            echo "- npm: $(npm --version)"
+            echo "- Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   fresh-clone-smoke:
@@ -158,6 +158,6 @@ jobs:
         run: |
           {
             echo "## Fresh-clone smoke"
-            echo "- Commit: `${GITHUB_SHA:0:12}`"
-            echo "- Result: `${{ job.status }}` — npm ci && VITE_MOCK_DATA=true npm run build && npm test passed without any secrets"
+            echo "- Commit: ${GITHUB_SHA:0:12}"
+            echo "- Result: ${{ job.status }} — npm ci && VITE_MOCK_DATA=true npm run build && npm test passed without any secrets"
           } >> "$GITHUB_STEP_SUMMARY"
