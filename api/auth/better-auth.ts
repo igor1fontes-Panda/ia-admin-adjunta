@@ -49,7 +49,7 @@ function requestBody(req: VercelRequest): Record<string, unknown> {
 }
 
 /** Enforce the single-admin identity before requests reach either auth provider. */
-function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): VercelResponse | null {
+export function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): VercelResponse | null {
   let path = "/";
   try {
     path = new URL(req.url ?? "/", "http://localhost").pathname.toLowerCase().replace(/\/+$/, "");
