@@ -3,12 +3,12 @@
  * autonomous bots have learned from real outcomes (channel conversion,
  * incident fixes, market briefs, skills).
  */
-import type { VercelRequest, VercelResponse } from "./lib/http";
+import type { VercelRequest, VercelResponse } from "../lib/api-http";
 import { desc } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { agentMemory } from "../db/schema";
 import { auth } from "../server/auth";
-import { dbUnavailable, getSessionUser, serverError, unauthorized } from "./lib/http";
+import { dbUnavailable, getSessionUser, serverError, unauthorized } from "../lib/api-http";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isDbConfigured || !db) return dbUnavailable(res);
