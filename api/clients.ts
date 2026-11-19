@@ -4,7 +4,7 @@
  *   POST  /api/clients        — create (MRR derived from plan)
  *   PATCH /api/clients?id=…   — update status/plan
  */
-import type { VercelRequest, VercelResponse } from "./lib/http";
+import type { VercelRequest, VercelResponse } from "../lib/api-http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { clients } from "../db/schema";
@@ -17,7 +17,7 @@ import {
   parseBody,
   serverError,
   unauthorized,
-} from "./lib/http";
+} from "../lib/api-http";
 
 const PLANS = { starter: "1250.00", professional: "2916.00", enterprise: "8333.00" } as const;
 type Plan = keyof typeof PLANS;
