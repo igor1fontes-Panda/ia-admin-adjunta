@@ -30,6 +30,7 @@
     "db",
     "server",
     "api",
+    "tests",
     "drizzle.config.ts",
     "vite.config.ts",
     ".next/types/**/*.ts",
