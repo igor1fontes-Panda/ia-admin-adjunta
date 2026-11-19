@@ -103,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Self-hosted mode: load the auth stack lazily so this function only pays
   // for it when it actually runs (and bundlers don't trace it in proxy mode).
-  const [{ auth }, { toNodeHandler }] = await Promise.all([import("../../server/auth"), import("better-auth/node")]);
+  const [{ auth }, { toNodeHandler }] = await Promise.all([import("../../server/auth.ts"), import("better-auth/node")]);
   if (!auth) {
     return res.status(503).json({
       error:
