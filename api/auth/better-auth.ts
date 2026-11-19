@@ -124,7 +124,7 @@ async function proxyToNeonAuth(req: VercelRequest, res: VercelResponse, upstream
 
   // Collect the raw request body once (Vercel parses JSON into req.body).
   const rawBody = typeof req.body === "string" ? req.body : req.body === undefined ? "" : JSON.stringify(req.body);
-  const url = `${upstream}${(req.url ?? "/").replace(/^\\/api\\/auth/, "")}`;
+  const url = `${upstream}${(req.url ?? "/").replace(/^\/api\/auth/, "")}`;
   const headers: Record<string, string> = { "content-type": "application/json" };
   // Hop-by-hop + host-identity headers. The upstream receives its own trusted
   // Origin only after the caller's browser Origin has passed our allowlist.
