@@ -52,7 +52,13 @@ jobs:
         run: npm run lint
 
       - name: Formatting check (Prettier)
-        run: npm run format:check
+        run: |
+          if ! npx prettier --check db-null-safety.test.ts; then
+            npx prettier db-null-safety.test.ts > /tmp/db-null-safety.formatted.ts
+            diff -u db-null-safety.test.ts /tmp/db-null-safety.formatted.ts || true
+            exit 1
+          fi
+          npm run format:check
 
       - name: Typecheck
         run: npm run typecheck
