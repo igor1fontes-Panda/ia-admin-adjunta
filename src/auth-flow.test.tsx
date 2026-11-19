@@ -64,10 +64,10 @@ function renderAuth() {
   );
 }
 
-async function submitCredentials(email = "ana@acme.test", password = "password123") {
+async function submitCredentials(password = "password123") {
   const { userEvent } = await import("@testing-library/user-event");
   const user = userEvent.setup();
-  await user.type(screen.getByPlaceholderText("you@company.com"), email);
+  expect(screen.getByLabelText("Authorized administrator email")).toHaveValue("igor1fontes@gmail.com");
   await user.type(screen.getByPlaceholderText("••••••••"), password);
   await user.click(screen.getByRole("button", { name: /entrar/i }));
   return user;
@@ -90,7 +90,7 @@ describe("auth flow (same-origin client + server proxy)", () => {
     renderAuth();
     await submitCredentials();
     expect(await screen.findByText(/Verifica o teu email/i)).toBeInTheDocument();
-    expect(await screen.findByText(/ana@acme\.test/)).toBeInTheDocument();
+    expect(await screen.findByText(/igor1fontes@gmail.com/)).toBeInTheDocument();
     // Panel replaces navigation — dashboard is never reached unverified.
     expect(screen.queryByText("dashboard-reached")).not.toBeInTheDocument();
   });
