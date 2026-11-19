@@ -35,7 +35,62 @@ function neonAuthUrl(): string {
   return (process.env.VITE_NEON_AUTH_URL || "").trim().replace(/\/$/, "");
 }
 
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "igor1fontes@gmail.com").trim().toLowerCase();
+
+function requestBody(req: VercelRequest): Record<string, unknown> {
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return req.body && typeof req.body === "object" ? (req.body as Record<string, unknown>) : {};
+}
+
+/** Enforce the single-admin identity before requests reach either auth provider. */
+function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): VercelResponse | null {
+  let path = "/";
+  try {
+    path = new URL(req.url ?? "/", "http://localhost").pathname.toLowerCase().replace(/\\/+$/, "");
+  } catch {
+    return res.status(400).json({ error: "Invalid authentication route." });
+  }
+
+  const body = requestBody(req);
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const newEmail = typeof body.newEmail === "string" ? body.newEmail.trim().toLowerCase() : "";
+  const isEmailSignUp = path.endsWith("/sign-up/email");
+  const isEmailSignIn = path.endsWith("/sign-in/email");
+  const isEmailRecovery =
+    path.endsWith("/forget-password") ||
+    path.endsWith("/send-verification-email") ||
+    path.endsWith("/resend-verification-email");
+  const isEmailChange = path.endsWith("/change-email") || path.endsWith("/update-user");
+
+  // Do not expose alternative identity providers or signup methods.
+  if (
+    (path.includes("/sign-up/") && !isEmailSignUp) ||
+    (path.includes("/sign-in/") && !isEmailSignIn)
+  ) {
+    return res.status(403).json({ error: "Only the authorized administrator can access this application." });
+  }
+
+  if ((isEmailSignUp || isEmailSignIn || isEmailRecovery) && email !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: "This application is restricted to its authorized administrator." });
+  }
+
+  if (isEmailChange && ((email && email !== ADMIN_EMAIL) || (newEmail && newEmail !== ADMIN_EMAIL))) {
+    return res.status(403).json({ error: "The administrator email address cannot be changed here." });
+  }
+
+  return null;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const denied = enforceAdminIdentity(req, res);
+  if (denied) return denied;
+
   const upstream = neonAuthUrl();
   if (upstream) {
     return proxyToNeonAuth(req, res, upstream);
