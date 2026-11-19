@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install
@@ -50,11 +50,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Temporary formatter preview for admin security changes
-        run: |
-          npx prettier --write api/auth/better-auth.ts
-          git diff -- api/auth/better-auth.ts
 
       - name: Formatting check (Prettier)
         run: npm run format:check
@@ -101,7 +96,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Clean install
