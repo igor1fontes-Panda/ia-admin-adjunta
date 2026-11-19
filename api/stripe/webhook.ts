@@ -34,10 +34,7 @@ function getSignature(req: any): string | undefined {
 function isMinimalResource(value: unknown): value is { id: string; object?: string } {
   if (!value || typeof value !== "object") return false;
   const resource = value as { id?: unknown; object?: unknown };
-  return (
-    typeof resource.id === "string" &&
-    (resource.object === undefined || typeof resource.object === "string")
-  );
+  return typeof resource.id === "string" && (resource.object === undefined || typeof resource.object === "string");
 }
 
 async function hydrateEventResource(
@@ -83,23 +80,14 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ received: true });
   }
 
-  if (
-    event.type === "checkout.session.completed" ||
-    event.type === "checkout.session.async_payment_succeeded"
-  ) {
+  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const session = (await hydrateEventResource(event)) as Stripe.Checkout.Session;
-    if (
-      session.payment_status !== "paid" &&
-      event.type === "checkout.session.completed"
-    ) {
+    if (session.payment_status !== "paid" && event.type === "checkout.session.completed") {
       return res.status(200).json({ received: true });
     }
 
     const amount = ((session.amount_total || 0) / 100).toFixed(2);
-    const customerName =
-      session.customer_details?.name ||
-      session.customer_details?.email ||
-      "Stripe customer";
+    const customerName = session.customer_details?.name || session.customer_details?.email || "Stripe customer";
     const currency = session.currency?.toUpperCase() || "EUR";
 
     try {
