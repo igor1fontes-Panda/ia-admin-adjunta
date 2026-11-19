@@ -51,14 +51,25 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit refreshed dependency lockfile and dispatch clean verification
-        if: steps.audit-fix.outputs.changed == 'true'
+      - name: Format security changes with Prettier
+        id: format-security
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'security/remediate-dependencies-')
+        run: |
+          npx prettier --write api/auth/better-auth.ts api/clients.ts
+          if git diff --quiet -- api/auth/better-auth.ts api/clients.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit generated dependency and formatting updates
+        if: steps.audit-fix.outputs.changed == 'true' || steps.format-security.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
+          git add package.json package-lock.json api/auth/better-auth.ts api/clients.ts
           git commit -m "fix(security): refresh vulnerable npm dependencies"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "HEAD:${GITHUB_HEAD_REF}"
@@ -87,7 +98,7 @@ jobs:
           echo "✅ Python dependencies clean"
 
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=low
 
       - name: Lint
         run: npm run lint
