@@ -12,9 +12,9 @@
  * reject the deployed origin with "Invalid origin".
  */
 import { createAuthClient } from "better-auth/react";
+import { ADMIN_EMAIL } from "../../shared/admin";
 
-/** Public identifier of the only account permitted to enter the admin workspace. */
-export const ADMIN_EMAIL = "igor1fontes@gmail.com";
+export { ADMIN_EMAIL };
 
 const configuredAuthUrl = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined)?.trim();
 

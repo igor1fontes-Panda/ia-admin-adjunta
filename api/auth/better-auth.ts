@@ -27,6 +27,7 @@
  *    when the database is not configured.
  */
 import type { VercelRequest, VercelResponse } from "../lib/http";
+import { ADMIN_EMAIL } from "../../shared/admin";
 
 export const config = { runtime: "nodejs" };
 
@@ -34,8 +35,6 @@ export const config = { runtime: "nodejs" };
 function neonAuthUrl(): string {
   return (process.env.VITE_NEON_AUTH_URL || "").trim().replace(/\/$/, "");
 }
-
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "igor1fontes@gmail.com").trim().toLowerCase();
 
 function requestBody(req: VercelRequest): Record<string, unknown> {
   if (typeof req.body === "string") {
@@ -103,7 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Self-hosted mode: load the auth stack lazily so this function only pays
   // for it when it actually runs (and bundlers don't trace it in proxy mode).
-  const [{ auth }, { toNodeHandler }] = await Promise.all([import("../../server/auth"), import("better-auth/node")]);
+  // Keep the .ts extension explicit: Node 24 ESM does not infer source extensions in the deployed function bundle.
+  const [{ auth }, { toNodeHandler }] = await Promise.all([import("../../server/auth.ts"), import("better-auth/node")]);
   if (!auth) {
     return res.status(503).json({
       error:

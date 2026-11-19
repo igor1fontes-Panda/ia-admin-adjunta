@@ -9,9 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import type { VercelResponse } from "./http";
-import { apiSchemas, isAdminEmail, parseBody, validationError } from "./http";
-import { enforceAdminIdentity } from "../auth/better-auth";
+import type { VercelResponse } from "../../api/lib/http";
+import { apiSchemas, isAdminEmail, parseBody, validationError } from "../../api/lib/http";
+import { enforceAdminIdentity } from "../../api/auth/better-auth";
 
 function mockRes(): VercelResponse & { statusCode: number; body: unknown } {
   const state = { statusCode: 200, body: undefined as unknown };
@@ -184,7 +184,7 @@ describe("validationError", () => {
 });
 
 describe("single-administrator access control", () => {
-  it("recognizes the configured administrator email case-insensitively", () => {
+  it("recognizes only the fixed administrator email case-insensitively", () => {
     expect(isAdminEmail("Igor1Fontes@gmail.com")).toBe(true);
     expect(isAdminEmail("other@example.com")).toBe(false);
     expect(isAdminEmail(undefined)).toBe(false);
@@ -210,6 +210,23 @@ describe("single-administrator access control", () => {
     );
     expect(denied).toBe(deniedResponse);
     expect(deniedResponse.statusCode).toBe(403);
+  });
+
+  it("rejects non-admin and missing identities on email sign-in", () => {
+    for (const body of [{ email: "other@example.com" }, {}]) {
+      const response = mockRes();
+      enforceAdminIdentity(
+        {
+          method: "POST",
+          url: "/api/auth/sign-in/email",
+          body,
+          query: {},
+          headers: {},
+        },
+        response,
+      );
+      expect(response.statusCode).toBe(403);
+    }
   });
 
   it("rejects alternative sign-in methods and administrator email changes", () => {

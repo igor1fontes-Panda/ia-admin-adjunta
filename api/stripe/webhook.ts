@@ -20,7 +20,9 @@ export const config = { api: { bodyParser: false } };
 
 async function rawBody(req: any): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
   return Buffer.concat(chunks);
 }
 
@@ -47,7 +49,9 @@ async function hydrateEventResource(event: Stripe.Event): Promise<Stripe.Event["
 }
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
   if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
     return res.status(503).json({ error: "Stripe webhook is not configured." });
   }
@@ -99,12 +103,7 @@ export default async function handler(req: any, res: any) {
           .onConflictDoNothing({ target: orders.reference })
           .returning({ id: orders.id });
 
-        const [order] = await tx
-          .select()
-          .from(orders)
-          .where(eq(orders.reference, session.id))
-          .for("update")
-          .limit(1);
+        const [order] = await tx.select().from(orders).where(eq(orders.reference, session.id)).for("update").limit(1);
         if (!order) throw new Error("Stripe order could not be persisted.");
 
         const [existingDelivery] = await tx

@@ -28,6 +28,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Enforce Vercel Hobby serverless function limit
+        run: node scripts/check-vercel-function-count.mjs
+
       - name: Python bots syntax and offline tests
         run: |
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
@@ -68,12 +71,66 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_MOCK_DATA: "true"
 
-      - name: Check client bundle for server secrets
+      - name: Check built client bundle for server secrets
         run: |
-          if grep -RInE 'SUPABASE_SERVICE_ROLE_KEY|SUPABASE_JWT_SECRET|GEMINI_API_KEY|BLACKBOX_API_KEY' src public 2>/dev/null; then
-            echo "Server-only secret name found in client-facing source."
-            exit 1
-          fi
+          node --input-type=module <<'NODE'
+          import { readdir, readFile } from "node:fs/promises";
+          import path from "node:path";
+
+          const root = "dist";
+          const serverOnlyNames = [
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "SUPABASE_SECRET_KEY",
+            "SUPABASE_JWT_SECRET",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "GEMINI_API_KEY",
+            "BLACKBOX_API_KEY",
+            "HUME_API_KEY",
+          ];
+          const tokenPatterns = [
+            ["Supabase secret API key", /sb_secret_[A-Za-z0-9_-]{12,}/g],
+            ["Stripe secret API key", /sk_(?:live|test)_[A-Za-z0-9]{12,}/g],
+            ["Stripe webhook signing secret", /whsec_[A-Za-z0-9]{12,}/g],
+            ["private key material", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
+            ["Postgres connection URI", /postgres(?:ql)?:\/\/[^:\s/@]+:[^@\s/]+@[^/\s]+\/[^\s]+/g],
+          ];
+          const files = [];
+          async function walk(directory) {
+            for (const entry of await readdir(directory, { withFileTypes: true })) {
+              const file = path.join(directory, entry.name);
+              if (entry.isDirectory()) await walk(file);
+              else files.push(file);
+            }
+          }
+          await walk(root);
+          if (files.length === 0) throw new Error("The built dist bundle is empty.");
+
+          const findings = [];
+          for (const file of files) {
+            const content = await readFile(file, "utf8");
+            for (const name of serverOnlyNames) {
+              if (content.includes(name)) findings.push({ file, label: `server-only variable name: ${name}` });
+            }
+            for (const [label, pattern] of tokenPatterns) {
+              if (pattern.test(content)) findings.push({ file, label });
+              pattern.lastIndex = 0;
+            }
+            for (const match of content.matchAll(/eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g)) {
+              try {
+                const payload = JSON.parse(Buffer.from(match[1], "base64url").toString("utf8"));
+                if (payload.role === "service_role") findings.push({ file, label: "Supabase service_role JWT" });
+              } catch {
+                // Ignore non-JWT strings that only resemble a compact token.
+              }
+            }
+          }
+          if (findings.length) {
+            for (const finding of findings) console.error(`BLOCKED ${finding.file}: ${finding.label}`);
+            process.exit(1);
+          }
+          console.log(`Scanned ${files.length} built files: no known server-only secret names or token formats found.`);
+          NODE
 
       - name: Publish CI summary
         if: always()
