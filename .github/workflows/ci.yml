@@ -28,6 +28,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Enforce Vercel Hobby serverless function limit
+        run: node scripts/check-vercel-function-count.mjs
+
       - name: Python bots syntax and offline tests
         run: |
           python3 -m py_compile ai_engine.py scripts/hume_voice.py
