@@ -112,11 +112,11 @@ export default async function handler(req: any, res: any) {
       .limit(1);
     if (!existingDelivery) {
       await db.insert(deliveryStatus).values({
-      client_id: null,
-      order_id: order.id,
-      client_name: customerName,
-      pack: "stripe",
-      method: "stripe",
+        client_id: null,
+        order_id: order.id,
+        client_name: customerName,
+        pack: "stripe",
+        method: "stripe",
         amount,
       });
     }
