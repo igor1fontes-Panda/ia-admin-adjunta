@@ -68,9 +68,7 @@ export function enforceAdminIdentity(req: VercelRequest, res: VercelResponse): V
     path.endsWith("/resend-verification-email");
   const isEmailChange = path.endsWith("/change-email") || path.endsWith("/update-user");
   const usesAlternateIdentity =
-    typeof body.provider === "string" ||
-    typeof body.username === "string" ||
-    typeof body.phoneNumber === "string";
+    typeof body.provider === "string" || typeof body.username === "string" || typeof body.phoneNumber === "string";
 
   // This is an email/password-only administrator account. Apply the body
   // allowlist even if an upstream rewrite changes the visible request path.
