@@ -183,7 +183,6 @@ describe("validationError", () => {
   });
 });
 
-
 describe("single-administrator access control", () => {
   it("recognizes the configured administrator email case-insensitively", () => {
     expect(isAdminEmail("Igor1Fontes@gmail.com")).toBe(true);
@@ -193,7 +192,13 @@ describe("single-administrator access control", () => {
 
   it("allows signup only for the administrator identity", () => {
     const allowed = enforceAdminIdentity(
-      { method: "POST", url: "/api/auth/sign-up/email", body: { email: "igor1fontes@gmail.com" }, query: {}, headers: {} },
+      {
+        method: "POST",
+        url: "/api/auth/sign-up/email",
+        body: { email: "igor1fontes@gmail.com" },
+        query: {},
+        headers: {},
+      },
       mockRes(),
     );
     expect(allowed).toBeNull();
@@ -217,7 +222,13 @@ describe("single-administrator access control", () => {
 
     const emailResponse = mockRes();
     enforceAdminIdentity(
-      { method: "POST", url: "/api/auth/change-email", body: { newEmail: "other@example.com" }, query: {}, headers: {} },
+      {
+        method: "POST",
+        url: "/api/auth/change-email",
+        body: { newEmail: "other@example.com" },
+        query: {},
+        headers: {},
+      },
       emailResponse,
     );
     expect(emailResponse.statusCode).toBe(403);
