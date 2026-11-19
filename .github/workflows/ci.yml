@@ -90,7 +90,7 @@ jobs:
             ["Stripe secret API key", /sk_(?:live|test)_[A-Za-z0-9]{12,}/g],
             ["Stripe webhook signing secret", /whsec_[A-Za-z0-9]{12,}/g],
             ["private key material", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
-            ["Postgres connection URI", /postgres(?:ql)?:\\/\\/[^:\\s/@]+:[^@\\s/]+@[^/\\s]+\\/[^\\s]+/g],
+            ["Postgres connection URI", /postgres(?:ql)?:\/\/[^:\s/@]+:[^@\s/]+@[^/\s]+\/[^\s]+/g],
           ];
           const files = [];
           async function walk(directory) {
