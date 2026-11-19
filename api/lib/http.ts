@@ -77,8 +77,8 @@ export function badRequest(res: VercelResponse, message: string): VercelResponse
 /** Central error mapping so routes never leak stack traces to the client. */
 export function serverError(res: VercelResponse, error: unknown): VercelResponse {
   console.error("[api] error:", error);
-  const message = error instanceof Error ? error.message : "Unexpected server error.";
-  return res.status(500).json({ error: message });
+  // Keep database/provider details in server logs only; never expose them to clients.
+  return res.status(500).json({ error: "An internal server error occurred." });
 }
 
 // ---------- Input validation (zod) ----------
