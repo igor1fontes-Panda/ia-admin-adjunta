@@ -216,7 +216,13 @@ describe("single-administrator access control", () => {
     for (const body of [{ email: "other@example.com" }, {}]) {
       const response = mockRes();
       enforceAdminIdentity(
-        { method: "POST", url: "/api/auth/sign-in/email", body, query: {}, headers: {} },
+        {
+          method: "POST",
+          url: "/api/auth/sign-in/email",
+          body,
+          query: {},
+          headers: {},
+        },
         response,
       );
       expect(response.statusCode).toBe(403);
