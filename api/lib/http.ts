@@ -27,15 +27,11 @@ export interface VercelResponse {
   flushHeaders?(): void;
 }
 import type { Auth } from "../../server/auth";
+import { ADMIN_EMAIL, isAdminEmail } from "../../shared/admin";
+
+export { ADMIN_EMAIL, isAdminEmail };
 
 export type AuthUser = { id: string; email: string; name: string };
-
-/** Single principal allowed to access the administrative workspace. */
-export const ADMIN_EMAIL = "igor1fontes@gmail.com";
-
-export function isAdminEmail(email: string | null | undefined): boolean {
-  return typeof email === "string" && email.trim().toLowerCase() === ADMIN_EMAIL;
-}
 
 /** Returns the signed-in user for this request, or null.
  * `auth` may be null when DATABASE_URL is not configured (null-safe server).
