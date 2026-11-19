@@ -9,9 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 import type { z } from "zod";
-import type { VercelResponse } from "./http";
-import { apiSchemas, isAdminEmail, parseBody, validationError } from "./http";
-import { enforceAdminIdentity } from "../auth/better-auth";
+import type { VercelResponse } from "../../api/lib/http";
+import { apiSchemas, isAdminEmail, parseBody, validationError } from "../../api/lib/http";
+import { enforceAdminIdentity } from "../../api/auth/better-auth";
 
 function mockRes(): VercelResponse & { statusCode: number; body: unknown } {
   const state = { statusCode: 200, body: undefined as unknown };

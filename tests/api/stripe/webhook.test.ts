@@ -101,8 +101,8 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../db", () => ({ db: mocks.db, isDbConfigured: true }));
-vi.mock("../../db/schema", () => mocks.schema);
+vi.mock("../../../db", () => ({ db: mocks.db, isDbConfigured: true }));
+vi.mock("../../../db/schema", () => mocks.schema);
 vi.mock("drizzle-orm", () => ({
   eq: (column: unknown, value: unknown) => ({ column, value }),
 }));
@@ -113,7 +113,7 @@ vi.mock("stripe", () => ({
   },
 }));
 
-import handler from "./webhook";
+import handler from "../../../api/stripe/webhook";
 
 function makeRequest() {
   return {
