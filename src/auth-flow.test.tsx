@@ -1,6 +1,6 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // These tests exercise the self-hosted Better Auth flow. Force the additive
 // Clerk bridge OFF and the managed Neon Auth override OFF so this file is
@@ -51,10 +51,10 @@ vi.stubGlobal(
   }),
 );
 
-function renderAuth() {
+function renderAuth(initialPath = "/auth") {
   return render(
     <PreferencesProvider>
-      <MemoryRouter initialEntries={["/auth"]}>
+      <MemoryRouter initialEntries={[initialPath]}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<div>dashboard-reached</div>} />
@@ -74,6 +74,7 @@ async function submitCredentials(password = "password123") {
 }
 
 describe("auth flow (same-origin client + server proxy)", () => {
+  beforeEach(() => vi.mocked(fetch).mockClear());
   afterEach(cleanup);
 
   it("targets the app's own /api/auth base URL with cookie credentials", async () => {
@@ -105,6 +106,44 @@ describe("auth flow (same-origin client + server proxy)", () => {
     const resendCall = vi.mocked(fetch).mock.calls.find((c) => String(c[0]).includes("/send-verification-email"));
     expect(resendCall).toBeTruthy();
     expect((resendCall?.[1] as RequestInit).method).toBe("POST");
+  });
+
+
+  it("allows only the administrator to bootstrap the account", async () => {
+    renderAuth("/auth?mode=signup");
+    const { userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText("Igor Fontes"), "Igor Fontes");
+    await user.type(screen.getByPlaceholderText("••••••••"), "password123");
+    await user.click(screen.getByRole("button", { name: "Criar conta" }));
+    await waitFor(() => expect(screen.getByText("dashboard-reached")).toBeInTheDocument());
+
+    const signupCall = vi.mocked(fetch).mock.calls.find((call) => String(call[0]).includes("/sign-up/email"));
+    expect(signupCall).toBeTruthy();
+    expect(JSON.parse(String((signupCall?.[1] as RequestInit).body))).toMatchObject({
+      email: "igor1fontes@gmail.com",
+      name: "Igor Fontes",
+    });
+  });
+
+  it("switches between sign-in and the restricted signup form", async () => {
+    renderAuth();
+    const { userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Registar" }));
+    expect(screen.getByPlaceholderText("Igor Fontes")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    expect(screen.queryByPlaceholderText("Igor Fontes")).not.toBeInTheDocument();
+  });
+
+  it("shows a controlled error if the verification resend request fails", async () => {
+    renderAuth();
+    await submitCredentials();
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("mail service offline"));
+    const { userEvent } = await import("@testing-library/user-event");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /reenviar/i }));
+    expect(await screen.findByText("mail service offline")).toBeInTheDocument();
   });
 
   it("navigates to the dashboard after a verified sign-in", async () => {
