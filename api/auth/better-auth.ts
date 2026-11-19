@@ -27,6 +27,7 @@
  *    when the database is not configured.
  */
 import type { VercelRequest, VercelResponse } from "../lib/http";
+import { ADMIN_EMAIL } from "../../shared/admin";
 
 export const config = { runtime: "nodejs" };
 
@@ -35,7 +36,6 @@ function neonAuthUrl(): string {
   return (process.env.VITE_NEON_AUTH_URL || "").trim().replace(/\/$/, "");
 }
 
-const ADMIN_EMAIL = "igor1fontes@gmail.com";
 
 function requestBody(req: VercelRequest): Record<string, unknown> {
   if (typeof req.body === "string") {
