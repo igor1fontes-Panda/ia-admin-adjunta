@@ -3,12 +3,12 @@
  * delivery QA rows written by the Ops Manager and verified by the
  * Error Handler bot.
  */
-import type { VercelRequest, VercelResponse } from "./lib/http";
+import type { VercelRequest, VercelResponse } from "../lib/api-http";
 import { desc } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { deliveryStatus } from "../db/schema";
 import { auth } from "../server/auth";
-import { dbUnavailable, getSessionUser, serverError, unauthorized } from "./lib/http";
+import { dbUnavailable, getSessionUser, serverError, unauthorized } from "../lib/api-http";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isDbConfigured || !db) return dbUnavailable(res);
