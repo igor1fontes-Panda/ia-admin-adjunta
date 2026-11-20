@@ -64,7 +64,7 @@
     "stripe": "^22.6.2",
     "tailwindcss": "^4.3.5",
     "vite": "^8.3.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
