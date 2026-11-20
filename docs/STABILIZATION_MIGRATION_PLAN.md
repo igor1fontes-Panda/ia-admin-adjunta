@@ -134,3 +134,94 @@ Trabalho obrigatório:
 4. Rever os módulos de autenticação e todos os bots na branch de estabilização.
 5. Preparar migrations e testes em branch isolada.
 6. Só depois planear o cutover com janela, validação e rollback explícitos.
+
+
+## 13. Auditoria detalhada de autenticação e bots — 20/11/2026
+
+### Autenticação
+
+Ficheiros revistos:
+- `server/auth.ts`
+- `api/lib/http.ts`
+- `api/auth/better-auth.ts`
+- `src/lib/auth-client.ts`
+- `server/clerk.ts`
+- `lib/auth.ts`
+- `lib/db/schema.ts`
+- `db/index.ts`
+- `db/schema.ts`
+- `src/app/api/auth/[...all]/route.ts`
+- `src/app/page.tsx`
+
+Achados:
+1. `server/auth.ts` é a implementação Better Auth ligada ao schema Drizzle Neon principal.
+2. `api/auth/better-auth.ts` mantém dois modos: proxy Neon Managed Auth via `VITE_NEON_AUTH_URL` e Better Auth auto-gerido. A variável VITE também é exposta ao bundle do cliente.
+3. `api/lib/http.ts` tenta Better Auth e depois Clerk Bearer; `server/clerk.ts` mantém uma integração activa de fallback.
+4. `src/lib/auth-client.ts` define `NEON_AUTH` a partir de `VITE_NEON_AUTH_URL`, pelo que a interface ainda contém comportamento dependente do modo Managed Auth.
+5. Existe uma segunda instância em `lib/auth.ts`, usada pela superfície Next.js, com `pg` e schema camelCase fisicamente diferente do schema snake_case de `db/schema.ts`.
+6. `src/app/api/auth/[...all]/route.ts` encaminha directamente para Better Auth via `toNextJsHandler`, sem passar pelo controlo `enforceAdminIdentity` do handler Vercel. A superfície Next.js deve ser consolidada ou desactivada, não deixada como segundo caminho de autenticação.
+7. `server/auth.ts` activa email/password mas não configura explicitamente envio de recuperação de palavra-passe. A recuperação exige provider de email e teste end-to-end.
+8. O bootstrap administrativo tem de ser fechado de forma controlada antes de abrir o endpoint de registo; não copiar credenciais nem hashes sem validação.
+
+Decisão de implementação:
+- Uma única instância Better Auth e um único schema Drizzle.
+- Um único caminho de autenticação usado pela SPA e por qualquer handler Next.js que permaneça activo.
+- Retirar Neon Managed Auth e Clerk apenas depois de migração, login, recuperação e autorização testados.
+- Configurar recuperação de password e convite/bootstrap administrativo antes do cutover.
+
+### Bots e persistência
+
+Bots revistos:
+- `scripts/lead-hunter.mjs`
+- `scripts/ops-manager.mjs`
+- `scripts/growth-marketing.mjs`
+- `scripts/teacher-agent.mjs`
+- `scripts/error-handler.mjs`
+- `scripts/skills-scout.mjs`
+- `ai_engine.py`
+
+Camadas de dados:
+- `scripts/bot-lib.mjs` implementa um shim Supabase-like sobre Neon, mas cai para Supabase se Neon não estiver configurado ou se uma query Neon falhar. Isso permite split-brain durante falhas.
+- `scripts/bot-db.mjs` contém uma segunda implementação e usa Supabase quando Neon não está configurado. O lead-hunter usa esta camada e importa também o bot-lib para IA.
+- Os outros cinco bots JS usam o shim `supabase.from(...)` do `bot-lib.mjs`, apesar de a persistência principal ser Neon.
+- `ai_engine.py` usa Supabase REST directamente para leads, clients, orders, agent_memory e activity_log. Não usa Neon.
+- `scripts/hume_voice.py` usa Supabase Storage para publicar briefings de voz. Esta é uma dependência de object storage, não de base de dados, e precisa de migração própria ou de credenciais Storage separadas antes de remover todos os segredos Supabase.
+
+Fiabilidade:
+- Os seis bots JavaScript contêm caminhos de saída com `process.exit(0)` em situações sem configuração e/ou erro fatal. A política actual pode marcar execuções falhadas como sucesso.
+- `ai_engine.py` devolve código 0 quando não há configuração ou quando falha leitura de dados.
+- O teste `scripts/bots-null-safety.test.mjs` espera saída 0 para ausência de credenciais; deverá ser reescrito para distinguir execução intencionalmente ignorada (skip explícito) de erro operacional.
+- O shim constrói nomes de tabelas/colunas dinamicamente. Antes de o manter, validar identificadores contra allow-list e manter valores parametrizados.
+- `bot-lib.test.mjs` cobre o SQL gerado e falhas simuladas, mas não prova integração real, transacções ou ausência de fallback para outro servidor.
+
+### Workflows
+
+Ficheiros revistos:
+- `.github/workflows/ai-bots.yml`
+- `.github/workflows/ci.yml`
+- `.github/workflows/deploy.yml`
+- `.github/workflows/supabase-migrations.yml`
+- `.github/workflows/preview-environment.yml`
+
+Achados:
+1. `ai-bots.yml` passa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para os seis jobs JS e para o job Python; não fornece `DATABASE_URL` nem `NEON_DATABASE_URL`.
+2. Os seis jobs JS usam Node 22, apesar de `package.json` declarar Node 24 e o workflow CI principal já usar Node 24.
+3. `deploy.yml` também usa Node 22.
+4. `supabase-migrations.yml` continua configurado para fazer `supabase db push` em `main` quando há alterações nas migrações Supabase e o secret está presente. Este workflow deve ser desactivado/retirado apenas quando o fluxo de migrações Neon estiver implementado e verificado.
+5. O CI principal usa Node 24 e executa testes Python, lint, typecheck, coverage e build. A validação por PR pode ser usada como gate da branch de estabilização.
+6. Não foi possível consultar os valores nem a existência efectiva dos GitHub Secrets; nenhum valor secreto foi lido ou exposto.
+
+### Dependência de armazenamento de voz
+
+`scripts/hume_voice.py` carrega áudio gerado pela Hume para o bucket Supabase Storage `briefings`. Não remover credenciais Supabase indiscriminadamente. Opções técnicas para decidir na fase seguinte:
+- manter temporariamente uma credencial restrita exclusivamente a Storage, separada das credenciais de base de dados; ou
+- migrar os ficheiros para um object store escolhido (por exemplo, Vercel Blob ou S3 compatível), validar URLs e playback e só então retirar a dependência Storage.
+
+### Bloqueios antes da implementação
+
+- Definir provider transaccional de email para reset/invite Better Auth.
+- Confirmar a decisão de manter ou migrar Supabase Storage para briefings.
+- Inventariar de forma não sensível os 11 utilizadores de origem e os providers associados.
+- Preparar adapter Python PostgreSQL (dependência e conexão Neon) e testes sem acesso à produção.
+- Definir exit codes e semântica de skip/failure para os bots.
+- Consolidar a superfície Next.js e garantir que não há bypass do controlo administrativo.
