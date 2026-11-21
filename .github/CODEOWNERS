@@ -1,0 +1,7 @@
+# Default owner for all files in this repository.
+# Ownership and review routing are assigned to the repository owner.
+* @igor1fontes-Panda
+
+# Security-sensitive and release-critical configuration.
+.github/ @igor1fontes-Panda
+.github/workflows/ @igor1fontes-Panda
