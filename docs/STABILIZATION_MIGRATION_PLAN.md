@@ -207,12 +207,15 @@ Decisão de implementação — actualizada em 21/11/2026:
 - Dependências Clerk removidas; Better Auth e o adaptador Drizzle alinhados na versão 1.7.26.
 - Variáveis de ambiente legadas da integração Managed Neon Auth não foram apagadas do Vercel.
 
-**Verificação local**
+**Verificação local e CI — actualizada após o commit 87129cc**
 
 - npm ci: aprovado.
-- Testes: 147/147 aprovados.
-- TypeScript, ESLint e build Vite: aprovados.
-- A cobertura ainda precisa de ser recalculada após estas alterações.
+- Testes: 148/148 aprovados.
+- TypeScript, ESLint, Prettier e build Vite: aprovados.
+- Cobertura: 70,16% statements.
+- npm audit e pip-audit: sem vulnerabilidades conhecidas.
+- GitHub Actions: build-test e fresh-clone-smoke aprovados.
+- Vercel preview: BLOCKED pela política de verified commits; não houve deployment nem cutover de produção.
 - A integração directa do Better Auth com as 10 identidades existentes ainda não foi validada por um login end-to-end; não executar cutover.
 
 ### Bots e persistência
