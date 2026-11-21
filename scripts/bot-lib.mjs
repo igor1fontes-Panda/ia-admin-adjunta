@@ -92,6 +92,9 @@ export class ShimQuery {
     this._mode = "select";
     this._columns = "*";
     this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
     this._orderBy = null;
     this._ascending = false;
     this._limit = null;
@@ -105,6 +108,19 @@ export class ShimQuery {
   }
   eq(col, val) {
     this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\.ilike\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
     return this;
   }
   order(col, opts = {}) {
@@ -151,12 +167,13 @@ function param(v) {
 }
 
 async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
   if (neonSql) {
     try {
       return await execNeon(q);
     } catch (e) {
-      if (!supabaseClient) return { data: null, error: { message: String(e?.message ?? e) } };
-      // fall through to Supabase fallback
+      return { data: null, error: { message: String(e?.message ?? e) } };
     }
   }
   if (supabaseClient) {
@@ -178,10 +195,26 @@ async function execNeon(q) {
 
   if (q._mode === "select") {
     let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
     for (const [col, val] of q._filters) {
       params.push(param(val));
-      text += params.length === 1 ? " where" : " and";
-      text += ` "${col}" = $${params.length}`;
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" = ${params.length}`;
+    }
+    for (const [col, val] of q._gteFilters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" >= ${params.length}`;
+    }
+    if (q._orFilters.length) {
+      const clauses = q._orFilters.map(([col, val]) => {
+        params.push(val);
+        return `"${col}" ilike ${params.length}`;
+      });
+      text += hasWhere ? " and" : " where";
+      text += ` (${clauses.join(" or ")})`;
     }
     if (q._orderBy) text += ` order by "${q._orderBy}" ${q._ascending ? "asc" : "desc"}`;
     if (q._limit !== null) text += ` limit ${q._limit}`;
@@ -235,6 +268,8 @@ async function execSupabase(q) {
   else if (q._mode === "update") qb = qb.update(q._payload).select();
   else if (q._mode === "upsert") qb = qb.upsert(q._payload).select();
   for (const [col, val] of q._filters) qb = qb.eq(col, val);
+  for (const [col, val] of q._gteFilters) qb = qb.gte(col, val);
+  if (q._orExpression) qb = qb.or(q._orExpression);
   if (q._orderBy) qb = qb.order(q._orderBy, { ascending: q._ascending });
   if (q._limit !== null) qb = qb.limit(q._limit);
   if (q._single) qb = qb.single();
