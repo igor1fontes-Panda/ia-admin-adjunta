@@ -70,7 +70,7 @@ function DashboardGate() {
 }
 
 /**
- * Auth gate — the canonical Better Auth session (HttpOnly cookie based).
+ * Auth gate — only the Neon Managed Auth administrator session is accepted.
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();

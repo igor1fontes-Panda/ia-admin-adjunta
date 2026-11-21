@@ -3,7 +3,7 @@
  *
  * The browser never touches the database directly anymore. Every read/write
  * goes through this app's authenticated serverless API (Neon Postgres +
- * Drizzle server-side, Better Auth sessions). The ONLY public mutation is
+ * Drizzle server-side, Neon Managed Auth sessions). The ONLY public mutation is
  * the landing-page lead form (POST /api/leads without a session).
  *
  * "Live" updates arrive via a 15s poll of the authenticated snapshot —
@@ -12,7 +12,9 @@
  */
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
-import { AUTH_BASE } from "./auth-client";
+import { getSessionToken } from "./auth-client";
+export type Snapshot = { metrics: Metric; leads: Lead[]; clients: Client[]; orders: Order[]; activity: Activity[] };
+
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -20,6 +22,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     "Content-Type": "application/json",
     ...((init?.headers as Record<string, string>) ?? {}),
   };
+  // Neon Managed Auth issues the short-lived JWT; the API verifies it with JWKS.
+  // Public lead capture remains available if the auth service is unreachable.
+  try {
+    const token = await getSessionToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch {
+    // Protected endpoints return 401; the public lead form can still be submitted.
+  }
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
     ...init,
@@ -163,55 +173,6 @@ export type DeliveryRow = {
 export async function fetchDeliveryStatus(): Promise<DeliveryRow[]> {
   return api<DeliveryRow[]>("/deliveries");
 }
-
-// ---- Auth (Better Auth + Neon) ----
-
-export async function authSignIn(email: string, password: string): Promise<void> {
-  const res = await fetch(`${AUTH_BASE}/sign-in/email`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-    throw new Error(body.message || body.error || `Sign-in failed (${res.status})`);
-  }
-}
-
-export async function authSignOut(): Promise<void> {
-  await fetch(`${AUTH_BASE}/sign-out`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-  });
-}
-
-export async function authGetSession(): Promise<{ email: string; name: string } | null> {
-  try {
-    const res = await fetch(`${AUTH_BASE}/get-session`, {
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return null;
-    const session = (await res.json()) as { user?: { email?: string; name?: string } } | null;
-    if (session?.user?.email) return { email: session.user.email, name: session.user.name ?? "" };
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-// ---- Aggregated snapshot ----
-
-export type Snapshot = {
-  metrics: Metric;
-  leads: Lead[];
-  clients: Client[];
-  orders: Order[];
-  activity: Activity[];
-};
 
 export async function loadSnapshot(): Promise<Snapshot> {
   const [leads, clients, orders, activity] = await Promise.all([

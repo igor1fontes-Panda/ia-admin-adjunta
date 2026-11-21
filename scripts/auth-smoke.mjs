@@ -1,54 +1,27 @@
-const rawBaseUrl = process.env.AUTH_SMOKE_URL || "http://localhost:3000";
-const baseUrl = rawBaseUrl.endsWith("/") ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
-const email = "smoke-" + Date.now() + "@example.invalid";
-const password = "Smoke-" + crypto.randomUUID();
+const baseUrl = process.env.NEON_AUTH_BASE_URL?.replace(/\/+$/, "");
+const jwksUrl = process.env.NEON_AUTH_JWKS_URL || (baseUrl ? `${baseUrl}/.well-known/jwks.json` : "");
 
-async function request(path, options = {}) {
-  const response = await fetch(baseUrl + path, {
-    redirect: "manual",
-    ...options,
-    headers: { "content-type": "application/json", ...(options.headers || {}) },
-  });
-  const text = await response.text();
-  let body = null;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { response, body };
+if (!baseUrl || !jwksUrl) {
+  throw new Error("Set NEON_AUTH_BASE_URL (and optionally NEON_AUTH_JWKS_URL) before running auth:smoke.");
 }
 
-const session = await request("/api/auth/get-session");
-if (![200, 401].includes(session.response.status)) {
-  throw new Error("get-session returned " + session.response.status + ": " + JSON.stringify(session.body));
+const health = await fetch(`${baseUrl}/ok`, { redirect: "manual" });
+if (!health.ok) {
+  throw new Error(`Neon Managed Auth health endpoint returned ${health.status}.`);
 }
 
-const signIn = await request("/api/auth/sign-in/email", {
-  method: "POST",
-  body: JSON.stringify({ email, password }),
-});
-if (![400, 401, 403, 404, 503].includes(signIn.response.status)) {
-  throw new Error(
-    "sign-in contract returned unexpected " + signIn.response.status + ": " + JSON.stringify(signIn.body),
-  );
+const jwksResponse = await fetch(jwksUrl, { redirect: "manual" });
+if (!jwksResponse.ok) {
+  throw new Error(`Neon Managed Auth JWKS endpoint returned ${jwksResponse.status}.`);
 }
 
-const signUp = await request("/api/auth/sign-up/email", {
-  method: "POST",
-  body: JSON.stringify({ email, password, name: "Auth smoke test" }),
-});
-if (signUp.response.status !== 403) {
-  throw new Error("sign-up must be disabled; received " + signUp.response.status + ": " + JSON.stringify(signUp.body));
+const jwks = await jwksResponse.json();
+if (!Array.isArray(jwks?.keys) || jwks.keys.length === 0) {
+  throw new Error("Neon Managed Auth returned an empty or invalid JWKS document.");
+}
+if (!jwks.keys.some((key) => key.kty === "OKP" && key.crv === "Ed25519" && typeof key.kid === "string")) {
+  throw new Error("Neon Managed Auth JWKS does not contain an Ed25519 signing key.");
 }
 
-console.log("[auth-smoke] " + baseUrl + " responded correctly for session, sign-in and disabled sign-up.");
-console.log(
-  "[auth-smoke] get-session=" +
-    session.response.status +
-    " sign-in=" +
-    signIn.response.status +
-    " sign-up=" +
-    signUp.response.status,
-);
-console.log("[auth-smoke] This test uses a non-existent identity and does not create a user or write database data.");
+console.log("[auth-smoke] Neon Managed Auth health and EdDSA JWKS checks passed.");
+console.log("[auth-smoke] Read-only probe: no login, identity, session, or database data was changed.");

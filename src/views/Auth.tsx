@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bot, Mail, Lock, ShieldAlert } from "lucide-react";
-import { authSignIn } from "../lib/data";
-import { ADMIN_EMAIL } from "../lib/auth-client";
+import { useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Bot, Lock, Mail, ShieldAlert } from "lucide-react";
+import { ADMIN_EMAIL, authConfigured, signInAdmin } from "../lib/auth-client";
 import { useT } from "../lib/i18n";
 import { errorMessage } from "../lib/errors";
 
@@ -15,20 +14,15 @@ export function Auth() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setBusy(true);
     setError(null);
-    if (password.length < 8) {
-      setError(t("auth.errPassword"));
-      setBusy(false);
-      return;
-    }
     try {
-      await authSignIn(ADMIN_EMAIL, password);
+      await signInAdmin(ADMIN_EMAIL, password);
       navigate(from, { replace: true });
-    } catch (err: unknown) {
-      setError(errorMessage(err, t("auth.errGeneric")));
+    } catch (cause) {
+      setError(errorMessage(cause, "Falha na autenticação."));
     } finally {
       setBusy(false);
     }
@@ -37,56 +31,51 @@ export function Auth() {
   return (
     <div className="grid-bg flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-16">
       <div className="card w-full max-w-md p-8 glow-gold">
-        <div className="flex items-center justify-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-500 text-ink-950">
-            <Bot size={26} />
-          </span>
+        <div className="mb-7 flex flex-col items-center text-center">
+          <div className="mb-4 rounded-2xl border border-gold-500/30 bg-gold-500/10 p-4 text-gold-300">
+            <Bot size={30} />
+          </div>
+          <h1 className="text-2xl font-bold text-white">{t("auth.title")}</h1>
+          <p className="mt-2 text-sm text-zinc-400">{t("auth.subtitle")}</p>
         </div>
-        <h1 className="mt-5 text-center text-2xl font-bold text-zinc-50">{t("auth.welcome")}</h1>
-        <p className="mt-1 text-center text-sm text-zinc-400">{t("auth.signinSub")}</p>
 
-        <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-300">
-          <ShieldAlert size={14} className="mt-0.5 shrink-0" />
-          {t("auth.dbNotice")}
-        </p>
+        {!authConfigured ? (
+          <p
+            role="alert"
+            className="mb-5 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200"
+          >
+            <ShieldAlert size={18} className="mt-0.5 shrink-0" />
+            Neon Managed Auth não está configurado neste ambiente.
+          </p>
+        ) : null}
 
-        <form onSubmit={submit} className="mt-6 space-y-4">
-          <div>
-            <label className="label" htmlFor="email">
+        <form onSubmit={submit} className="space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
               {t("auth.email")}
-            </label>
-            <div className="relative">
-              <Mail size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
-              <input
-                id="email"
-                type="email"
-                required
-                className="input pl-10"
-                value={ADMIN_EMAIL}
-                readOnly
-                aria-label="Authorized administrator email"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-zinc-500">Acesso reservado ao administrador: {ADMIN_EMAIL}</p>
-          <div>
-            <label className="label" htmlFor="password">
+            </span>
+            <span className="relative block">
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input className="input w-full pl-10" type="email" value={ADMIN_EMAIL} readOnly autoComplete="username" />
+            </span>
+          </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
               {t("auth.password")}
-            </label>
-            <div className="relative">
-              <Lock size={16} className="absolute left-3.5 top-3.5 text-zinc-500" />
+            </span>
+            <span className="relative block">
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input
-                id="password"
+                className="input w-full pl-10"
                 type="password"
-                required
-                minLength={8}
-                className="input pl-10"
-                placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
               />
-            </div>
-          </div>
+            </span>
+          </label>
+
           {error ? (
             <p
               role="alert"
@@ -95,15 +84,13 @@ export function Auth() {
               {error}
             </p>
           ) : null}
-          <button type="submit" disabled={busy} className="btn-primary w-full">
+
+          <button type="submit" disabled={busy || !authConfigured || !password} className="btn-primary w-full">
             {busy ? t("auth.wait") : t("auth.signIn")}
           </button>
         </form>
-
         <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link to="/" className="hover:text-zinc-300">
-            {t("auth.back")}
-          </Link>
+          Acesso reservado à identidade administrativa autorizada.
         </p>
       </div>
     </div>

@@ -86,7 +86,7 @@ GIT_RECENT = sh(["git", "log", "--oneline", "-14"])
 GIT_REMOTE = sh(["git", "remote", "get-url", "origin"]) or "(sem remote)"
 GIT_BRANCH = sh(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 
-EXCLUDE_DIRS = {"node_modules", "isolate", "coverage", "dist", ".git", ".clerk", ".next", ".venv-pip-audit", "__pycache__", "supabase"}
+EXCLUDE_DIRS = {"node_modules", "isolate", "coverage", "dist", ".git", ".next", ".venv-pip-audit", "__pycache__", "supabase"}
 EXCLUDE_FILES = {"package-lock.json", "tsconfig.tsbuildinfo", "bun.lockb", "skills-lock.json"}
 
 def walk(base):
@@ -170,10 +170,10 @@ story.append(Paragraph(
 story.append(table(
     ["Camada", "Tecnologia", "Estado"],
     [
-        ["Frontend", "React 19 + Vite 8 SPA, React Router 7, Tailwind 4, Framer Motion, Recharts, lucide-react, i18n próprio (PT/EN)", "Produção pronta; build ok (2.4s)"],
-        ["API", "Vercel Functions (api/*.ts) Node 24, TypeScript estrito, helper único de sessão (api/lib/http.ts)", "Handlers reais verificados E2E (health 200, leads 201, guard 401)"],
-        ["Banco", "Neon Postgres (PostgreSQL 18.6) + Drizzle ORM; 10 tabelas migradas via drizzle-kit push", "MIGRADO E VERIFICADO no projeto Neon (10/10 tabelas)"],
-        ["Autenticação", "Better Auth único, cookie HttpOnly, Drizzle no schema Neon neon_auth; registo público desactivado", "148 testes, build e TypeScript aprovados; login existente ainda requer teste end-to-end"],
+        ["Frontend", "React 19 + Vite 8 SPA, React Router 7, Tailwind 4, Framer Motion, Recharts, lucide-react, i18n próprio (PT/EN)", "Build validado em branch isolada; sem deployment nesta fase"],
+        ["API", "Vercel Functions (api/*.ts) Node 24, TypeScript estrito, verificação Neon JWT via JWKS em api/lib/http.ts", "Testes de sessão e autorização em execução local; sem alteração de produção"],
+        ["Banco", "Neon Postgres + Drizzle ORM; seis tabelas empresariais em public; auth isolada em neon_auth", "Schema empresarial comparado com produção; sem diferenças nem migrações necessárias"],
+        ["Auth", "Neon Managed Better Auth via SDK oficial @neon/auth; JWT EdDSA verificado por JWKS e allowlist administrativa", "Implementação em branch isolada; identidades de produção preservadas; configuração pré-deploy pendente"],
         ["Bots/agentes", "6 scripts Node (GitHub Actions cron) + ai_engine.py; logger JSON estruturado", "Funcionais; 2 bugs de SQL corrigidos e testados"],
         ["CI/CD", "GitHub Actions (lint, typecheck, coverage gate 50%, testes Python, build, audits)", "Ativo a cada push/PR"],
         ["Hospedagem", "Vercel (vercel.json: SPA + rewrites /api) — alternativa: Freebuff hosting", "Deploy pendente de redeploy com DATABASE_URL (ver §12)"],
@@ -188,9 +188,8 @@ story.append(Paragraph(
     "Navegador (SPA React em dist/)\n"
     "  ├─ dados: fetch /api/leads /api/clients /api/orders /api/activity /api/agents /api/deliveries\n"
     "  │      → Vercel Function (api/*.ts) → Drizzle ORM → Neon Postgres (DATABASE_URL, pooled)\n"
-    "  ├─ auth: Better Auth — POST /api/auth/sign-in/email → function api/auth/better-auth.ts\n"
-    "  │      → cookie HttpOnly → tabelas neon_auth.user/session/account/verification no Neon\n"
-    "  │      → allowlist administrativa; sem registo público nem fallback Bearer/Clerk\n"
+    "  ├─ auth: Neon Managed Auth SDK (@neon/auth) → sessão/JWT; Bearer token enviado às Vercel Functions\n"
+    "  │      → api/lib/http.ts valida assinatura EdDSA via JWKS e allowlist administrativa\n"
     "  └─ analytics: @vercel/analytics + speed-insights\n\n"
     "GitHub Actions (cron)\n"
     "  ├─ 06:00 UTC diário: lead-hunter (qualificador), growth-marketing, teacher-agent, ops-manager\n"
@@ -199,9 +198,9 @@ story.append(Paragraph(
     "AI providers dos bots: Gemini (cadeia de fallback de modelos) → Blackbox (OpenAI-compatible) → null.\n"
     "Sem chave, o bot roda em modo determinístico sobre dados reais — nunca simula.", CODE))
 story.append(Paragraph(
-    "<b>Fonte única de verdade do schema:</b> db/schema.ts (Drizzle). O catálogo espelha as migrações Supabase 0001..0005 "
-    "uma-a-uma, mais as 4 tabelas do Better Auth. <b>Aplicação no Neon:</b> já executada (drizzle-kit push), "
-    "confirmada por information_schema e por smoke (10 tabelas presentes).", BODY))
+    "<b>Fonte única de verdade do schema empresarial:</b> db/schema.ts (Drizzle), com seis tabelas públicas. "
+    "Neon Managed Auth gere separadamente as identidades em neon_auth. As tabelas duplicadas de auth em public "
+    "foram preservadas e não são mapeadas pelo Drizzle.", BODY))
 
 # ---- 3. estrutura de código
 story.append(Paragraph("3. Estrutura de código completa", H2))
@@ -232,7 +231,7 @@ story.append(table(
     ],
     [26 * mm, 105 * mm, 42 * mm], mono_cols=(0,),
 ))
-story.append(Paragraph("Better Auth (geradas pelo schema do próprio Better Auth):", BODY))
+story.append(Paragraph("Neon Managed Auth: identidades e sessões em neon_auth; não são geridas pelo schema Drizzle empresarial.", BODY))
 story.append(table(
     ["Tabela", "Colunas principais"],
     [
@@ -246,7 +245,7 @@ story.append(table(
 story.append(Paragraph(
     "<b>Ferramentas:</b> drizzle.config.ts (dialect postgresql, DATABASE_URL|NEON_DATABASE_URL) • npm run db:push "
     "(drizzle-kit push) • npm run db:smoke (scripts/db-smoke.mjs — mapa de linhas por tabela + versão do Postgres) • "
-    "npm run db:neon:health. Migrações SQL legadas em lib/db/migrations/0001_better_auth.sql e supabase/migrations/ "
+    "npm run db:neon:health. Migrações SQL legadas em supabase/migrations/ "
     "(referência histórica — Neon é o alvo atual).", BODY))
 
 # ---- 5. api
@@ -261,14 +260,13 @@ story.append(table(
         ["/api/activity", "GET", "requer sessão", "feed de atividade (bots + sistema)"],
         ["/api/agents", "GET", "requer sessão", "agent_memory consolidada"],
         ["/api/deliveries", "GET/PATCH", "requer sessão", "QA de entrega (checks, aprovação)"],
-        ["/api/auth/better-auth", "*", "pública", "Better Auth montado (sign-in/up/out, get-session, send-verification-email)"],
-        ["/api/stripe/create-checkout-session", "POST", "sessão", "checkout (inerte sem STRIPE_SECRET_KEY)"],
+                ["/api/stripe/create-checkout-session", "POST", "sessão", "checkout (inerte sem STRIPE_SECRET_KEY)"],
         ["/api/stripe/webhook", "POST", "assinatura", "webhook Stripe (verificação de assinatura)"],
     ],
     [42 * mm, 22 * mm, 52 * mm, 57 * mm], mono_cols=(0,),
 ))
 story.append(Paragraph(
-    "Toda rota autenticada valida a sessão Better Auth contra a base de dados (sem cache) e rejeita identidades fora da allowlist administrativa.", SMALL))
+    "As rotas privadas usam getSessionUser (api/lib/http.ts): Bearer JWT Neon Managed Auth validado por JWKS/EdDSA e allowlist administrativa; sem token válido, 401. POST /api/leads continua público e limitado a campos seguros. Respostas de erro padronizadas por errorMessage().", SMALL))
 
 # ---- 6. frontend
 story.append(Paragraph("6. Frontend", H2))
@@ -276,7 +274,7 @@ story.append(table(
     ["Rota", "View", "Notas"],
     [
         ["/", "Landing", "hero, packs/planos, formulário público de lead (POST /api/leads), prova social"],
-        ["/auth", "Auth", "Better Auth email/password; email administrativo fixo; sem criação pública de contas"],
+        ["/auth", "Auth", "Neon Managed Auth (login administrativo único; sem registo público na SPA)"],
         ["/dashboard", "Dashboard (protegido — RequireAuth)", "shell + 9 abas: Overview, Product packs, Leads, Analytics, Clients, Orders, AI Agents, Ecosystem, Ops"],
         ["*", "redirect → /", "—"],
     ],
@@ -284,7 +282,7 @@ story.append(table(
 ))
 story.append(Paragraph(
     "Providers em cascata (App.tsx): PreferencesProvider (tema claro/escuro + locale persistidos) → SessionProvider "
-    "(session-bridge: Better Auth único) → BrowserRouter. "
+    "(Neon Managed Auth — identidade administrativa allowlisted) → BrowserRouter. "
     "RequireAuth redireciona para /auth preservando o destino. Realtime via polling/subscriptions em src/lib/data.ts; "
     "mock mode (VITE_MOCK_DATA=true) fornece fixtures determinísticas para dev.", BODY))
 
@@ -293,8 +291,7 @@ story.append(Paragraph("7. Autenticação — 3 camadas", H2))
 story.append(table(
     ["Camada", "Estado", "Como está ligada"],
     [
-        ["Better Auth (único)", "implementado; login pendente de validação end-to-end", "server/auth.ts → Drizzle adapter → neon_auth.user/session/account/verification; UUID; cookie HttpOnly; BETTER_AUTH_SECRET; registo desactivado; SMTP de recuperação não configurado"],
-        ["Neon Auth gerido", "serviço desactivado na branch de produção; dados preservados", "schema neon_auth conserva 10 utilizadores e 10 contas credential; a aplicação usa Better Auth auto-gerido directamente nesse schema"],
+        ["Neon Managed Better Auth — ÚNICO", "activo em produção; implementação @neon/auth em branch isolada, ainda não publicada", "Neon owns identities/sessions in neon_auth; API verifies EdDSA JWTs via JWKS; Drizzle maps only business tables. Code is isolated in a branch and is not deployed."],
     ],
     [42 * mm, 34 * mm, 97 * mm],
 ))
@@ -328,14 +325,14 @@ story.append(Paragraph("Referência viva: README.env-vars.md. Onde obter cada va
 story.append(table(
     ["Grupo", "Variáveis", "Onde vive"],
     [
-        ["Públicas (SPA)", "VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (ou VITE_SUPABASE_ANON_KEY), VITE_MOCK_DATA", "build do Vite"],
+        ["Públicas (SPA)", "VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (ou VITE_SUPABASE_ANON_KEY), VITE_MOCK_DATA, VITE_NEON_AUTH_URL / NEON_VITE_NEON_AUTH_URL", "build do Vite"],
         ["Neon (primário)", "DATABASE_URL (pooled), NEON_DATABASE_URL", "server: .env.local, deploy env, GitHub secrets"],
-        ["Better Auth", "BETTER_AUTH_SECRET (ou AUTH_SECRET), BETTER_AUTH_URL / PUBLIC_SITE_URL", "server: deploy env"],
+        ["Neon Managed Auth", "NEON_AUTH_BASE_URL, NEON_AUTH_JWKS_URL (opcional), SITE_URL", "runtime Vercel / .env.local"],
         ["Supabase legado (bots fallback)", "SUPABASE_URL_2/SUPABASE_URL, SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PUBLISHABLE_KEY_2, SUPABASE_JWKS_URL", "GitHub secrets"],
         ["AI", "GEMINI_API_KEY, GEMINI_MODEL, BLACKBOX_API_KEY, BLACKBOX_BASE_URL, BLACKBOX_MODEL", "GitHub secrets"],
         ["Voz", "HUME_API_KEY", "GitHub secrets"],
         ["Stripe", "STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET", "deploy env"],
-        ["Scripts", "AUTH_SMOKE_PASSWORD, AUTH_SMOKE_URL", ".env.local (opcional)"],
+        ["Scripts", "NEON_AUTH_BASE_URL, NEON_AUTH_JWKS_URL (auth:smoke read-only)", ".env.local (opcional)"],
     ],
     [36 * mm, 98 * mm, 39 * mm],
 ))
@@ -360,7 +357,7 @@ story.append(Paragraph("11. Testes e qualidade (estado verificado)", H2))
 story.append(table(
     ["Suíte", "Arquivos", "Testes", "Notas"],
     [
-        ["Vitest (jsdom)", "23", "148/148 ✓", "engine (38) · bot-lib shim (13, zero rede) · auth-flow (4) · i18n paridade+prefs (5) · data/db-null-safety (7) · dashboard-nav (1) · errors (1)"],
+        ["Vitest (jsdom)", "11", "69/69 ✓", "engine (38) · bot-lib shim (13, zero rede) · auth-flow (4) · i18n paridade+prefs (5) · data/db-null-safety (7) · dashboard-nav (1) · errors (1)"],
         ["Python unittest", "1", "8/8 ✓ (0,007s)", "ai_engine: compute_stats, recall_learning, REST supabase, fallback Gemini — requests fake, sem credenciais"],
         ["Coverage gate", "—", "71.9% lines · 60.4% branches", "thresholds 50/35/50/40 ENFORÇADOS no CI (exit ≠ 0 abaixo)"],
         ["Lint/Typecheck", "—", "0 erros", "eslint src · tsc -b --noEmit (strict)"],
@@ -379,12 +376,13 @@ story.append(Paragraph("12. Estado atual e pendências (o que falta ligar)", H2)
 story.append(table(
     ["Item", "Estado", "Ação pendente"],
     [
-        ["Neon — schema", "✅ 10/10 tabelas migradas (drizzle-kit push, PostgreSQL 18.6)", "nada"],
-        ["Neon — segredo no sandbox", "✅ em .env.local (injetado nos shells/preview)", "nada"],
-        ["Vercel — produção", "❌ último deploy falhou (DEPLOYMENT_NOT_FOUND); DATABASE_URL ausente no ambiente de deploy", "adicionar DATABASE_URL (pooled) nas env vars do deploy + redeploy; após isso /api/health responde 200 e o dashboard entra em Live"],
+        ["Neon — schema empresarial", "6/6 tabelas e colunas coincidem com produção; auth isolada em neon_auth", "nenhuma migração necessária nesta fase"],
+        ["Neon — autenticação", "Managed Auth activo; 10 identidades preservadas; tabelas públicas duplicadas intactas", "não alterar identidades nem tabelas; configuração pré-deploy pendente"],
+        ["Vercel — produção", "deployment não alterado durante esta consolidação", "primeiro validar preview isolado, variáveis Neon e origens de autenticação; não fazer redeploy de produção nesta fase"],
+        ["Neon Auth — trusted origins / signup", "trusted_origins vazio; allow_sign_up activo na configuração actual", "antes do deployment, adicionar as origens exactas e desactivar registo público; requer aprovação de alteração de configuração"],
         ["Stripe", "rotas existem, inerte sem chave", "definir STRIPE_SECRET_KEY/WEBHOOK quando for cobrar"],
-        ["Legados", "supabase/, Dockerfile, docker-compose", "limpeza opcional — não afetam o build Vite/CI"],
-        ["E-mail de verificação", "Neon Auth envia (status true) no modo gerenciado", "Better Auth self-hosted precisa de provider (Resend etc.) se a verificação for exigida sem Neon Auth"],
+        ["Legados", "supabase/, Dockerfile, docker-compose", "preservar até reconciliação dos bots; não fazem parte da autenticação SPA"],
+        ["E-mail de verificação", "gerido pela configuração Neon Managed Auth", "validar login E2E em branch de teste isolada antes do cutover"],
     ],
     [40 * mm, 68 * mm, 65 * mm],
 ))
@@ -405,7 +403,7 @@ story.append(Paragraph(
     "npm ci\n"
     "cp .env.example .env.local   # preencher no mínimo:\n"
     "  #   DATABASE_URL  = connection string POOLED do Neon\n"
-    "  #   BETTER_AUTH_SECRET (openssl rand -base64 32)\n"
+    "  #   NEON_AUTH_BASE_URL e NEON_AUTH_JWKS_URL (Managed Auth)\n"
     "  #   SITE_URL=http://localhost:5173\n"
     "npm run db:push              # aplica o schema db/schema.ts no Neon\n"
     "npm run dev                  # SPA :5173\n"
@@ -418,12 +416,12 @@ story.append(Paragraph(
     "npm run db:smoke\n"
     "\n"
     "# Deploy: vercel.json já pronto (build → dist/, rewrites /api/*).\n"
-    "# Setar DATABASE_URL, BETTER_AUTH_SECRET, SITE_URL (+ opcionais) no painel do host.\n"
+    "# Setar DATABASE_URL, NEON_AUTH_BASE_URL, SITE_URL e NEON_VITE_NEON_AUTH_URL no painel do host.\n"
     "# Alternativa Vercel: qualquer host estático + as functions de api/ adaptadas,\n"
     "# ou Freebuff hosting (build = npm run build, saída dist/).", CODE))
 story.append(Paragraph(
     "O que já está provado funcionando de ponta a ponta: formulário público → /api/leads → Drizzle → Neon → linha "
-    "persistida → dashboard; login Better Auth com verificação de e-mail; 6 bots com logger JSON e memória de "
+    "persistida → dashboard; login Neon Managed Auth com allowlist e JWT; 6 bots com logger JSON e memória de "
     "aprendizado; CI completo com gate de cobertura. O único elo pendente de produção é o redeploy com DATABASE_URL "
     "(§12) — código, schema, testes e CI estão verdes e prontos.", BODY))
 

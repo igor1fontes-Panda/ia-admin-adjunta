@@ -2,25 +2,13 @@
  * Drizzle schema — Fontes AI Admin Adjunta
  * Target: Neon Postgres (serverless).
  *
- * Business tables in public mirror the Supabase migrations (0001..0005).
- * Better Auth identity tables are mapped separately in db/auth-schema.ts
- * under the existing Neon neon_auth schema.
+ * Drizzle maps only the six public business tables. Neon Managed Auth owns
+ * identities and sessions in the separate neon_auth schema; it is not managed here.
  *
  * Conventions kept from the Supabase era: snake_case columns, uuid PKs,
  * timestamptz created_at, enum values enforced in the API layer.
  */
-import {
-  boolean,
-  index,
-  integer,
-  jsonb,
-  numeric,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // ============ BUSINESS TABLES ============
 
@@ -113,3 +101,14 @@ export const deliveryStatus = pgTable(
   },
   (t) => [index("idx_delivery_status_order").on(t.order_id), index("idx_delivery_status_status").on(t.qa_status)],
 );
+
+/** Drizzle maps only the six public business tables. Authentication is owned
+ * by Neon Managed Auth and its neon_auth schema; no auth migrations are run here. */
+export const schema = {
+  leads,
+  clients,
+  orders,
+  activity_log: activityLog,
+  agent_memory: agentMemory,
+  delivery_status: deliveryStatus,
+};

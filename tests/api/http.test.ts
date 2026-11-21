@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import type { z } from "zod";
 import type { VercelResponse } from "../../api/lib/http";
 import { apiSchemas, isAdminEmail, parseBody, validationError } from "../../api/lib/http";
-import { enforceAdminIdentity } from "../../api/auth/better-auth";
 
 function mockRes(): VercelResponse & { statusCode: number; body: unknown } {
   const state = { statusCode: 200, body: undefined as unknown };
@@ -180,85 +179,5 @@ describe("validationError", () => {
     validationError(res, emptyIssueError);
     expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({ error: "Invalid input." });
-  });
-});
-
-describe("single-administrator access control", () => {
-  it("recognizes only the fixed administrator email case-insensitively", () => {
-    expect(isAdminEmail("Igor1Fontes@gmail.com")).toBe(true);
-    expect(isAdminEmail("other@example.com")).toBe(false);
-    expect(isAdminEmail(undefined)).toBe(false);
-  });
-
-  it("blocks signup because the administrator identity already exists", () => {
-    const response = mockRes();
-    const denied = enforceAdminIdentity(
-      {
-        method: "POST",
-        url: "/api/auth/sign-up/email",
-        body: { email: "igor1fontes@gmail.com" },
-        query: {},
-        headers: {},
-      },
-      response,
-    );
-    expect(denied).toBe(response);
-    expect(response.statusCode).toBe(403);
-    expect(response.body).toMatchObject({ error: expect.stringMatching(/registration is disabled/i) });
-  });
-
-  it("rejects non-admin and missing identities on email sign-in", () => {
-    for (const body of [{ email: "other@example.com" }, {}]) {
-      const response = mockRes();
-      enforceAdminIdentity(
-        {
-          method: "POST",
-          url: "/api/auth/sign-in/email",
-          body,
-          query: {},
-          headers: {},
-        },
-        response,
-      );
-      expect(response.statusCode).toBe(403);
-    }
-  });
-
-  it("keeps password recovery disabled until SMTP delivery is configured", () => {
-    const response = mockRes();
-    enforceAdminIdentity(
-      {
-        method: "POST",
-        url: "/api/auth/request-password-reset",
-        body: { email: "igor1fontes@gmail.com" },
-        query: {},
-        headers: {},
-      },
-      response,
-    );
-    expect(response.statusCode).toBe(503);
-    expect(response.body).toMatchObject({ error: expect.stringMatching(/email delivery is not configured/i) });
-  });
-
-  it("rejects alternative sign-in methods and administrator email changes", () => {
-    const socialResponse = mockRes();
-    enforceAdminIdentity(
-      { method: "POST", url: "/api/auth/sign-in/social", body: { provider: "google" }, query: {}, headers: {} },
-      socialResponse,
-    );
-    expect(socialResponse.statusCode).toBe(403);
-
-    const emailResponse = mockRes();
-    enforceAdminIdentity(
-      {
-        method: "POST",
-        url: "/api/auth/change-email",
-        body: { newEmail: "other@example.com" },
-        query: {},
-        headers: {},
-      },
-      emailResponse,
-    );
-    expect(emailResponse.statusCode).toBe(403);
   });
 });

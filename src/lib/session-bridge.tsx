@@ -1,31 +1,42 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { authClient } from "./auth-client";
+import { authClient, signOutAdmin } from "./auth-client";
+import { isAdminEmail } from "../../shared/admin";
 
-export type BridgeSession = { email: string; name: string } | null;
-export type BridgeAuth = {
-  session: BridgeSession;
+type SessionView = { id: string; email: string; name: string } | null;
+type SessionContextValue = {
+  session: SessionView;
   isPending: boolean;
   signOut: () => Promise<void>;
 };
 
-const SessionCtx = createContext<BridgeAuth>({
+const SessionContext = createContext<SessionContextValue>({
   session: null,
-  isPending: true,
-  signOut: async () => {},
+  isPending: false,
+  signOut: signOutAdmin,
 });
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const { data, isPending } = authClient.useSession();
-  const value: BridgeAuth = {
-    session: data?.user ? { email: data.user.email, name: data.user.name ?? "" } : null,
-    isPending,
-    signOut: async () => {
-      await authClient.signOut();
-    },
-  };
-  return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
+  if (!authClient) {
+    return (
+      <SessionContext.Provider value={{ session: null, isPending: false, signOut: signOutAdmin }}>
+        {children}
+      </SessionContext.Provider>
+    );
+  }
+  return <NeonSessionProvider client={authClient}>{children}</NeonSessionProvider>;
 }
 
-export function useSessionBridge(): BridgeAuth {
-  return useContext(SessionCtx);
+function NeonSessionProvider({ children, client }: { children: ReactNode; client: NonNullable<typeof authClient> }) {
+  const { data, isPending } = client.useSession();
+  const user = data?.user;
+  const session: SessionView =
+    user && isAdminEmail(user.email) ? { id: user.id, email: user.email, name: user.name || user.email } : null;
+
+  return (
+    <SessionContext.Provider value={{ session, isPending, signOut: signOutAdmin }}>{children}</SessionContext.Provider>
+  );
+}
+
+export function useSessionBridge() {
+  return useContext(SessionContext);
 }

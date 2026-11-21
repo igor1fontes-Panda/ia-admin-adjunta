@@ -10,9 +10,8 @@
  * (Run with Bun: it executes the TS handlers directly and resolves the
  *  directory imports the Vercel bundler allows, e.g. `../db`.)
  *
- * Routing mirrors vercel.json:
- *   /api/auth/(.*) → api/auth/better-auth.ts (original URL preserved —
- *                    Better Auth routes on req.url)
+ * Routing mirrors vercel.json. Neon Managed Auth is called directly by the
+ * browser SDK; this server does not proxy or implement authentication routes:
  *   /api/<name>    → api/<name>.ts
  *   everything else→ dist/ static files, falling back to dist/index.html
  */
@@ -33,7 +32,6 @@ const HANDLERS = {
   "/api/deliveries": () => import("../api/deliveries.ts"),
   "/api/agents": () => import("../api/agents.ts"),
 };
-const AUTH_TARGET = () => import("../api/auth/better-auth.ts");
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -84,18 +82,12 @@ const server = http.createServer(async (req, res) => {
       req.headers = req.headers;
       if (req.method !== "GET" && req.method !== "HEAD") req.body = await parseBody(req);
 
-      let mod;
-      if (pathname.startsWith("/api/auth/")) {
-        req.url = pathname + url.search; // Better Auth routes on the original path
-        mod = await AUTH_TARGET();
-      } else {
-        const key = Object.keys(HANDLERS).find((k) => pathname === k || pathname.startsWith(`${k}/`));
-        if (!key) {
-          res.writeHead(404, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ error: `No handler for ${pathname}` }));
-        }
-        mod = await HANDLERS[key]();
+      const key = Object.keys(HANDLERS).find((k) => pathname === k || pathname.startsWith(`${k}/`));
+      if (!key) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: `No handler for ${pathname}` }));
       }
+      const mod = await HANDLERS[key]();
       return await mod.default(req, adapt(res));
     }
 

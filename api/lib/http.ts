@@ -26,24 +26,70 @@ export interface VercelResponse {
   getHeader(name: string): string | number | string[] | undefined;
   flushHeaders?(): void;
 }
-import type { Auth } from "../../server/auth";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ADMIN_EMAIL, isAdminEmail } from "../../shared/admin";
 
 export { ADMIN_EMAIL, isAdminEmail };
 
 export type AuthUser = { id: string; email: string; name: string };
 
-/** Returns the signed-in administrator from the canonical Better Auth session. */
-export async function getSessionUser(req: VercelRequest, auth: Auth | null): Promise<AuthUser | null> {
-  if (!auth) return null;
+/**
+ * Verify Neon Managed Better Auth access tokens before granting API access.
+ * The browser SDK sends the short-lived session JWT as a Bearer token.
+ * No database-backed Better Auth instance or Drizzle auth schema is used.
+ */
+let cachedJwksUrl: string | null = null;
+let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function authorizationHeader(headers: VercelRequest["headers"]): string | null {
+  const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === "authorization");
+  const value = entry?.[1];
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function neonJwks(): { keys: ReturnType<typeof createRemoteJWKSet>; issuer: string } | null {
+  const baseUrl = process.env.NEON_AUTH_BASE_URL?.trim();
+  if (!baseUrl) return null;
+
   try {
-    const { fromNodeHeaders } = await import("better-auth/node");
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(req.headers),
-      query: { disableCookieCache: true },
+    const parsedBaseUrl = new URL(baseUrl);
+    if (parsedBaseUrl.protocol !== "https:" && parsedBaseUrl.hostname !== "localhost") return null;
+    const issuer = parsedBaseUrl.origin;
+    const jwksUrl =
+      process.env.NEON_AUTH_JWKS_URL?.trim() ||
+      `${baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl}/.well-known/jwks.json`;
+    if (jwksUrl !== cachedJwksUrl || !cachedJwks) {
+      cachedJwks = createRemoteJWKSet(new URL(jwksUrl));
+      cachedJwksUrl = jwksUrl;
+    }
+    return { keys: cachedJwks, issuer };
+  } catch {
+    return null;
+  }
+}
+
+export async function getSessionUser(req: VercelRequest): Promise<AuthUser | null> {
+  const authorization = authorizationHeader(req.headers);
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const configuration = neonJwks();
+  if (!configuration) return null;
+
+  try {
+    const { payload } = await jwtVerify(match[1].trim(), configuration.keys, {
+      algorithms: ["EdDSA"],
+      issuer: configuration.issuer,
+      audience: configuration.issuer,
     });
-    if (!session?.user || !isAdminEmail(session.user.email)) return null;
-    return { id: session.user.id, email: session.user.email, name: session.user.name };
+    if (typeof payload.sub !== "string" || typeof payload.email !== "string" || !isAdminEmail(payload.email)) {
+      return null;
+    }
+    return {
+      id: payload.sub,
+      email: payload.email,
+      name: typeof payload.name === "string" ? payload.name : payload.email,
+    };
   } catch {
     return null;
   }

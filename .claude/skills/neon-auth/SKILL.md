@@ -15,6 +15,10 @@ metadata:
   source: https://github.com/neondatabase/agent-skills/tree/main/skills/neon-auth
 ---
 
+## IA Admin Adjunta — implementação actual (21/11/2026)
+
+For this repository, the approved browser package is `@neon/auth` (not `@neondatabase/auth`). Use `createAuthClient` from `@neon/auth` and `BetterAuthReactAdapter` from `@neon/auth/react/adapters`, with `fetchOptions.credentials = "include"`. The app is a Vite SPA; it does not use the Next.js server adapter. Vercel Functions validate Bearer JWTs with `jose` and the JWKS derived from `NEON_AUTH_BASE_URL`; check EdDSA, issuer and audience against the auth URL origin, expiry, `sub`, and the administrative email allowlist. Drizzle owns only public business tables and must not manage `neon_auth`. Do not use the legacy self-hosted Better Auth, Clerk, or Next.js examples below for this app.
+
 **FIRST**: Use the parent `neon` skill for a Neon overview, getting started with Neon, Neon development best practices, and more.
 
 If the `neon` skill is not installed, fetch it from https://neon.com/docs/ai/skills/neon/SKILL.md or install it with:

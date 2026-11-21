@@ -5,22 +5,32 @@
 **Branch de trabalho:** `stabilization/neon-better-auth-unification`  
 **Branch de produção Git:** `main` (não alterada)  
 **Base de dados-alvo:** Neon PostgreSQL  
-**Autenticação-alvo:** Better Auth auto-gerido
+**Autenticação-alvo:** Neon Managed Better Auth (`@neon/auth`)
 
 ## 1. Objectivo e limites
 
-Consolidar a arquitectura numa base sustentável, mantendo Neon como autoridade dos dados e Better Auth auto-gerido como mecanismo único de autenticação. A migração deve ser incremental, auditável e reversível.
+Consolidar a arquitectura numa base sustentável, mantendo Neon como autoridade dos dados e Neon Managed Better Auth como único serviço de identidade e sessão. A migração deve ser incremental, auditável e reversível.
 
 Este documento não autoriza cutover de produção, eliminação de contas, remoção de credenciais, destruição de dados ou alteração de tabelas de produção. Essas operações só ocorrerão após validação técnica e confirmação específica do ponto de cutover.
 
 ## 2. Decisões arquitecturais
 
 - Neon PostgreSQL é a fonte de verdade para dados operacionais e memória dos agentes.
-- Better Auth auto-gerido, ligado ao Neon via Drizzle, é o destino da autenticação.
+- Neon Managed Better Auth, consumido pelo SDK oficial `@neon/auth`, é a única autoridade de autenticação.
+- Drizzle gere exclusivamente o schema e as operações de dados empresariais; não gere o schema `neon_auth`.
 - Tailwind CSS 4 é a versão CSS de destino.
 - Node.js 24.x é a versão de execução padrão dos workflows.
 - Os bots não devem alternar silenciosamente entre Neon e Supabase.
 - Supabase permanece preservado e sem escrita até a reconciliação e validação estarem concluídas.
+
+## Estado verificado em 21/11/2026
+
+- Neon Managed Better Auth está activo na branch de produção; as 10 identidades existentes residem em `neon_auth`.
+- Não é necessária migração de identidades. As tabelas de autenticação duplicadas em `public` permanecem intactas; nenhuma limpeza foi executada.
+- O schema empresarial Drizzle foi comparado com `public.leads`, `clients`, `orders`, `activity_log`, `agent_memory` e `delivery_status`: nomes, tipos SQL, nullability, índices secundários e foreign keys coincidem. A comparação da branch isolada com produção também não revelou diferenças.
+- A API valida JWTs EdDSA via JWKS, com `iss` e `aud` iguais à origem de `NEON_AUTH_BASE_URL`, e aplica a allowlist administrativa.
+- Não foram alterados utilizadores, tabelas ou configurações de autenticação em produção. Não foi executada qualquer migração.
+- Antes de um deployment de produção, é necessário rever `allow_sign_up` e `trusted_origins` na configuração Neon. Essa alteração de configuração permanece pendente de autorização específica.
 
 ## 3. Protecção efectuada em 20/11/2026
 
@@ -41,35 +51,26 @@ Foram comparados fingerprints MD5 de ID, email normalizado e empresa normalizada
 
 O lead Supabase tem estado `lost` e score 55; os quatro leads Neon têm estado `new` e score 50. As fingerprints de email e empresa também não coincidem. Portanto, não há evidência de duplicação entre o registo Supabase e os quatro registos Neon. A decisão provisória é preservar os cinco registos e não importar, fundir ou eliminar nenhum até validação de negócio e confirmação de integridade referencial.
 
-## 5. Autenticação — plano de transição
+## 5. Autenticação — arquitectura de destino e preservação
 
-Estado anteriormente observado:
+A autenticação já existe em Neon Managed Auth; não se deve migrar as dez identidades existentes para uma instância Better Auth auto-gerida.
 
-- Neon Managed Auth: 10 utilizadores.
-- Supabase Auth: 1 utilizador.
-- Better Auth nas tabelas públicas Neon: zero utilizadores.
-
-Sequência obrigatória:
-
-1. Inventariar os campos de identidade e providers, sem exportar passwords, tokens ou segredos.
-2. Determinar se os hashes existentes são compatíveis com o formato esperado pelo Better Auth e com a configuração de hashing escolhida.
-3. Não copiar hashes sem validação criptográfica e teste controlado.
-4. Para credenciais incompatíveis ou não verificáveis, usar convite/redefinição de palavra-passe com canal de email funcional.
-5. Mapear identidades por email normalizado e identificador de origem; resolver colisões manualmente.
-6. Preservar a associação a dados de negócio; não presumir que utilizadores de auth correspondem a registos de clientes.
-7. Invalidar sessões antigas apenas no cutover, depois de confirmar que os utilizadores conseguem recuperar acesso.
-8. Fechar registo público e implementar bootstrap/invite administrativo explícito.
-9. Testar login, logout, reset, expiração, cookies, RBAC e protecção de rotas em Preview.
-
-Nenhuma conta deve ser eliminada antes de o utilizador correspondente confirmar acesso ao Better Auth ou concluir recuperação.
+- Usar o SDK oficial `@neon/auth` no frontend Vite.
+- Validar os JWTs de sessão nas Vercel Functions por JWKS/EdDSA e allowlist administrativa.
+- Manter Drizzle apenas para as seis tabelas empresariais públicas.
+- Preservar as tabelas de autenticação duplicadas em `public` sem as mapear ou apagar.
+- Não executar migrações nem alterar identidades em produção nesta fase.
+- Antes de deployment, rever `allow_sign_up` e `trusted_origins` no Managed Auth; qualquer alteração de configuração de produção requer aprovação específica.
 
 ## 6. Dados e schema
 
-- Comparar todas as entidades por PK, chaves naturais, timestamps e relações.
+- A comparação de produção em 21/11/2026 confirmou PKs, colunas, tipos, nullability, índices e foreign keys nas seis tabelas empresariais; manter esse teste de regressão.
+- Comparar futuras alterações por PK, chaves naturais, timestamps e relações.
 - Preservar os registos de origem; preferir importação idempotente e auditável.
 - Resolver divergências de constraints entre Supabase e Neon antes de alterar schema.
 - Incorporar constraints CHECK e índices validados no schema Drizzle.
-- Formalizar migrações Drizzle versionadas; não depender de `db:push` como histórico único.
+- Nesta fase, não criar nem executar migrações: a comparação do schema empresarial com produção não demonstrou diferenças.
+- Só propor uma migração versionada se uma alteração futura de código exigir colunas, índices ou constraints que não existam em produção; apresentar diff e plano de rollback antes de qualquer execução.
 - Garantir atomicidade na criação de `orders` e `delivery_status`.
 - Validar UUIDs e referências antes das escritas.
 - Não migrar tabelas de template ou demonstração sem dependência funcional comprovada.
@@ -138,11 +139,11 @@ Trabalho obrigatório:
 5. Preparar migrations e testes em branch isolada.
 6. Só depois planear o cutover com janela, validação e rollback explícitos.
 
-## 13. Auditoria detalhada de autenticação e bots — 20/11/2026
+## 13. Auditoria histórica de autenticação e bots — 20/11/2026
 
-#> Actualização operacional — 21/11/2026: a lista abaixo regista os achados da primeira auditoria, antes das correcções descritas no fim desta secção. Não deve ser interpretada como estado actual do código.
+> **Nota:** esta auditoria descreve o estado anterior à consolidação. Os caminhos e achados de autenticação abaixo são históricos e foram substituídos pela arquitectura Neon Managed Auth documentada no início deste ficheiro. Não representam ficheiros activos no estado de 21/11/2026.
 
-## Autenticação
+### Autenticação
 
 Ficheiros revistos:
 
@@ -169,54 +170,12 @@ Achados:
 7. `server/auth.ts` activa email/password mas não configura explicitamente envio de recuperação de palavra-passe. A recuperação exige provider de email e teste end-to-end.
 8. O bootstrap administrativo tem de ser fechado de forma controlada antes de abrir o endpoint de registo; não copiar credenciais nem hashes sem validação.
 
-Decisão de implementação — actualizada em 21/11/2026:
+Decisão de implementação:
 
-- Preservar as 10 identidades e as 10 contas credential existentes em neon_auth; preservar também a identidade Supabase até reconciliação.
-- Não copiar hashes, não recriar utilizadores, não executar migrações de identidade nem alterar dados de produção nesta fase.
-- Usar uma única instância Better Auth auto-gerida em server/auth.ts, ligada por Drizzle ao schema PostgreSQL neon_auth existente. As tabelas de negócio continuam em public.
-- Manter um único schema Drizzle de autenticação em db/auth-schema.ts; remover as definições duplicadas em lib/db/schema.ts e as tabelas Better Auth vazias de public.
-- A SPA e as Vercel Functions usam uma única API de autenticação. O scaffold Next.js foi removido porque o projecto está configurado como Vite no Vercel e não tinha root layout nem deployment próprio.
-- Remover Clerk como fornecedor alternativo e retirar a tentativa de proxy para Neon Managed Auth, cujo serviço não está activo na branch de produção. As variáveis antigas da integração Vercel ficam intactas até à validação pós-deploy.
-- Nas rotas de dados, validar a sessão contra a base de dados (disableCookieCache) antes de autorizar operações.
-- O login com as identidades existentes, recuperação de palavra-passe e envio SMTP continuam pendentes de teste end-to-end. Não declarar a autenticação estabilizada até concluir esses testes.
-- Não efectuar cutover, migração ou alteração de produção sem snapshot, revisão e verificação de compatibilidade das credenciais.
-
-### Registo de execução — 21/11/2026
-
-**Estado do repositório**
-
-- Branch de trabalho: fix/auth-unification (PR #131 permanece draft).
-- Tailwind 4 e lockfile: instalados e validados na branch.
-- Melhorias de autenticação aplicadas localmente no ambiente isolado; ainda não integradas nem publicadas.
-
-**Estado das bases de dados (consultas apenas de leitura)**
-
-- Neon neon_auth: 10 utilizadores, 10 contas credential, 0 sessões e 13 registos de verificação.
-- Neon public: as tabelas Better Auth anteriormente duplicadas estão vazias.
-- Supabase Auth: 1 utilizador e 1 identidade.
-- A API Neon indica que Managed Neon Auth não está activo na branch de produção. O schema e os registos persistem na base de dados.
-- Foi criada a branch Neon isolada auth-unification-validation-2026-11-21 a partir da produção; a contagem de utilizadores copiada é 10. Nenhum dado de produção foi alterado.
-
-**Alterações locais propostas**
-
-- server/auth.ts passa a ser a única instância Better Auth.
-- db/auth-schema.ts mapeia as tabelas existentes em neon_auth, com IDs UUID.
-- api/lib/http.ts deixa de aceitar Clerk Bearer como identidade alternativa e força validação da sessão sem cache.
-- shared/auth-policy.ts centraliza a allowlist de identidade; Vercel e Next.js usam a mesma política.
-- Removidas as implementações duplicadas lib/auth.ts, lib/db/*, server/clerk.ts e src/lib/clerk-bridge.tsx.
-- Dependências Clerk removidas; Better Auth e o adaptador Drizzle alinhados na versão 1.7.26.
-- Variáveis de ambiente legadas da integração Managed Neon Auth não foram apagadas do Vercel.
-
-**Verificação local e CI — actualizada após o commit 87129cc**
-
-- npm ci: aprovado.
-- Testes: 148/148 aprovados.
-- TypeScript, ESLint, Prettier e build Vite: aprovados.
-- Cobertura: 70,16% statements.
-- npm audit e pip-audit: sem vulnerabilidades conhecidas.
-- GitHub Actions: build-test e fresh-clone-smoke aprovados.
-- Vercel preview: BLOCKED pela política de verified commits; não houve deployment nem cutover de produção.
-- A integração directa do Better Auth com as 10 identidades existentes ainda não foi validada por um login end-to-end; não executar cutover.
+- Uma única instância Better Auth e um único schema Drizzle.
+- Um único caminho de autenticação usado pela SPA e por qualquer handler Next.js que permaneça activo.
+- Retirar Neon Managed Auth e Clerk apenas depois de migração, login, recuperação e autorização testados.
+- Configurar recuperação de password e convite/bootstrap administrativo antes do cutover.
 
 ### Bots e persistência
 

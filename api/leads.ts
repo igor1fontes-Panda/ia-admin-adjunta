@@ -11,7 +11,6 @@ import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { leads } from "../db/schema";
-import { auth } from "../server/auth";
 import {
   apiSchemas,
   badRequest,
@@ -30,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === "GET") {
-      const user = await getSessionUser(req, auth);
+      const user = await getSessionUser(req);
       if (!user) return unauthorized(res);
       const rows = await db.select().from(leads).orderBy(desc(leads.created_at)).limit(200);
       return res.status(200).json(rows);
@@ -47,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const niche = parsed.niche;
 
       // If a session exists, the signed-in admin may set privileged fields.
-      const user = await getSessionUser(req, auth);
+      const user = await getSessionUser(req);
       const privileged = user !== null;
       const rawScore = Number(raw.score);
       // Public callers cannot influence internal lead scoring.
@@ -76,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "PATCH") {
-      const user = await getSessionUser(req, auth);
+      const user = await getSessionUser(req);
       if (!user) return unauthorized(res);
       const id = str(req.query.id);
       if (!id) return badRequest(res, "id query parameter is required.");
