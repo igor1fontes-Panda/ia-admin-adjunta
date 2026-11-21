@@ -170,11 +170,10 @@ story.append(Paragraph(
 story.append(table(
     ["Camada", "Tecnologia", "Estado"],
     [
-        ["Frontend", "React 19 + Vite 8 SPA, React Router 7, Tailwind 3, Framer Motion, Recharts, lucide-react, i18n próprio (PT/EN)", "Produção pronta; build ok (2.4s)"],
-        ["API", "Vercel Functions (api/*.ts) Node 22, TypeScript estrito, helper único de sessão (api/lib/http.ts)", "Handlers reais verificados E2E (health 200, leads 201, guard 401)"],
+        ["Frontend", "React 19 + Vite 8 SPA, React Router 7, Tailwind 4, Framer Motion, Recharts, lucide-react, i18n próprio (PT/EN)", "Produção pronta; build ok (2.4s)"],
+        ["API", "Vercel Functions (api/*.ts) Node 24, TypeScript estrito, helper único de sessão (api/lib/http.ts)", "Handlers reais verificados E2E (health 200, leads 201, guard 401)"],
         ["Banco", "Neon Postgres (PostgreSQL 18.6) + Drizzle ORM; 10 tabelas migradas via drizzle-kit push", "MIGRADO E VERIFICADO no projeto Neon (10/10 tabelas)"],
-        ["Auth padrão", "Better Auth auto-hospedado (sessão cookie HttpOnly, tabelas user/session/account/verification)", "Implementado; verificação de e-mail exigida pelo modo gerenciado"],
-        ["Auth opcional", "Clerk (aditivo) — @clerk/react + verificação JWT em todas as rotas; ativa somente com chaves presentes", "Integrado e testado (76+ testes verdes); chaves dev accountless provisionadas"],
+        ["Autenticação", "Better Auth único, cookie HttpOnly, Drizzle no schema Neon neon_auth; registo público desactivado", "148 testes, build e TypeScript aprovados; login existente ainda requer teste end-to-end"],
         ["Bots/agentes", "6 scripts Node (GitHub Actions cron) + ai_engine.py; logger JSON estruturado", "Funcionais; 2 bugs de SQL corrigidos e testados"],
         ["CI/CD", "GitHub Actions (lint, typecheck, coverage gate 50%, testes Python, build, audits)", "Ativo a cada push/PR"],
         ["Hospedagem", "Vercel (vercel.json: SPA + rewrites /api) — alternativa: Freebuff hosting", "Deploy pendente de redeploy com DATABASE_URL (ver §12)"],
@@ -189,9 +188,9 @@ story.append(Paragraph(
     "Navegador (SPA React em dist/)\n"
     "  ├─ dados: fetch /api/leads /api/clients /api/orders /api/activity /api/agents /api/deliveries\n"
     "  │      → Vercel Function (api/*.ts) → Drizzle ORM → Neon Postgres (DATABASE_URL, pooled)\n"
-    "  ├─ auth: Better Auth — POST /api/auth/sign-in|sign-up → function api/auth/better-auth.ts\n"
-    "  │      → cookie HttpOnly session_token → tabelas user/session no Neon\n"
-    "  │   (alternativa com chaves: Clerk — Authorization: Bearer <JWT> verificado em api/lib/http.ts)\n"
+    "  ├─ auth: Better Auth — POST /api/auth/sign-in/email → function api/auth/better-auth.ts\n"
+    "  │      → cookie HttpOnly → tabelas neon_auth.user/session/account/verification no Neon\n"
+    "  │      → allowlist administrativa; sem registo público nem fallback Bearer/Clerk\n"
     "  └─ analytics: @vercel/analytics + speed-insights\n\n"
     "GitHub Actions (cron)\n"
     "  ├─ 06:00 UTC diário: lead-hunter (qualificador), growth-marketing, teacher-agent, ops-manager\n"
@@ -269,8 +268,7 @@ story.append(table(
     [42 * mm, 22 * mm, 52 * mm, 57 * mm], mono_cols=(0,),
 ))
 story.append(Paragraph(
-    "Toda rota autenticada passa por getSessionUser (api/lib/http.ts): 1) cookie Better Auth → 2) fallback Bearer JWT do "
-    "Clerk (server/clerk.ts, verifyToken standalone) → 401 se nenhuma. Respostas de erro padronizadas por errorMessage().", SMALL))
+    "Toda rota autenticada valida a sessão Better Auth contra a base de dados (sem cache) e rejeita identidades fora da allowlist administrativa.", SMALL))
 
 # ---- 6. frontend
 story.append(Paragraph("6. Frontend", H2))
@@ -278,7 +276,7 @@ story.append(table(
     ["Rota", "View", "Notas"],
     [
         ["/", "Landing", "hero, packs/planos, formulário público de lead (POST /api/leads), prova social"],
-        ["/auth", "Auth", "Better Auth (default) OU componentes SignIn/SignUp do Clerk quando chaves presentes; painel de verificação de e-mail com reenvio (PT/EN)"],
+        ["/auth", "Auth", "Better Auth email/password; email administrativo fixo; sem criação pública de contas"],
         ["/dashboard", "Dashboard (protegido — RequireAuth)", "shell + 9 abas: Overview, Product packs, Leads, Analytics, Clients, Orders, AI Agents, Ecosystem, Ops"],
         ["*", "redirect → /", "—"],
     ],
@@ -286,7 +284,7 @@ story.append(table(
 ))
 story.append(Paragraph(
     "Providers em cascata (App.tsx): PreferencesProvider (tema claro/escuro + locale persistidos) → SessionProvider "
-    "(clerk-bridge: Clerk se configurado, senão Better Auth — mesma forma de sessão) → BrowserRouter. "
+    "(session-bridge: Better Auth único) → BrowserRouter. "
     "RequireAuth redireciona para /auth preservando o destino. Realtime via polling/subscriptions em src/lib/data.ts; "
     "mock mode (VITE_MOCK_DATA=true) fornece fixtures determinísticas para dev.", BODY))
 
@@ -295,9 +293,8 @@ story.append(Paragraph("7. Autenticação — 3 camadas", H2))
 story.append(table(
     ["Camada", "Estado", "Como está ligada"],
     [
-        ["Better Auth (self-hosted) — PADRÃO", "ativo", "server/auth.ts → Drizzle adapter → tabelas user/session/account/verification no Neon; cookie HttpOnly; segredo BETTER_AUTH_SECRET; e-mail+senha (min 8); verificação exigida quando provedor de e-mail configurado"],
-        ["Clerk — OPCIONAL/ADITIVO", "integrado, aguardando claim da app", "src/lib/clerk-bridge.tsx comuta o provider; Vite expõe NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pública) além de VITE_*; server/clerk.ts valida Bearer JWT em todas as rotas via CLERK_SECRET_KEY; chaves dev accountless em .env.local (geradas por npx clerk init + env pull)"],
-        ["Neon Auth (Better Auth gerenciado) — DO PROJETO NEON", "ativo no Neon, NÃO consumido pelo app", "host ep-broad-salad-zanhmhy8…neonauth…/neondb/auth responde /ok 200 e JWKS válido; CORS aberto com credenciais; origins confiáveis: localhost:5173 e :3000. O app não depende dele — manter como opção futura"],
+        ["Better Auth (único)", "implementado; login pendente de validação end-to-end", "server/auth.ts → Drizzle adapter → neon_auth.user/session/account/verification; UUID; cookie HttpOnly; BETTER_AUTH_SECRET; registo desactivado; SMTP de recuperação não configurado"],
+        ["Neon Auth gerido", "serviço desactivado na branch de produção; dados preservados", "schema neon_auth conserva 10 utilizadores e 10 contas credential; a aplicação usa Better Auth auto-gerido directamente nesse schema"],
     ],
     [42 * mm, 34 * mm, 97 * mm],
 ))
@@ -331,10 +328,9 @@ story.append(Paragraph("Referência viva: README.env-vars.md. Onde obter cada va
 story.append(table(
     ["Grupo", "Variáveis", "Onde vive"],
     [
-        ["Públicas (SPA)", "VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (ou VITE_SUPABASE_ANON_KEY), VITE_MOCK_DATA, VITE_CLERK_PUBLISHABLE_KEY / NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "build do Vite"],
+        ["Públicas (SPA)", "VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY (ou VITE_SUPABASE_ANON_KEY), VITE_MOCK_DATA", "build do Vite"],
         ["Neon (primário)", "DATABASE_URL (pooled), NEON_DATABASE_URL", "server: .env.local, deploy env, GitHub secrets"],
-        ["Better Auth", "BETTER_AUTH_SECRET (ou AUTH_SECRET), SITE_URL", "idem"],
-        ["Clerk backend", "CLERK_SECRET_KEY, CLERK_ISSUER", "idem (opcional)"],
+        ["Better Auth", "BETTER_AUTH_SECRET (ou AUTH_SECRET), BETTER_AUTH_URL / PUBLIC_SITE_URL", "server: deploy env"],
         ["Supabase legado (bots fallback)", "SUPABASE_URL_2/SUPABASE_URL, SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PUBLISHABLE_KEY_2, SUPABASE_JWKS_URL", "GitHub secrets"],
         ["AI", "GEMINI_API_KEY, GEMINI_MODEL, BLACKBOX_API_KEY, BLACKBOX_BASE_URL, BLACKBOX_MODEL", "GitHub secrets"],
         ["Voz", "HUME_API_KEY", "GitHub secrets"],
@@ -364,7 +360,7 @@ story.append(Paragraph("11. Testes e qualidade (estado verificado)", H2))
 story.append(table(
     ["Suíte", "Arquivos", "Testes", "Notas"],
     [
-        ["Vitest (jsdom)", "11", "69/69 ✓", "engine (38) · bot-lib shim (13, zero rede) · auth-flow (4) · i18n paridade+prefs (5) · data/db-null-safety (7) · dashboard-nav (1) · errors (1)"],
+        ["Vitest (jsdom)", "23", "148/148 ✓", "engine (38) · bot-lib shim (13, zero rede) · auth-flow (4) · i18n paridade+prefs (5) · data/db-null-safety (7) · dashboard-nav (1) · errors (1)"],
         ["Python unittest", "1", "8/8 ✓ (0,007s)", "ai_engine: compute_stats, recall_learning, REST supabase, fallback Gemini — requests fake, sem credenciais"],
         ["Coverage gate", "—", "71.9% lines · 60.4% branches", "thresholds 50/35/50/40 ENFORÇADOS no CI (exit ≠ 0 abaixo)"],
         ["Lint/Typecheck", "—", "0 erros", "eslint src · tsc -b --noEmit (strict)"],
@@ -386,10 +382,8 @@ story.append(table(
         ["Neon — schema", "✅ 10/10 tabelas migradas (drizzle-kit push, PostgreSQL 18.6)", "nada"],
         ["Neon — segredo no sandbox", "✅ em .env.local (injetado nos shells/preview)", "nada"],
         ["Vercel — produção", "❌ último deploy falhou (DEPLOYMENT_NOT_FOUND); DATABASE_URL ausente no ambiente de deploy", "adicionar DATABASE_URL (pooled) nas env vars do deploy + redeploy; após isso /api/health responde 200 e o dashboard entra em Live"],
-        ["Neon Auth — trusted origins", "localhost ok; domínio Vercel não", "adicionar o domínio de produção em Neon Console → Auth → Trusted Origins (se/quando o login usar o Neon Auth)"],
-        ["Clerk — claim da app accountless", "chaves dev funcionam (mock/dev)", "npx clerk auth login → npx clerk deploy; depois trocar chaves dev por produção e CLERK_SECRET_KEY no deploy"],
         ["Stripe", "rotas existem, inerte sem chave", "definir STRIPE_SECRET_KEY/WEBHOOK quando for cobrar"],
-        ["Legados", "next.config.ts, src/app/, supabase/, Dockerfile, docker-compose", "limpeza opcional — não afetam o build Vite/CI"],
+        ["Legados", "supabase/, Dockerfile, docker-compose", "limpeza opcional — não afetam o build Vite/CI"],
         ["E-mail de verificação", "Neon Auth envia (status true) no modo gerenciado", "Better Auth self-hosted precisa de provider (Resend etc.) se a verificação for exigida sem Neon Auth"],
     ],
     [40 * mm, 68 * mm, 65 * mm],

@@ -1,16 +1,8 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
-// These tests exercise the self-hosted Better Auth flow. Force the additive
-// Clerk bridge OFF and the managed Neon Auth override OFF so this file is
-// deterministic even when a local .env.local contains those keys (Vitest
-// loads them via Vite envPrefix). Modules are imported dynamically AFTER the
-// env stub so their import-time constants are evaluated in the stubbed env.
-vi.mock("./lib/clerk-bridge", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("./lib/clerk-bridge")>();
-  return { ...mod, CLERK_ENABLED: false, getClerkToken: async () => "" };
-});
+import { PreferencesProvider } from "./lib/i18n";
 
 type AuthClientModule = typeof import("./lib/auth-client");
 type AuthModule = typeof import("./views/Auth");
@@ -18,38 +10,14 @@ let AUTH_BASE: AuthClientModule["AUTH_BASE"];
 let Auth: AuthModule["Auth"];
 
 beforeAll(async () => {
-  vi.stubEnv("VITE_NEON_AUTH_URL", "");
   ({ AUTH_BASE } = await import("./lib/auth-client"));
   ({ Auth } = await import("./views/Auth"));
 });
 
-afterAll(() => {
-  vi.unstubAllEnvs();
-});
+afterAll(() => vi.unstubAllGlobals());
 
-import { PreferencesProvider } from "./lib/i18n";
-
-// Contract tests for the self-hosted Neon + Better Auth flow:
-//  - auth calls target the app's same-origin AUTH_BASE (cookie based)
-//  - EMAIL_NOT_VERIFIED must surface the verification panel, not an error wall
-//  - navigation only happens on a real session
-vi.stubGlobal(
-  "fetch",
-  vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    const method = (init?.method ?? "GET").toUpperCase();
-    if (url.includes("/sign-in/email") && method === "POST") {
-      return new Response(JSON.stringify({ message: "EMAIL_NOT_VERIFIED" }), { status: 401 });
-    }
-    if (url.includes("/sign-up/email") && method === "POST") {
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }
-    if (url.includes("/send-verification-email") && method === "POST") {
-      return new Response(JSON.stringify({ status: true }), { status: 200 });
-    }
-    return new Response(JSON.stringify({ error: `unexpected ${method} ${url}` }), { status: 404 });
-  }),
-);
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
 
 function renderAuth(initialPath = "/auth") {
   return render(
@@ -65,7 +33,6 @@ function renderAuth(initialPath = "/auth") {
 }
 
 async function submitCredentials(password = "password123") {
-  const { userEvent } = await import("@testing-library/user-event");
   const user = userEvent.setup();
   expect(screen.getByLabelText("Authorized administrator email")).toHaveValue("igor1fontes@gmail.com");
   await user.type(screen.getByPlaceholderText("••••••••"), password);
@@ -73,83 +40,46 @@ async function submitCredentials(password = "password123") {
   return user;
 }
 
-describe("auth flow (same-origin client + server proxy)", () => {
-  beforeEach(() => vi.mocked(fetch).mockClear());
+describe("single Better Auth sign-in flow", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify({ message: "Invalid email or password" }), { status: 401 }),
+    );
+  });
   afterEach(cleanup);
 
-  it("targets the app's own /api/auth base URL with cookie credentials", async () => {
+  it("uses the same-origin Better Auth endpoint with cookie credentials", async () => {
     expect(AUTH_BASE).toBe("/api/auth");
     renderAuth();
     await submitCredentials();
-    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
-    const call = vi.mocked(fetch).mock.calls[0];
-    expect(String(call?.[0])).toBe(`${AUTH_BASE}/sign-in/email`);
-    expect((call?.[1] as RequestInit).credentials).toBe("include");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(AUTH_BASE + "/sign-in/email");
+    expect(init.method).toBe("POST");
+    expect(init.credentials).toBe("include");
+    expect(JSON.parse(String(init.body))).toMatchObject({ email: "igor1fontes@gmail.com" });
   });
 
-  it("shows the verification panel (not an error) when the account is unverified", async () => {
+  it("shows a controlled error when credentials are rejected", async () => {
     renderAuth();
     await submitCredentials();
-    expect(await screen.findByText(/Verifica o teu email/i)).toBeInTheDocument();
-    expect(screen.getByText("igor1fontes@gmail.com", { selector: "span" })).toBeInTheDocument();
-    // Panel replaces navigation — dashboard is never reached unverified.
+    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid email or password");
     expect(screen.queryByText("dashboard-reached")).not.toBeInTheDocument();
   });
 
-  it("resends the verification email from the panel", async () => {
+  it("navigates to the dashboard after a successful sign-in", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ user: { email: "igor1fontes@gmail.com" } }), { status: 200 }),
+    );
     renderAuth();
     await submitCredentials();
-    const { userEvent } = await import("@testing-library/user-event");
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /reenviar/i }));
-    expect(await screen.findByText(/Email reenviado/i)).toBeInTheDocument();
-    const resendCall = vi.mocked(fetch).mock.calls.find((c) => String(c[0]).includes("/send-verification-email"));
-    expect(resendCall).toBeTruthy();
-    expect((resendCall?.[1] as RequestInit).method).toBe("POST");
+    await waitFor(() => expect(screen.getByText("dashboard-reached")).toBeInTheDocument());
   });
 
-  it("allows only the administrator to bootstrap the account", async () => {
+  it("does not expose a sign-up or account-registration control", () => {
     renderAuth("/auth?mode=signup");
-    const { userEvent } = await import("@testing-library/user-event");
-    const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText("Igor Fontes"), "Igor Fontes");
-    await user.type(screen.getByPlaceholderText("••••••••"), "password123");
-    await user.click(screen.getByRole("button", { name: "Criar conta" }));
-    await waitFor(() => expect(screen.getByText("dashboard-reached")).toBeInTheDocument());
-
-    const signupCall = vi.mocked(fetch).mock.calls.find((call) => String(call[0]).includes("/sign-up/email"));
-    expect(signupCall).toBeTruthy();
-    expect(JSON.parse(String((signupCall?.[1] as RequestInit).body))).toMatchObject({
-      email: "igor1fontes@gmail.com",
-      name: "Igor Fontes",
-    });
-  });
-
-  it("switches between sign-in and the restricted signup form", async () => {
-    renderAuth();
-    const { userEvent } = await import("@testing-library/user-event");
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Registar" }));
-    expect(screen.getByPlaceholderText("Igor Fontes")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    expect(screen.queryByRole("button", { name: /registar|criar conta/i })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Igor Fontes")).not.toBeInTheDocument();
-  });
-
-  it("shows a controlled error if the verification resend request fails", async () => {
-    renderAuth();
-    await submitCredentials();
-    vi.mocked(fetch).mockRejectedValueOnce(new Error("mail service offline"));
-    const { userEvent } = await import("@testing-library/user-event");
-    const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: /reenviar/i }));
-    expect(await screen.findByText("mail service offline")).toBeInTheDocument();
-  });
-
-  it("navigates to the dashboard after a verified sign-in", async () => {
-    vi.mocked(fetch).mockImplementationOnce(async () => new Response(JSON.stringify({}), { status: 200 }));
-    renderAuth();
-    await submitCredentials();
-    await waitFor(() => expect(screen.getByText("dashboard-reached")).toBeInTheDocument());
-    cleanup();
   });
 });

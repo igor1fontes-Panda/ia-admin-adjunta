@@ -8,8 +8,6 @@ Every variable the repo reads is listed below.
 | `VITE_SUPABASE_URL`                                                              | browser     | Supabase project URL baked into the SPA                                                  |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_SUPABASE_ANON_KEY`                       | browser     | publishable key (RLS-protected)                                                          |
 | `VITE_MOCK_DATA`                                                                 | browser     | `true` enables the deterministic fixture dataset (dev only)                              |
-| `VITE_CLERK_PUBLISHABLE_KEY` / `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`               | browser     | optional Clerk auth (additive; Better Auth stays default)                                |
-| `VITE_NEON_AUTH_URL`                                                             | browser     | set server-side so the SPA proxies auth to managed Neon Auth                             |
 | `SUPABASE_URL_2` / `SUPABASE_URL`                                                | server      | bots' Supabase REST endpoint                                                             |
 | `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY`                              | server      | bots' service key (both naming models accepted)                                          |
 | `SUPABASE_PUBLISHABLE_KEY_2` / `SUPABASE_PUBLISHABLE_KEY`                        | server      | server-side publishable key for `@supabase/server`                                       |
@@ -22,8 +20,6 @@ Every variable the repo reads is listed below.
 | `PUBLIC_SITE_URL`                                                                | server      | public site URL override consumed by the client bundle                                   |
 | `NODE_ENV`                                                                       | server      | runtime mode; `server/auth.ts` switches secure-cookie behavior based on it               |
 | `PORT`                                                                           | server      | port for local server runtimes (Vercel injects it in production)                         |
-| `CLERK_SECRET_KEY`                                                               | server      | optional Clerk JWT verification in `api/*`                                               |
-| `CLERK_ISSUER`                                                                   | server      | optional Clerk token issuer override                                                     |
 | `GEMINI_API_KEY`                                                                 | server/bots | Google Gemini (bots skip gracefully when absent)                                         |
 | `GEMINI_MODEL`                                                                   | server/bots | override the head of the model fallback chain                                            |
 | `BLACKBOX_API_KEY`                                                               | server/bots | second AI provider (OpenAI-compatible)                                                   |
@@ -37,7 +33,6 @@ Every variable the repo reads is listed below.
 | `STRIPE_SECRET_KEY`                                                              | server      | Stripe API (inert without key)                                                           |
 | `STRIPE_WEBHOOK_SECRET`                                                          | server      | Stripe webhook signature verification                                                    |
 | `STRIPE_PRICE_STARTER` / `STRIPE_PRICE_PROFESSIONAL` / `STRIPE_PRICE_ENTERPRISE` | server      | recurring price IDs per plan (`api/stripe/create-checkout-session.ts`)                   |
-| `AUTH_SMOKE_PASSWORD`                                                            | scripts     | password used by `scripts/auth-smoke.mjs` (random per run when unset)                    |
 | `AUTH_SMOKE_URL`                                                                 | scripts     | base URL override for the auth smoke (default `http://localhost:3000`)                   |
 
 CI-only values (`SUPABASE_ACCESS_TOKEN`, `GITHUB_TOKEN`, repo `vars.*`) are set as

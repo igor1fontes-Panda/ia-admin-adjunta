@@ -40,10 +40,8 @@ const PENDING = [
   "BETTER_AUTH_URL",
   "BOT_NAME",
   "BRIEFING_BUCKET",
-  "CLERK_SECRET_KEY",
   "HUME_BASE_URL",
   "HUME_VOICE_NAME",
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "NODE_ENV",
   "PORT",
   "STRIPE_PRICE_ENTERPRISE",
@@ -51,8 +49,6 @@ const PENDING = [
   "STRIPE_PRICE_STARTER",
   "SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_URL",
-  "VITE_CLERK_PUBLISHABLE_KEY",
-  "VITE_NEON_AUTH_URL",
 ];
 
 const SCAN_DIRS = ["api", "src", "scripts", "server", "db"];
@@ -133,7 +129,7 @@ describe(".env.example completeness (audit item 07)", () => {
       PENDING.length,
       "PENDING shrank or grew? It is a ratchet: entries may only be REMOVED (when the " +
         "corresponding var is declared in .env.example). Fix by deleting entries, not adding.",
-    ).toBe(17);
+    ).toBe(13);
   });
 
   it("has no PENDING entry that is already declared or no longer read (keeps the list honest)", () => {

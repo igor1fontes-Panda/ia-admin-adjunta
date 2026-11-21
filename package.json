@@ -9,9 +9,7 @@
   "scripts": {
     "dev": "npm run build && bun scripts/dev-server.mjs",
     "dev:vite": "vite",
-    "dev:next": "next dev",
     "build": "vite build",
-    "build:next": "next build",
     "preview": "vite preview",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
@@ -39,9 +37,7 @@
     "esbuild": "^0.25.12"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.7.5",
-    "@clerk/backend": "^3.18.1",
-    "@clerk/react": "^6.16.1",
+    "@better-auth/drizzle-adapter": "1.7.26",
     "@google/genai": "^2.23.0",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/server": "^1.7.0",
@@ -50,11 +46,10 @@
     "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
-    "better-auth": "^1.7.5",
+    "better-auth": "1.7.26",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^13.4.0",
     "lucide-react": "^1.47.0",
-    "next": "^16.3.5",
     "pg": "^8.23.0",
     "postcss": "^8.4.40",
     "react": "^19.3.0",
@@ -68,6 +63,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
@@ -86,7 +82,6 @@
     "supabase": "^3.1.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
-    "vitest": "^5.0.1",
-    "@tailwindcss/postcss": "^4.3.5"
+    "vitest": "^5.0.1"
   }
 }

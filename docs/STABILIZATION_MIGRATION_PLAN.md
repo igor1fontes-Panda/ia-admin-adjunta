@@ -34,21 +34,23 @@ Este documento não autoriza cutover de produção, eliminação de contas, remo
 
 Foram comparados fingerprints MD5 de ID, email normalizado e empresa normalizada, sem expor os valores originais.
 
-| Origem | Registos | Resultado |
-|---|---:|---|
-| Neon `public.leads` | 4 | Quatro fingerprints de ID distintos |
-| Supabase `public.leads` | 1 | Fingerprints de ID, email e empresa não coincidem com os quatro do Neon |
+| Origem                  | Registos | Resultado                                                               |
+| ----------------------- | -------: | ----------------------------------------------------------------------- |
+| Neon `public.leads`     |        4 | Quatro fingerprints de ID distintos                                     |
+| Supabase `public.leads` |        1 | Fingerprints de ID, email e empresa não coincidem com os quatro do Neon |
 
 O lead Supabase tem estado `lost` e score 55; os quatro leads Neon têm estado `new` e score 50. As fingerprints de email e empresa também não coincidem. Portanto, não há evidência de duplicação entre o registo Supabase e os quatro registos Neon. A decisão provisória é preservar os cinco registos e não importar, fundir ou eliminar nenhum até validação de negócio e confirmação de integridade referencial.
 
 ## 5. Autenticação — plano de transição
 
 Estado anteriormente observado:
+
 - Neon Managed Auth: 10 utilizadores.
 - Supabase Auth: 1 utilizador.
 - Better Auth nas tabelas públicas Neon: zero utilizadores.
 
 Sequência obrigatória:
+
 1. Inventariar os campos de identidade e providers, sem exportar passwords, tokens ou segredos.
 2. Determinar se os hashes existentes são compatíveis com o formato esperado pelo Better Auth e com a configuração de hashing escolhida.
 3. Não copiar hashes sem validação criptográfica e teste controlado.
@@ -77,6 +79,7 @@ Nenhuma conta deve ser eliminada antes de o utilizador correspondente confirmar 
 Bots identificados: `lead-hunter.mjs`, `ops-manager.mjs`, `growth-marketing.mjs`, `teacher-agent.mjs`, `error-handler.mjs`, `skills-scout.mjs` e `ai_engine.py`.
 
 Trabalho obrigatório:
+
 1. Mapear cada bot, workflow, tabela, integração, secret referenciado e permissões.
 2. Migrar `ai_engine.py` de Supabase REST para o acesso Neon aprovado.
 3. Configurar explicitamente `DATABASE_URL`/variável Neon apropriada nos workflows.
@@ -135,12 +138,14 @@ Trabalho obrigatório:
 5. Preparar migrations e testes em branch isolada.
 6. Só depois planear o cutover com janela, validação e rollback explícitos.
 
-
 ## 13. Auditoria detalhada de autenticação e bots — 20/11/2026
 
-### Autenticação
+#> Actualização operacional — 21/11/2026: a lista abaixo regista os achados da primeira auditoria, antes das correcções descritas no fim desta secção. Não deve ser interpretada como estado actual do código.
+
+## Autenticação
 
 Ficheiros revistos:
+
 - `server/auth.ts`
 - `api/lib/http.ts`
 - `api/auth/better-auth.ts`
@@ -154,6 +159,7 @@ Ficheiros revistos:
 - `src/app/page.tsx`
 
 Achados:
+
 1. `server/auth.ts` é a implementação Better Auth ligada ao schema Drizzle Neon principal.
 2. `api/auth/better-auth.ts` mantém dois modos: proxy Neon Managed Auth via `VITE_NEON_AUTH_URL` e Better Auth auto-gerido. A variável VITE também é exposta ao bundle do cliente.
 3. `api/lib/http.ts` tenta Better Auth e depois Clerk Bearer; `server/clerk.ts` mantém uma integração activa de fallback.
@@ -163,15 +169,56 @@ Achados:
 7. `server/auth.ts` activa email/password mas não configura explicitamente envio de recuperação de palavra-passe. A recuperação exige provider de email e teste end-to-end.
 8. O bootstrap administrativo tem de ser fechado de forma controlada antes de abrir o endpoint de registo; não copiar credenciais nem hashes sem validação.
 
-Decisão de implementação:
-- Uma única instância Better Auth e um único schema Drizzle.
-- Um único caminho de autenticação usado pela SPA e por qualquer handler Next.js que permaneça activo.
-- Retirar Neon Managed Auth e Clerk apenas depois de migração, login, recuperação e autorização testados.
-- Configurar recuperação de password e convite/bootstrap administrativo antes do cutover.
+Decisão de implementação — actualizada em 21/11/2026:
+
+- Preservar as 10 identidades e as 10 contas credential existentes em neon_auth; preservar também a identidade Supabase até reconciliação.
+- Não copiar hashes, não recriar utilizadores, não executar migrações de identidade nem alterar dados de produção nesta fase.
+- Usar uma única instância Better Auth auto-gerida em server/auth.ts, ligada por Drizzle ao schema PostgreSQL neon_auth existente. As tabelas de negócio continuam em public.
+- Manter um único schema Drizzle de autenticação em db/auth-schema.ts; remover as definições duplicadas em lib/db/schema.ts e as tabelas Better Auth vazias de public.
+- A SPA e as Vercel Functions usam uma única API de autenticação. O scaffold Next.js foi removido porque o projecto está configurado como Vite no Vercel e não tinha root layout nem deployment próprio.
+- Remover Clerk como fornecedor alternativo e retirar a tentativa de proxy para Neon Managed Auth, cujo serviço não está activo na branch de produção. As variáveis antigas da integração Vercel ficam intactas até à validação pós-deploy.
+- Nas rotas de dados, validar a sessão contra a base de dados (disableCookieCache) antes de autorizar operações.
+- O login com as identidades existentes, recuperação de palavra-passe e envio SMTP continuam pendentes de teste end-to-end. Não declarar a autenticação estabilizada até concluir esses testes.
+- Não efectuar cutover, migração ou alteração de produção sem snapshot, revisão e verificação de compatibilidade das credenciais.
+
+### Registo de execução — 21/11/2026
+
+**Estado do repositório**
+
+- Branch de trabalho: fix/auth-unification (PR #131 permanece draft).
+- Tailwind 4 e lockfile: instalados e validados na branch.
+- Melhorias de autenticação aplicadas localmente no ambiente isolado; ainda não integradas nem publicadas.
+
+**Estado das bases de dados (consultas apenas de leitura)**
+
+- Neon neon_auth: 10 utilizadores, 10 contas credential, 0 sessões e 13 registos de verificação.
+- Neon public: as tabelas Better Auth anteriormente duplicadas estão vazias.
+- Supabase Auth: 1 utilizador e 1 identidade.
+- A API Neon indica que Managed Neon Auth não está activo na branch de produção. O schema e os registos persistem na base de dados.
+- Foi criada a branch Neon isolada auth-unification-validation-2026-11-21 a partir da produção; a contagem de utilizadores copiada é 10. Nenhum dado de produção foi alterado.
+
+**Alterações locais propostas**
+
+- server/auth.ts passa a ser a única instância Better Auth.
+- db/auth-schema.ts mapeia as tabelas existentes em neon_auth, com IDs UUID.
+- api/lib/http.ts deixa de aceitar Clerk Bearer como identidade alternativa e força validação da sessão sem cache.
+- shared/auth-policy.ts centraliza a allowlist de identidade; Vercel e Next.js usam a mesma política.
+- Removidas as implementações duplicadas lib/auth.ts, lib/db/*, server/clerk.ts e src/lib/clerk-bridge.tsx.
+- Dependências Clerk removidas; Better Auth e o adaptador Drizzle alinhados na versão 1.7.26.
+- Variáveis de ambiente legadas da integração Managed Neon Auth não foram apagadas do Vercel.
+
+**Verificação local**
+
+- npm ci: aprovado.
+- Testes: 147/147 aprovados.
+- TypeScript, ESLint e build Vite: aprovados.
+- A cobertura ainda precisa de ser recalculada após estas alterações.
+- A integração directa do Better Auth com as 10 identidades existentes ainda não foi validada por um login end-to-end; não executar cutover.
 
 ### Bots e persistência
 
 Bots revistos:
+
 - `scripts/lead-hunter.mjs`
 - `scripts/ops-manager.mjs`
 - `scripts/growth-marketing.mjs`
@@ -181,6 +228,7 @@ Bots revistos:
 - `ai_engine.py`
 
 Camadas de dados:
+
 - `scripts/bot-lib.mjs` implementa um shim Supabase-like sobre Neon, mas cai para Supabase se Neon não estiver configurado ou se uma query Neon falhar. Isso permite split-brain durante falhas.
 - `scripts/bot-db.mjs` contém uma segunda implementação e usa Supabase quando Neon não está configurado. O lead-hunter usa esta camada e importa também o bot-lib para IA.
 - Os outros cinco bots JS usam o shim `supabase.from(...)` do `bot-lib.mjs`, apesar de a persistência principal ser Neon.
@@ -188,6 +236,7 @@ Camadas de dados:
 - `scripts/hume_voice.py` usa Supabase Storage para publicar briefings de voz. Esta é uma dependência de object storage, não de base de dados, e precisa de migração própria ou de credenciais Storage separadas antes de remover todos os segredos Supabase.
 
 Fiabilidade:
+
 - Os seis bots JavaScript contêm caminhos de saída com `process.exit(0)` em situações sem configuração e/ou erro fatal. A política actual pode marcar execuções falhadas como sucesso.
 - `ai_engine.py` devolve código 0 quando não há configuração ou quando falha leitura de dados.
 - O teste `scripts/bots-null-safety.test.mjs` espera saída 0 para ausência de credenciais; deverá ser reescrito para distinguir execução intencionalmente ignorada (skip explícito) de erro operacional.
@@ -197,6 +246,7 @@ Fiabilidade:
 ### Workflows
 
 Ficheiros revistos:
+
 - `.github/workflows/ai-bots.yml`
 - `.github/workflows/ci.yml`
 - `.github/workflows/deploy.yml`
@@ -204,6 +254,7 @@ Ficheiros revistos:
 - `.github/workflows/preview-environment.yml`
 
 Achados:
+
 1. `ai-bots.yml` passa `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` para os seis jobs JS e para o job Python; não fornece `DATABASE_URL` nem `NEON_DATABASE_URL`.
 2. Os seis jobs JS usam Node 22, apesar de `package.json` declarar Node 24 e o workflow CI principal já usar Node 24.
 3. `deploy.yml` também usa Node 22.
@@ -214,6 +265,7 @@ Achados:
 ### Dependência de armazenamento de voz
 
 `scripts/hume_voice.py` carrega áudio gerado pela Hume para o bucket Supabase Storage `briefings`. Não remover credenciais Supabase indiscriminadamente. Opções técnicas para decidir na fase seguinte:
+
 - manter temporariamente uma credencial restrita exclusivamente a Storage, separada das credenciais de base de dados; ou
 - migrar os ficheiros para um object store escolhido (por exemplo, Vercel Blob ou S3 compatível), validar URLs e playback e só então retirar a dependência Storage.
 

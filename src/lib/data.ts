@@ -13,7 +13,6 @@
 import type { Activity, Client, Lead, Metric, Order } from "../types";
 import { computeMetrics } from "./engine";
 import { AUTH_BASE } from "./auth-client";
-import { CLERK_ENABLED, getClerkToken } from "./clerk-bridge";
 const API = "/api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -21,12 +20,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     "Content-Type": "application/json",
     ...((init?.headers as Record<string, string>) ?? {}),
   };
-  // Clerk mode: authenticate API calls with the session JWT (verified
-  // server-side as a fallback identity in api/lib/http.ts).
-  if (CLERK_ENABLED) {
-    const token = await getClerkToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-  }
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
     ...init,
@@ -183,35 +176,6 @@ export async function authSignIn(email: string, password: string): Promise<void>
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
     throw new Error(body.message || body.error || `Sign-in failed (${res.status})`);
-  }
-}
-
-export async function authSignUp(email: string, password: string, name: string): Promise<void> {
-  const res = await fetch(`${AUTH_BASE}/sign-up/email`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-    throw new Error(body.message || body.error || `Sign-up failed (${res.status})`);
-  }
-}
-
-/** Resend the verification email (managed Neon Auth mode). */
-export async function authResendVerification(email: string): Promise<void> {
-  // Same-origin call — the server proxies to managed Neon Auth and injects the
-  // trusted origin itself, so no cross-origin rejection can occur here.
-  const res = await fetch(`${AUTH_BASE}/send-verification-email`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-    throw new Error(body.message || body.error || `Verification email request failed (${res.status})`);
   }
 }
 

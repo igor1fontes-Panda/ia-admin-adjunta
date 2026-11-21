@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Header } from "./components/Header";
-import { useSessionBridge, SessionProvider } from "./lib/clerk-bridge";
+import { useSessionBridge, SessionProvider } from "./lib/session-bridge";
 import { PreferencesProvider } from "./lib/i18n";
 import { ADMIN_EMAIL } from "./lib/auth-client";
 import "./theme.css";
@@ -70,9 +70,7 @@ function DashboardGate() {
 }
 
 /**
- * Auth gate — Clerk session when Clerk keys are configured, otherwise the
- * self-hosted Better Auth session (HttpOnly cookie based). Shape comes from
- * useSessionBridge so this component is provider-agnostic.
+ * Auth gate — the canonical Better Auth session (HttpOnly cookie based).
  */
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();

@@ -190,8 +190,9 @@ describe("single-administrator access control", () => {
     expect(isAdminEmail(undefined)).toBe(false);
   });
 
-  it("allows signup only for the administrator identity", () => {
-    const allowed = enforceAdminIdentity(
+  it("blocks signup because the administrator identity already exists", () => {
+    const response = mockRes();
+    const denied = enforceAdminIdentity(
       {
         method: "POST",
         url: "/api/auth/sign-up/email",
@@ -199,17 +200,11 @@ describe("single-administrator access control", () => {
         query: {},
         headers: {},
       },
-      mockRes(),
+      response,
     );
-    expect(allowed).toBeNull();
-
-    const deniedResponse = mockRes();
-    const denied = enforceAdminIdentity(
-      { method: "POST", url: "/api/auth/sign-up/email", body: { email: "other@example.com" }, query: {}, headers: {} },
-      deniedResponse,
-    );
-    expect(denied).toBe(deniedResponse);
-    expect(deniedResponse.statusCode).toBe(403);
+    expect(denied).toBe(response);
+    expect(response.statusCode).toBe(403);
+    expect(response.body).toMatchObject({ error: expect.stringMatching(/registration is disabled/i) });
   });
 
   it("rejects non-admin and missing identities on email sign-in", () => {
@@ -227,6 +222,22 @@ describe("single-administrator access control", () => {
       );
       expect(response.statusCode).toBe(403);
     }
+  });
+
+  it("keeps password recovery disabled until SMTP delivery is configured", () => {
+    const response = mockRes();
+    enforceAdminIdentity(
+      {
+        method: "POST",
+        url: "/api/auth/request-password-reset",
+        body: { email: "igor1fontes@gmail.com" },
+        query: {},
+        headers: {},
+      },
+      response,
+    );
+    expect(response.statusCode).toBe(503);
+    expect(response.body).toMatchObject({ error: expect.stringMatching(/email delivery is not configured/i) });
   });
 
   it("rejects alternative sign-in methods and administrator email changes", () => {

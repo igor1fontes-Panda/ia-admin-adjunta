@@ -33,33 +33,17 @@ export { ADMIN_EMAIL, isAdminEmail };
 
 export type AuthUser = { id: string; email: string; name: string };
 
-/** Returns the signed-in user for this request, or null.
- * `auth` may be null when DATABASE_URL is not configured (null-safe server).
- * Identity sources, in order: self-hosted Better Auth session cookie, then
- * an additive Clerk session JWT (Bearer) when CLERK_SECRET_KEY is set.
- * Both integrations load lazily: serverless functions must not crash at cold
- * start if a package's export map resolves oddly in the runtime — a failed
- * load degrades to "no session" (401) instead of FUNCTION_INVOCATION_FAILED. */
+/** Returns the signed-in administrator from the canonical Better Auth session. */
 export async function getSessionUser(req: VercelRequest, auth: Auth | null): Promise<AuthUser | null> {
-  if (auth) {
-    try {
-      const { fromNodeHeaders } = await import("better-auth/node");
-      const session = await auth.api.getSession({
-        // Vercel lambda headers are a plain object — convert for Better Auth.
-        headers: fromNodeHeaders(req.headers),
-      });
-      if (session?.user) {
-        if (!isAdminEmail(session.user.email)) return null;
-        return { id: session.user.id, email: session.user.email, name: session.user.name };
-      }
-    } catch {
-      // fall through to Clerk bearer verification
-    }
-  }
+  if (!auth) return null;
   try {
-    const { verifyClerkUser } = await import("../../server/clerk");
-    const clerkUser = await verifyClerkUser(req);
-    return clerkUser && isAdminEmail(clerkUser.email) ? clerkUser : null;
+    const { fromNodeHeaders } = await import("better-auth/node");
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+      query: { disableCookieCache: true },
+    });
+    if (!session?.user || !isAdminEmail(session.user.email)) return null;
+    return { id: session.user.id, email: session.user.email, name: session.user.name };
   } catch {
     return null;
   }

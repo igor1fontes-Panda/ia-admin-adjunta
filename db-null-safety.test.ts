@@ -33,7 +33,7 @@ describe("serverless cold-start null-safety", () => {
 
   it("resolves the serverless auth handler under Node ESM without database credentials", async () => {
     vi.resetModules();
-    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL", "VITE_NEON_AUTH_URL"] as const;
+    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL"] as const;
     const saved = new Map(envKeys.map((key) => [key, process.env[key]]));
     for (const key of envKeys) delete process.env[key];
 
@@ -58,8 +58,7 @@ describe("serverless cold-start null-safety", () => {
       );
       expect(response.statusCode).toBe(503);
       expect(response.body).toEqual({
-        error:
-          "Authentication is unavailable: set DATABASE_URL (Neon pooled connection) and BETTER_AUTH_SECRET, then redeploy.",
+        error: "Authentication is unavailable. Check DATABASE_URL and BETTER_AUTH_SECRET.",
       });
     } finally {
       for (const [key, value] of saved) {

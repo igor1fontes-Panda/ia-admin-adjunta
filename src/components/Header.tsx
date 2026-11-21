@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { LayoutDashboard, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 import { useState } from "react";
-import { useSessionBridge } from "../lib/clerk-bridge";
+import { useSessionBridge } from "../lib/session-bridge";
 import { useT, usePreferences } from "../lib/i18n";
 
 export function Header() {
