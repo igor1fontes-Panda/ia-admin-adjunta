@@ -101,7 +101,7 @@ A state transition requires an actor, timestamp, task ID, policy decision and ev
 
 ## 6. Autonomy and execution boundary
 
-Elevated autonomy applies to bounded, reversible work:
+Supervised autonomy applies to bounded, reversible work:
 - read approved repository context;
 - edit allowed files on an authorised feature branch;
 - run allowlisted checks in a sandbox;
