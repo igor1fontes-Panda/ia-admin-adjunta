@@ -13,6 +13,7 @@ Security fixes are prioritised for the current default branch and actively maint
 Please do not publish exploitable details in a public issue or pull request.
 
 Use GitHub's **Private vulnerability reporting** feature for this repository, if enabled. If it is unavailable, contact the repository owner through the private contact channel available from the repository owner's GitHub profile and request a confidential security-reporting channel. Include:
+
 - affected component, route, version or commit;
 - concise reproduction steps and required privileges;
 - security impact and realistic attack prerequisites;

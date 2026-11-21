@@ -9,7 +9,7 @@
 // it, this test fails in CI. When .env.example is completed, the PENDING list must be
 // emptied (this test then enforces "zero missing") — deleting entries is the only allowed
 // direction of change.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -55,7 +55,9 @@ const PENDING = [
   "VITE_NEON_AUTH_URL",
 ];
 
-const SCAN_DIRS = ["api", "src", "scripts", "server", "db"];
+const SCAN_DIRS = ["api", "src", "scripts", "server", "db"].filter(
+  (dir) => existsSync(dir) && statSync(dir).isDirectory(),
+);
 const SCAN_FILES = ["ai_engine.py"];
 const EXCLUDED_BASENAMES = [
   ".d.ts",
