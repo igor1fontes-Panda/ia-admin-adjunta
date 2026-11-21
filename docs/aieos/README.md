@@ -2,7 +2,7 @@
 
 **Status:** Foundation specification, version 0.2.0  
 **Repository:** IA Admin Adjunta  
-**Operating model:** Hybrid local + cloud, provider-neutral, free-first, elevated bounded autonomy.
+**Operating model:** Hybrid local + cloud, provider-neutral, free-first, supervised autonomy with bounded execution.
 
 ## 1. Purpose
 
@@ -47,7 +47,7 @@ A task is not complete because an agent says it is complete. Completion requires
 
 Read [SECURITY.md](./SECURITY.md). External model output is untrusted. Secrets remain in their owning platform's secret store. The orchestrator receives scoped references, never raw credentials unless a narrowly defined server-side adapter requires them.
 
-Elevated autonomy never means unrestricted access. Feature-branch write access does not imply permission to merge, deploy, change identity, alter databases or perform external financial/customer actions.
+Supervised autonomy never means unrestricted access. Feature-branch write access does not imply permission to merge, deploy, change identity, alter databases or perform external financial/customer actions.
 
 ## 7. Current project boundary
 
