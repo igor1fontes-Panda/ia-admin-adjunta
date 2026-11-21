@@ -91,9 +91,9 @@ Before enabling a provider adapter:
 On suspected compromise: stop affected adapter/automation, revoke its scoped credentials through the provider, preserve non-sensitive evidence, identify affected resources, notify the human owner, and resume only after review. Do not attempt autonomous cleanup that could destroy forensic evidence.
 
 
-## 11. Elevated bounded autonomy profile
+## 11. Supervised autonomy with bounded execution profile
 
-The selected AIEOS operating profile is elevated autonomy with technical limits. This permits independent execution only for tasks explicitly classified and scoped in the task contract.
+The selected AIEOS operating profile is supervised autonomy with technical limits. This permits independent execution only for tasks explicitly classified and scoped in the task contract.
 
 An agent may, when the task grants the capability:
 - inspect approved repository content;
