@@ -9,7 +9,7 @@
 // it, this test fails in CI. When .env.example is completed, the PENDING list must be
 // emptied (this test then enforces "zero missing") — deleting entries is the only allowed
 // direction of change.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -50,7 +50,9 @@ const PENDING = [
   "SUPABASE_URL",
 ];
 
-const SCAN_DIRS = ["api", "src", "scripts", "server", "db"];
+const SCAN_DIRS = ["api", "src", "scripts", "server", "db"].filter(
+  (dir) => existsSync(dir) && statSync(dir).isDirectory(),
+);
 const SCAN_FILES = ["ai_engine.py"];
 const EXCLUDED_BASENAMES = [
   ".d.ts",
@@ -73,16 +75,16 @@ function* walk(dir) {
 
 function scanSource() {
   const names = new Set();
-  const tsPattern = /(?:process|import\.meta)\.env\.([A-Z_][A-Z0-9_]*)/g;
+  const tsPattern = /(?:process|import\\.meta)\\.env\\.([A-Z_][A-Z0-9_]*)/g;
   // matches os.environ.get("X"), os.environ("X") and os.environ["X"]
-  const pyPattern = /os\.environ(?:\.get)?\(?["']([A-Z_][A-Z0-9_]*)["']\]?/g;
+  const pyPattern = /os\\.environ(?:\\.get)?\\(["']([A-Z_][A-Z0-9_]*)["']\\]?/g;
   for (const dir of SCAN_DIRS) {
     for (const file of walk(dir)) {
       if (EXCLUDED_BASENAMES.some((sfx) => file.endsWith(sfx))) continue;
       const text = readFileSync(file, "utf8");
-      if (/\.(ts|tsx|mjs|js)$/.test(file)) {
+      if (/\\.(ts|tsx|mjs|js)$/.test(file)) {
         for (const m of text.matchAll(tsPattern)) names.add(m[1]);
-      } else if (/\.py$/.test(file)) {
+      } else if (/\\.py$/.test(file)) {
         for (const m of text.matchAll(pyPattern)) names.add(m[1]);
       }
     }
@@ -97,8 +99,8 @@ function scanSource() {
 function declaredInExample() {
   const text = readFileSync(".env.example", "utf8");
   const names = new Set();
-  for (const line of text.split("\n")) {
-    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=/);
+  for (const line of text.split("\\n")) {
+    const m = line.match(/^\\s*([A-Z_][A-Z0-9_]*)\\s*=/);
     if (m) names.add(m[1]);
   }
   return names;
@@ -115,7 +117,11 @@ describe(".env.example completeness (audit item 07)", () => {
     const referenced = scanSource();
     const declared = declaredInExample();
     const missing = referenced.filter(
-      (name) => !declared.has(name) && !CI_ONLY.has(name) && !PLATFORM_INJECTED.has(name) && !PENDING.includes(name),
+      (name) =>
+        !declared.has(name) &&
+        !CI_ONLY.has(name) &&
+        !PLATFORM_INJECTED.has(name) &&
+        !PENDING.includes(name),
     );
     expect(
       missing,
