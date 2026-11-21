@@ -77,7 +77,7 @@ function scanSource() {
   const names = new Set();
   const tsPattern = /(?:process|import\.meta)\.env\.([A-Z_][A-Z0-9_]*)/g;
   // matches os.environ.get("X"), os.environ("X") and os.environ["X"]
-  const pyPattern = /os\.environ(?:\.get)?\(["']([A-Z_][A-Z0-9_]*)["']\]?/g;
+  const pyPattern = /os\.environ(?:\.get)?(?:\s*\(\s*|\s*\[\s*)["']([A-Z_][A-Z0-9_]*)["']/g;
   for (const dir of SCAN_DIRS) {
     for (const file of walk(dir)) {
       if (EXCLUDED_BASENAMES.some((sfx) => file.endsWith(sfx))) continue;
