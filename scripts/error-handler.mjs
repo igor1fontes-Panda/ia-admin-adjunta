@@ -137,50 +137,61 @@ try {
         }
 
         for (const d of qaRows) {
-        const checks = {};
-        // Check 1 — real paid order behind the delivery row
-        let order = null;
-        if (d.order_id) {
-          const { data: o } = await supabase.from("orders").select("status, amount").eq("id", d.order_id).maybeSingle();
-          order = o ?? null;
-        }
-        checks.order_paid = Boolean(order && order.status === "paid");
-        // Check 2 — client registered (null client_id = legitimate walk-in)
-        checks.client_registered = true; // walk-ins without a client_id are valid deliveries
-        if (d.client_id) {
-          const { data: c } = await supabase.from("clients").select("id").eq("id", d.client_id).maybeSingle();
-          checks.client_registered = Boolean(c);
-        }
-        // Check 3 — amount consistent with the pack tier
-        const amount = Number(d.amount) || 0;
-        checks.amount_matches_pack = isPackAmountValid(d.pack, amount);
-        checks.order_amount_matches = Boolean(order && isOrderAmountConsistent(order.amount, amount));
-        // Check 4 — only a confirmed HTTP success can pass this check.
-        checks.product_operational = productOperational === true;
+          const checks = {};
+          // Check 1 — real paid order behind the delivery row
+          let order = null;
+          if (d.order_id) {
+            const { data: o } = await supabase
+              .from("orders")
+              .select("status, amount")
+              .eq("id", d.order_id)
+              .maybeSingle();
+            order = o ?? null;
+          }
+          checks.order_paid = Boolean(order && order.status === "paid");
 
-        const passed = Object.values(checks).every(Boolean);
-        const { error: upErr } = await supabase
-          .from("delivery_status")
-          .update({
-            qa_status: passed ? "passed" : "failed",
-            checks,
-            verified_at: new Date().toISOString(),
-            notes: passed
-              ? "QA passed: paid order, client registered, amount consistent, product operational."
-              : `QA failed: ${Object.entries(checks)
-                  .filter(([, ok]) => !ok)
-                  .map(([k]) => k)
-                  .join(", ")}.`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", d.id);
-        if (upErr) {
-          log(`QA update failed for ${d.id}: ${upErr.message}`);
-          continue;
-        }
-        if (passed) qaPassed += 1;
-        else qaFailed += 1;
-        log(`QA ${passed ? "✅ passed" : "❌ failed"}: ${d.client_name} (${d.pack}, ${amount})`);
+          // Check 2 — client registered (null client_id = legitimate walk-in)
+          checks.client_registered = true; // walk-ins without a client_id are valid deliveries
+          if (d.client_id) {
+            const { data: c } = await supabase
+              .from("clients")
+              .select("id")
+              .eq("id", d.client_id)
+              .maybeSingle();
+            checks.client_registered = Boolean(c);
+          }
+
+          // Check 3 — amount matches both the pack tier and the paid order
+          const amount = Number(d.amount) || 0;
+          checks.amount_matches_pack = isPackAmountValid(d.pack, amount);
+          checks.order_amount_matches = Boolean(order && isOrderAmountConsistent(order.amount, amount));
+
+          // Check 4 — only a confirmed HTTP success can pass this check.
+          checks.product_operational = productOperational === true;
+
+          const passed = Object.values(checks).every(Boolean);
+          const { error: upErr } = await supabase
+            .from("delivery_status")
+            .update({
+              qa_status: passed ? "passed" : "failed",
+              checks,
+              verified_at: new Date().toISOString(),
+              notes: passed
+                ? "QA passed: paid order, client registered, amount consistent, product operational."
+                : `QA failed: ${Object.entries(checks)
+                    .filter(([, ok]) => !ok)
+                    .map(([k]) => k)
+                    .join(", ")}.`,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", d.id);
+          if (upErr) {
+            log(`QA update failed for ${d.id}: ${upErr.message}`);
+            continue;
+          }
+          if (passed) qaPassed += 1;
+          else qaFailed += 1;
+          log(`QA ${passed ? "✅ passed" : "❌ failed"}: ${d.client_name} (${d.pack}, ${amount})`);
         }
       }
     }
