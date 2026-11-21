@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // The Neon driver is mocked: queries never leave the process. Captured calls
 // let the tests assert the exact SQL the shim builds, and the reply queue
 // simulates server responses (including failures).
-const { neonCaptures, neonReplies } = vi.hoisted(() => ({
+const { neonCaptures, neonReplies, supabaseCaptures } = vi.hoisted(() => ({
   neonCaptures: [],
   neonReplies: [],
+  supabaseCaptures: [],
 }));
 
 vi.mock("@neondatabase/serverless", () => ({
@@ -19,18 +20,28 @@ vi.mock("@neondatabase/serverless", () => ({
 
 // Keep the other SDK imports inert — no network, no key material.
 vi.mock("@google/genai", () => ({ GoogleGenAI: class {} }));
-vi.mock("@supabase/supabase-js", () => ({ createClient: () => null }));
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({
+    from(table) {
+      supabaseCaptures.push(table);
+      return {
+        select: () => Promise.resolve({ data: [], error: null }),
+      };
+    },
+  }),
+}));
 
 async function freshLib() {
   vi.resetModules();
   neonCaptures.length = 0;
   neonReplies.length = 0;
+  supabaseCaptures.length = 0;
   return await import("./bot-lib.mjs");
 }
 
 beforeEach(() => {
+  vi.unstubAllEnvs();
   vi.stubEnv("DATABASE_URL", "postgresql://user:secret@localhost:5432/neondb");
-  vi.unstubAllEnvs; // keep other vars as-is; module state resets via resetModules
 });
 
 describe("bot-lib shim: SQL building (zero network)", () => {
@@ -62,6 +73,21 @@ describe("bot-lib shim: SQL building (zero network)", () => {
 
     expect(neonCaptures[0].params[0]).toBe(JSON.stringify({ bias: { linkedin: 4 } }));
     expect(neonCaptures[0].params[1]).toEqual(["a", "b"]);
+  });
+
+  it("builds gte and OR-ilike filters with parameterized SQL", async () => {
+    const lib = await freshLib();
+    const { error } = await lib.supabase
+      .from("activity_log")
+      .select("message, created_at")
+      .gte("created_at", "2026-11-21T00:00:00.000Z")
+      .or("message.ilike.%error%,message.ilike.%fail%");
+
+    expect(error).toBeNull();
+    expect(neonCaptures[0].text).toBe(
+      'select message, created_at from activity_log where "created_at" >= $1 and ("message" ilike $2 or "message" ilike $3)',
+    );
+    expect(neonCaptures[0].params).toEqual(["2026-11-21T00:00:00.000Z", "%error%", "%fail%"]);
   });
 
   it("builds multi-row insert with returning *", async () => {
@@ -127,6 +153,19 @@ describe("bot-lib shim: SQL building (zero network)", () => {
     expect(error?.message).toContain("password authentication failed");
   });
 
+  it("does not fail over to Supabase after a configured Neon query fails", async () => {
+    vi.stubEnv("SUPABASE_URL", "https://legacy.example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-key");
+    const lib = await freshLib();
+    neonReplies.push(new Error('relation "leads" does not exist'));
+
+    const { data, error } = await lib.supabase.from("leads").select("*");
+
+    expect(data).toBeNull();
+    expect(error?.message).toContain('relation "leads" does not exist');
+    expect(supabaseCaptures).toHaveLength(0);
+  });
+
   it("refuses to fabricate data when no store is configured", async () => {
     vi.stubEnv("DATABASE_URL", "");
     const lib = await freshLib();
@@ -172,6 +211,7 @@ describe("bot-lib helpers", () => {
       vi.resetModules();
       neonCaptures.length = 0;
       neonReplies.length = 0;
+      supabaseCaptures.length = 0;
       return await import("./bot-lib.mjs");
     })();
     const ok = await ready.verifyBotReadiness();
