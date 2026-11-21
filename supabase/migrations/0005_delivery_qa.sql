@@ -27,7 +27,7 @@ drop policy if exists "delivery_status read for authenticated" on public.deliver
 create policy "delivery_status read for authenticated"
   on public.delivery_status for select
   to authenticated
-  using (true);
+  using ((select auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 -- Service-role (bots) bypasses RLS; no anon access: only staff see QA state.
 
