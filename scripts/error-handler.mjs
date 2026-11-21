@@ -7,6 +7,7 @@
  * data), and REMEMBERS which diagnoses matched which real fixes. Over time
  * it maps recurring incident signatures to known resolutions.
  */
+import { isOrderAmountConsistent, isPackAmountValid, isValidSiteUrl } from "./delivery-qa.mjs";
 import {
   askAI,
   blackboxReady,
@@ -121,20 +122,21 @@ try {
     if (qaErr) {
       log(`delivery QA skipped (run migration 0005_delivery_qa.sql): ${qaErr.message}`);
     } else if ((qaRows ?? []).length) {
-      // Check 4 — the product itself is operational: production app answers.
-      const siteUrl = (process.env.SITE_URL || "").replace(/\/$/, "");
-      let productOperational = null; // unknown when SITE_URL is not set
-      if (siteUrl) {
+      // A missing or invalid URL is UNKNOWN, not a successful product check.
+      // Leave pending deliveries untouched until a real health check is possible.
+      const siteUrl = (process.env.SITE_URL || "").trim().replace(/\/+$/, "");
+      if (!isValidSiteUrl(siteUrl)) {
+        log("delivery QA deferred: SITE_URL is missing or invalid; product status is unknown and pending rows remain unchanged.");
+      } else {
+        let productOperational = false;
         try {
           const res = await fetch(siteUrl, { signal: AbortSignal.timeout(10_000) });
           productOperational = res.ok;
         } catch (e) {
           log(`product health check failed: ${e?.message ?? e}`);
-          productOperational = false;
         }
-      }
 
-      for (const d of qaRows) {
+        for (const d of qaRows) {
         const checks = {};
         // Check 1 — real paid order behind the delivery row
         let order = null;
@@ -144,22 +146,17 @@ try {
         }
         checks.order_paid = Boolean(order && order.status === "paid");
         // Check 2 — client registered (null client_id = legitimate walk-in)
-        checks.client_registered = !d.client_id || true; // walk-ins are valid deliveries
+        checks.client_registered = true; // walk-ins without a client_id are valid deliveries
         if (d.client_id) {
           const { data: c } = await supabase.from("clients").select("id").eq("id", d.client_id).maybeSingle();
           checks.client_registered = Boolean(c);
         }
         // Check 3 — amount consistent with the pack tier
         const amount = Number(d.amount) || 0;
-        const tierOk =
-          d.pack === "enterprise"
-            ? amount >= 8333
-            : d.pack === "professional"
-              ? amount >= 2916 && amount < 8333
-              : amount > 0 && amount < 2916;
-        checks.amount_matches_pack = tierOk;
-        // Check 4 — product operational (only enforced when SITE_URL is configured)
-        checks.product_operational = productOperational !== false;
+        checks.amount_matches_pack = isPackAmountValid(d.pack, amount);
+        checks.order_amount_matches = Boolean(order && isOrderAmountConsistent(order.amount, amount));
+        // Check 4 — only a confirmed HTTP success can pass this check.
+        checks.product_operational = productOperational === true;
 
         const passed = Object.values(checks).every(Boolean);
         const { error: upErr } = await supabase
@@ -184,6 +181,7 @@ try {
         if (passed) qaPassed += 1;
         else qaFailed += 1;
         log(`QA ${passed ? "✅ passed" : "❌ failed"}: ${d.client_name} (${d.pack}, ${amount})`);
+        }
       }
     }
   } catch (e) {
