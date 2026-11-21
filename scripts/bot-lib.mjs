@@ -200,18 +200,1455 @@ async function execNeon(q) {
       params.push(param(val));
       text += hasWhere ? " and" : " where";
       hasWhere = true;
-      text += ` "${col}" = ${params.length}`;
+      text += ` "${col}" = /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
     }
     for (const [col, val] of q._gteFilters) {
       params.push(param(val));
       text += hasWhere ? " and" : " where";
       hasWhere = true;
-      text += ` "${col}" >= ${params.length}`;
+      text += ` "${col}" >= /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" = /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
+    }
+    for (const [col, val] of q._gteFilters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
     }
     if (q._orFilters.length) {
       const clauses = q._orFilters.map(([col, val]) => {
         params.push(val);
-        return `"${col}" ilike ${params.length}`;
+        return `"${col}" ilike /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" = /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
+    }
+    for (const [col, val] of q._gteFilters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" >= /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+      text += ` "${col}" = /**
+ * Shared runtime for the autonomous bots — REAL DATA ONLY.
+ * - AI: official Google GenAI SDK (Interactions API) with automatic model
+ *   fallback chain so a single model hiccup never breaks a run.
+ * - Persistence: Neon Postgres (DATABASE_URL) is the primary store, accessed
+ *   through a supabase-js-compatible shim so every bot keeps its existing
+ *   code. If Neon is not configured the bots fall back to legacy Supabase
+ *   service-role secrets; if neither exists they refuse to fabricate data.
+ * - If GEMINI_API_KEY is missing, bots skip gracefully instead of inventing
+ *   "leads" — no simulations, ever.
+ */
+import { GoogleGenAI } from "@google/genai";
+import { neon } from "@neondatabase/serverless";
+import { createClient } from "@supabase/supabase-js";
+
+// Primary store: Neon pooled connection string.
+const NEON_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
+
+// Fallback store: legacy Supabase secrets.
+const SUPABASE_URL = process.env.SUPABASE_URL_2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SERVICE_KEY = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const BLACKBOX_KEY = process.env.BLACKBOX_API_KEY || "";
+const BLACKBOX_URL = process.env.BLACKBOX_BASE_URL || "https://enterprise.blackbox.ai/chat/completions";
+const BLACKBOX_MODEL = process.env.BLACKBOX_MODEL || "nvidia/nemotron-3-ultra-550b-a55b";
+
+/** Free-tier model chain: newest first, safest fallback last (deduplicated). */
+const MODEL_CHAIN = [
+  ...new Set([
+    process.env.GEMINI_MODEL || "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+  ]),
+];
+
+/**
+ * Structured logging for bots: one JSON line per event with
+ * { level, ts, bot, msg, ...fields } so scheduled GitHub Actions runs are
+ * greppable and parseable instead of free-form console noise.
+ *   log("plain message")              → level "info"
+ *   log("msg", { key: value })        → fields spread onto the JSON line
+ *   log.warn("…") / log.error("…")    → level "warn" / "error"
+ *   createLogger("growth-marketing")  → bot field stamped per script
+ *   (BOT_NAME env var is the fallback when no script name is given)
+ */
+function emit(level, bot, args) {
+  const last = args.at(-1);
+  const fields = args.length > 1 && last && typeof last === "object" && !Array.isArray(last) ? last : null;
+  const msgParts = (fields ? args.slice(0, -1) : args).map((a) => (typeof a === "string" ? a : JSON.stringify(a)));
+  const line = {
+    level,
+    ts: new Date().toISOString(),
+    bot: bot || process.env.BOT_NAME || undefined,
+    msg: msgParts.join(" "),
+    ...(fields || {}),
+  };
+  console.log(JSON.stringify(line));
+}
+const baseLog = (...args) => emit("info", null, args);
+baseLog.warn = (...args) => emit("warn", null, args);
+baseLog.error = (...args) => emit("error", null, args);
+export const log = baseLog;
+export function createLogger(bot) {
+  const botLog = (...args) => emit("info", bot, args);
+  botLog.warn = (...args) => emit("warn", bot, args);
+  botLog.error = (...args) => emit("error", bot, args);
+  return botLog;
+}
+
+const neonSql = NEON_URL ? neon(NEON_URL) : null;
+const supabaseClient = SUPABASE_URL && SERVICE_KEY ? createClient(SUPABASE_URL, SERVICE_KEY) : null;
+
+export const neonReady = Boolean(neonSql);
+export const supabaseReady = Boolean(neonSql || supabaseClient);
+export const storeLabel = neonReady ? "neon" : supabaseClient ? "supabase" : "none";
+
+// ---------------------------------------------------------------------------
+// supabase-js-compatible shim over the store (Neon-first, Supabase fallback).
+// Supports the fluent patterns the bots use:
+//   from(t).select(cols).eq(c,v).order(c,{ascending}).limit(n)
+//   from(t).select(...).eq(...).maybeSingle() / .single()
+//   from(t).insert(rows).select()      from(t).update(patch).eq("id",id)
+//   from(t).upsert(row)                (agent_memory: conflict on (agent,key))
+// Every query resolves to { data, error } exactly like supabase-js.
+// ---------------------------------------------------------------------------
+
+export class ShimQuery {
+  constructor(table) {
+    this._table = table;
+    this._mode = "select";
+    this._columns = "*";
+    this._filters = [];
+    this._gteFilters = [];
+    this._orExpression = null;
+    this._orFilters = [];
+    this._orderBy = null;
+    this._ascending = false;
+    this._limit = null;
+    this._payload = null;
+    this._single = false;
+    this._maybe = false;
+  }
+  select(cols = "*") {
+    this._columns = cols;
+    return this;
+  }
+  eq(col, val) {
+    this._filters.push([col, val]);
+    return this;
+  }
+  gte(col, val) {
+    this._gteFilters.push([col, val]);
+    return this;
+  }
+  or(expression) {
+    this._orExpression = String(expression);
+    this._orFilters = this._orExpression.split(",").map((filter) => {
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      if (!match) throw new Error(`Unsupported OR filter: ${filter}`);
+      return [match[1], match[2]];
+    });
+    return this;
+  }
+  order(col, opts = {}) {
+    this._orderBy = col;
+    this._ascending = opts.ascending === true;
+    return this;
+  }
+  limit(n) {
+    this._limit = n;
+    return this;
+  }
+  insert(values) {
+    this._mode = "insert";
+    this._payload = values;
+    return this;
+  }
+  update(patch) {
+    this._mode = "update";
+    this._payload = patch;
+    return this;
+  }
+  upsert(row) {
+    this._mode = "upsert";
+    this._payload = row;
+    return this;
+  }
+  single() {
+    this._single = true;
+    return this;
+  }
+  maybeSingle() {
+    this._maybe = true;
+    return this;
+  }
+  then(resolve, reject) {
+    return execShim(this).then(resolve, reject);
+  }
+}
+
+/** Serialize plain objects for jsonb columns; primitives pass through. */
+function param(v) {
+  if (v !== null && typeof v === "object" && !Array.isArray(v)) return JSON.stringify(v);
+  return v;
+}
+
+async function execShim(q) {
+  // Provider selection is configuration-based. Never route a failed Neon
+  // query to Supabase: that can split reads and writes across two databases.
+  if (neonSql) {
+    try {
+      return await execNeon(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  if (supabaseClient) {
+    try {
+      return await execSupabase(q);
+    } catch (e) {
+      return { data: null, error: { message: String(e?.message ?? e) } };
+    }
+  }
+  return {
+    data: null,
+    error: { message: "No data store configured (set DATABASE_URL for Neon, or legacy Supabase secrets)." },
+  };
+}
+
+async function execNeon(q) {
+  const params = [];
+  let data;
+
+  if (q._mode === "select") {
+    let text = `select ${q._columns} from ${q._table}`;
+    let hasWhere = false;
+    for (const [col, val] of q._filters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
+    }
+    for (const [col, val] of q._gteFilters) {
+      params.push(param(val));
+      text += hasWhere ? " and" : " where";
+      hasWhere = true;
+ + params.length;
+    }
+    if (q._orFilters.length) {
+      const clauses = q._orFilters.map(([col, val]) => {
+        params.push(val);
+ + params.length;
       });
       text += hasWhere ? " and" : " where";
       text += ` (${clauses.join(" or ")})`;
