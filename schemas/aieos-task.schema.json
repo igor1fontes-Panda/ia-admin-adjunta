@@ -110,5 +110,24 @@
     "due_at": { "type": "string", "format": "date-time" },
     "blocked_reason": { "type": "string", "maxLength": 2000 },
     "result_summary": { "type": "string", "maxLength": 5000 }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "permissions": {
+            "properties": { "external_side_effects": { "const": true } },
+            "required": ["external_side_effects"]
+          }
+        },
+        "required": ["permissions"]
+      },
+      "then": {
+        "required": ["approvals_required"],
+        "properties": {
+          "approvals_required": { "contains": { "const": "human_owner" } }
+        }
+      }
+    }
+  ]
 }
