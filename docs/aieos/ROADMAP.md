@@ -61,7 +61,7 @@
 - Keep automated remediation limited to isolated branches and reversible changes.
 **Exit gate:** failure-mode tests, alert routing, audit records, kill switch.
 
-## Stage 7 — Elevated bounded multi-agent execution
+## Stage 7 — Supervised bounded multi-agent execution
 - Allow task decomposition and provider routing within task budgets and declared capabilities.
 - Permit bounded branch-scoped execution for approved reversible work.
 - Require independent review for medium/high-risk work.
