@@ -20,13 +20,13 @@ This register is the control point for recording third-party software, assets an
 
 For each component, record:
 
-| Field     | Required information                   |
-|-----------|----------------------------------------|
-| Component | Package, asset or contribution name   |
-| Version   | Exact version used in the release     |
-| Source    | Canonical project or package source   |
-| Licence   | SPDX identifier and licence text/reference |
-| Use       | Runtime, build, development, bundled or vendored |
-| Notice    | Required copyright/attribution notice |
+| Field       | Required information                                                |
+|-------------|---------------------------------------------------------------------|
+| Component   | Package, asset or contribution name                                 |
+| Version     | Exact version used in the release                                   |
+| Source      | Canonical project or package source                                 |
+| Licence     | SPDX identifier and licence text/reference                          |
+| Use         | Runtime, build, development, bundled or vendored                    |
+| Notice      | Required copyright/attribution notice                               |
 | Obligations | Source disclosure, attribution, patent notice or other requirements |
-| Review    | Reviewer and review date              |
+| Review      | Reviewer and review date                                            |
