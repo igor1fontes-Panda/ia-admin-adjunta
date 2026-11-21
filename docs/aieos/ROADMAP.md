@@ -1,6 +1,6 @@
 # AIEOS Implementation Roadmap
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Principle:** deliver a working, verifiable increment at each stage; do not skip gates.
 
 ## Stage 0 — Foundation specification
@@ -37,6 +37,16 @@
 - Use MCP or documented APIs where available; otherwise retain manual handoff.
 - Add health checks, rate limits, cost tracking, and kill switches.
 **Exit gate:** each adapter passes its own security and contract tests.
+
+## Stage 4A — Google AI Studio Android application workflow
+- Learn Google AI Studio Build mode and distinguish web-app from native Android targets.
+- Prototype one non-production Android application using Kotlin and Jetpack Compose.
+- Review generated architecture, permissions, dependencies, persistence, authentication and AI calls.
+- Evaluate Firebase integration only for a new, separately approved application; do not replace the existing IA Admin Adjunta identity/data architecture.
+- Export/synchronise source using the route actually supported for the project and account; bring it under GitHub version control.
+- Continue in VS Code / Android Studio; validate Gradle builds, emulator/device behavior, signing and Android security.
+- Prepare an Android App Bundle and use Google Play internal testing before considering wider release.
+**Exit gate:** reproducible source in GitHub, reviewed security/data design, successful build and device tests, and approved Play testing plan.
 
 ## Stage 5 — Dashboard and task persistence
 - Add authenticated task/agent/evidence views to the existing dashboard.
