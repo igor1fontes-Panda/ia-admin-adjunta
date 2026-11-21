@@ -1,6 +1,6 @@
 # AIEOS Security Baseline
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Default posture:** deny by default; least privilege; human approval for critical actions.
 
 ## 1. Assets to protect
@@ -89,3 +89,21 @@ Before enabling a provider adapter:
 ## 10. Incident handling
 
 On suspected compromise: stop affected adapter/automation, revoke its scoped credentials through the provider, preserve non-sensitive evidence, identify affected resources, notify the human owner, and resume only after review. Do not attempt autonomous cleanup that could destroy forensic evidence.
+
+
+## 11. Elevated bounded autonomy profile
+
+The selected AIEOS operating profile is elevated autonomy with technical limits. This permits independent execution only for tasks explicitly classified and scoped in the task contract.
+
+An agent may, when the task grants the capability:
+- inspect approved repository content;
+- create or modify files only within the task's allowed paths on an authorised feature branch;
+- run allowlisted, non-destructive checks in an isolated workspace;
+- create a draft pull request and publish sanitised evidence;
+- retry transient failures within the declared retry and cost budget.
+
+An agent may not use a granted capability to expand its own scope, change the risk classification, grant permissions to another agent, or access unrelated projects. A write-capable provider connection must be scoped to the repository and branch where technically possible.
+
+The following remain approval-gated regardless of autonomy setting: protected-branch merge, production deploy/release, database/schema/migration/RLS changes, authentication or identity changes, secret or permission changes, destructive actions, billing/financial operations and external customer communications.
+
+AIEOS must support a kill switch that disables write-capable adapters and cancels active runs where the provider/runner supports cancellation. If cancellation is unsupported, revoke the scoped credential or stop the runner through its owning control plane.
