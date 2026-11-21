@@ -126,7 +126,9 @@ try {
       // Leave pending deliveries untouched until a real health check is possible.
       const siteUrl = (process.env.SITE_URL || "").trim().replace(/\/+$/, "");
       if (!isValidSiteUrl(siteUrl)) {
-        log("delivery QA deferred: SITE_URL is missing or invalid; product status is unknown and pending rows remain unchanged.");
+        log(
+          "delivery QA deferred: SITE_URL is missing or invalid; product status is unknown and pending rows remain unchanged.",
+        );
       } else {
         let productOperational = false;
         try {
@@ -153,11 +155,7 @@ try {
           // Check 2 — client registered (null client_id = legitimate walk-in)
           checks.client_registered = true; // walk-ins without a client_id are valid deliveries
           if (d.client_id) {
-            const { data: c } = await supabase
-              .from("clients")
-              .select("id")
-              .eq("id", d.client_id)
-              .maybeSingle();
+            const { data: c } = await supabase.from("clients").select("id").eq("id", d.client_id).maybeSingle();
             checks.client_registered = Boolean(c);
           }
 

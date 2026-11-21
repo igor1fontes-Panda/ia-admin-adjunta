@@ -200,23 +200,23 @@ async function execNeon(q) {
       params.push(param(val));
       text += hasWhere ? " and" : " where";
       hasWhere = true;
-      text += " \"" + col + "\" = " + String.fromCharCode(36) + params.length;
+      text += ' "' + col + '" = ' + String.fromCharCode(36) + params.length;
     }
     for (const [col, val] of q._gteFilters) {
       params.push(param(val));
       text += hasWhere ? " and" : " where";
       hasWhere = true;
-      text += " \"" + col + "\" >= " + String.fromCharCode(36) + params.length;
+      text += ' "' + col + '" >= ' + String.fromCharCode(36) + params.length;
     }
     if (q._orFilters.length) {
       const clauses = q._orFilters.map(([col, val]) => {
         params.push(val);
-        return "\"" + col + "\" ilike " + String.fromCharCode(36) + params.length;
+        return '"' + col + '" ilike ' + String.fromCharCode(36) + params.length;
       });
       text += hasWhere ? " and" : " where";
       text += " (" + clauses.join(" or ") + ")";
     }
-    if (q._orderBy) text += " order by \"" + q._orderBy + "\" " + (q._ascending ? "asc" : "desc");
+    if (q._orderBy) text += ' order by "' + q._orderBy + '" ' + (q._ascending ? "asc" : "desc");
     if (q._limit !== null) text += " limit " + q._limit;
     data = await neonSql(text, params);
   } else if (q._mode === "insert" || q._mode === "upsert") {
