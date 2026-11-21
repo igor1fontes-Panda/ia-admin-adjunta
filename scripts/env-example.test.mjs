@@ -9,7 +9,7 @@
 // it, this test fails in CI. When .env.example is completed, the PENDING list must be
 // emptied (this test then enforces "zero missing") — deleting entries is the only allowed
 // direction of change.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -28,6 +28,7 @@ const PLATFORM_INJECTED = new Set([
   "V0_DEV_APP_URL",
   "V0_RUNTIME_URL",
   "V0_SANDBOX_URL",
+  "NEON_VITE_NEON_AUTH_URL",
 ]);
 
 /**
@@ -36,14 +37,10 @@ const PLATFORM_INJECTED = new Set([
  * Empty this list once .env.example is refreshed (paste the reviewed template).
  */
 const PENDING = [
-  "AUTH_SECRET",
-  "BETTER_AUTH_URL",
   "BOT_NAME",
   "BRIEFING_BUCKET",
-  "CLERK_SECRET_KEY",
   "HUME_BASE_URL",
   "HUME_VOICE_NAME",
-  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "NODE_ENV",
   "PORT",
   "STRIPE_PRICE_ENTERPRISE",
@@ -51,11 +48,11 @@ const PENDING = [
   "STRIPE_PRICE_STARTER",
   "SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_URL",
-  "VITE_CLERK_PUBLISHABLE_KEY",
-  "VITE_NEON_AUTH_URL",
 ];
 
-const SCAN_DIRS = ["api", "src", "scripts", "server", "db"];
+const SCAN_DIRS = ["api", "src", "scripts", "server", "db"].filter(
+  (dir) => existsSync(dir) && statSync(dir).isDirectory(),
+);
 const SCAN_FILES = ["ai_engine.py"];
 const EXCLUDED_BASENAMES = [
   ".d.ts",
@@ -80,7 +77,7 @@ function scanSource() {
   const names = new Set();
   const tsPattern = /(?:process|import\.meta)\.env\.([A-Z_][A-Z0-9_]*)/g;
   // matches os.environ.get("X"), os.environ("X") and os.environ["X"]
-  const pyPattern = /os\.environ(?:\.get)?\(?["']([A-Z_][A-Z0-9_]*)["']\]?/g;
+  const pyPattern = /os\.environ(?:\.get)?(?:\s*\(\s*|\s*\[\s*)["']([A-Z_][A-Z0-9_]*)["']/g;
   for (const dir of SCAN_DIRS) {
     for (const file of walk(dir)) {
       if (EXCLUDED_BASENAMES.some((sfx) => file.endsWith(sfx))) continue;
@@ -120,7 +117,11 @@ describe(".env.example completeness (audit item 07)", () => {
     const referenced = scanSource();
     const declared = declaredInExample();
     const missing = referenced.filter(
-      (name) => !declared.has(name) && !CI_ONLY.has(name) && !PLATFORM_INJECTED.has(name) && !PENDING.includes(name),
+      (name) =>
+        !declared.has(name) &&
+        !CI_ONLY.has(name) &&
+        !PLATFORM_INJECTED.has(name) &&
+        !PENDING.includes(name),
     );
     expect(
       missing,
@@ -133,7 +134,7 @@ describe(".env.example completeness (audit item 07)", () => {
       PENDING.length,
       "PENDING shrank or grew? It is a ratchet: entries may only be REMOVED (when the " +
         "corresponding var is declared in .env.example). Fix by deleting entries, not adding.",
-    ).toBe(17);
+    ).toBe(11);
   });
 
   it("has no PENDING entry that is already declared or no longer read (keeps the list honest)", () => {

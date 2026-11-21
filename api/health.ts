@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   res.setHeader("Cache-Control", "no-store");
   const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
-  const authReady = Boolean(process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET);
+  const authReady = Boolean(process.env.NEON_AUTH_BASE_URL);
 
   let dbOk = false;
   let dbError: string | null = null;
@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   return res.status(ok ? 200 : 503).json({
     ok,
     database: { configured: Boolean(connectionString), connected: dbOk, error: dbError },
-    auth: { configured: authReady, provider: "better-auth" },
+    auth: { configured: authReady, provider: "neon-managed-auth" },
     checkedAt: new Date().toISOString(),
   });
 }
