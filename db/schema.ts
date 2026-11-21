@@ -68,7 +68,11 @@ export const orders = pgTable(
     reference: text("reference").notNull(),
     created_at: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   },
-  (t) => [index("orders_created_idx").on(t.created_at), uniqueIndex("orders_reference_unique").on(t.reference)],
+  (t) => [
+    index("orders_created_idx").on(t.created_at),
+    index("orders_client_id_idx").on(t.client_id),
+    uniqueIndex("orders_reference_unique").on(t.reference),
+  ],
 );
 
 export const activityLog = pgTable(
