@@ -117,7 +117,7 @@ export class ShimQuery {
   or(expression) {
     this._orExpression = String(expression);
     this._orFilters = this._orExpression.split(",").map((filter) => {
-      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)\\.ilike\\.(.+)$/);
+      const match = filter.match(/^([A-Za-z_][A-Za-z0-9_]*)[.]ilike[.](.+)$/);
       if (!match) throw new Error("Unsupported OR filter: " + filter);
       return [match[1], match[2]];
     });
