@@ -1,6 +1,6 @@
 # AIEOS Integration Catalogue
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Important:** this catalogue is a target integration plan, not proof that every provider is currently connected.
 
 ## 1. Integration patterns
@@ -22,7 +22,9 @@
 | GitHub Copilot | Repository-aware coding and review | VS Code / GitHub native |
 | Claude | Independent architecture and code review | Manual handoff or supported API/MCP |
 | Gemini | Research and model option for selected workloads | Manual handoff or documented API |
+| Google AI Studio | Prompt-driven web and native Android app prototyping/build; Gemini integration | Build mode; GitHub sync or ZIP/Android Studio handoff where supported |
 | VS Code | Local development and controlled tool execution | CLI / editor |
+| Android Studio | Native Android engineering, Gradle builds, device/emulator tests, signing and release preparation | Local IDE / Android tooling |
 | GitHub | Canonical source, tasks, PRs, CI evidence | GitHub API / Actions |
 | Base44 | Rapid application build and administration prototypes | Platform-native workflow; API only if documented |
 | Replit | Prototyping and application execution | Platform-native workflow; API only if documented |
@@ -73,3 +75,40 @@ A cheaper model must not be selected if it cannot meet the security or quality r
 - `disabled`: intentionally unavailable.
 
 A registry entry is not proof of a live connection. Store the timestamp and evidence of the latest health check.
+
+
+## 7. Google AI Studio and Android delivery
+
+Google AI Studio is an approved AIEOS ecosystem participant and a preferred rapid-prototyping path for selected Android and web application work. It is not the AIEOS control plane or the sole source of truth.
+
+### Intended workflow
+
+1. Prototype a clearly scoped application or feature in Google AI Studio Build mode.
+2. Select the target explicitly: web app or native Android app.
+3. For native Android, inspect the generated Kotlin and Jetpack Compose structure, navigation, state handling, permissions, dependencies and data layer.
+4. Review backend choices before accepting provisioning. Firebase Authentication, Cloud Firestore, Firebase AI Logic and App Check may be suitable for a Google-native app, but they are not automatically the correct backend for every existing IA Admin Adjunta project.
+5. Export or synchronise source to the governed GitHub workflow using the export/sync path actually available for that project type. If Android export is ZIP-only in the current account/workflow, import the ZIP into a local Git repository and review it before pushing.
+6. Continue engineering in VS Code or Android Studio; use Gradle, emulator and physical-device tests.
+7. Generate a signed Android App Bundle (AAB), complete Play Console requirements and use an internal testing track before any wider release.
+8. Record build, test, signing and release evidence in the corresponding GitHub issue/PR.
+
+### Guardrails
+
+- Treat AI-generated code, dependencies, Firebase rules and permissions as untrusted until reviewed.
+- Never put Gemini/API credentials in Android client code or an APK. Use the supported server-side or Firebase AI Logic pattern for the selected architecture.
+- Do not replace the existing Better Auth/Drizzle/Neon architecture in IA Admin Adjunta merely because AI Studio can provision Firebase.
+- Any new Firebase project, authentication system, database, security rules, billing activation or production Play release requires architecture and security review; obtain explicit approval before creating paid resources or changing production.
+- Confirm feature availability, export route, pricing, account eligibility and Google Play requirements at the time of use. AI Studio capabilities and rollout status can differ by account and project type.
+
+### Training sequence
+
+- **A — Orientation:** Build mode, web vs Android target, project files and preview.
+- **B — Native Android:** Kotlin, Jetpack Compose, app navigation, ViewModel/state, permissions and resources.
+- **C — Data and identity:** compare local storage, Firebase options and existing project backends; review security rules and identity boundaries.
+- **D — Engineering handoff:** export, Git, VS Code/Android Studio, Gradle, emulator and regression tests.
+- **E — Play delivery:** package ID, versioning, signing, AAB, Play Console, internal testing, privacy disclosures and release checklist.
+
+Official references:
+- Google AI Studio Build mode: https://ai.google.dev/gemini-api/docs/aistudio-build-mode
+- Build Android apps in Google AI Studio: https://ai.google.dev/gemini-api/docs/aistudio-android
+- Android developer guidance: https://developer.android.com/ai-tools/guides/quickstart
