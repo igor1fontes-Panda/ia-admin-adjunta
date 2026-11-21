@@ -29,7 +29,9 @@ const signIn = await request("/api/auth/sign-in/email", {
   body: JSON.stringify({ email, password }),
 });
 if (![400, 401, 403, 404, 503].includes(signIn.response.status)) {
-  throw new Error("sign-in contract returned unexpected " + signIn.response.status + ": " + JSON.stringify(signIn.body));
+  throw new Error(
+    "sign-in contract returned unexpected " + signIn.response.status + ": " + JSON.stringify(signIn.body),
+  );
 }
 
 const signUp = await request("/api/auth/sign-up/email", {
@@ -41,5 +43,12 @@ if (signUp.response.status !== 403) {
 }
 
 console.log("[auth-smoke] " + baseUrl + " responded correctly for session, sign-in and disabled sign-up.");
-console.log("[auth-smoke] get-session=" + session.response.status + " sign-in=" + signIn.response.status + " sign-up=" + signUp.response.status);
+console.log(
+  "[auth-smoke] get-session=" +
+    session.response.status +
+    " sign-in=" +
+    signIn.response.status +
+    " sign-up=" +
+    signUp.response.status,
+);
 console.log("[auth-smoke] This test uses a non-existent identity and does not create a user or write database data.");
