@@ -1,14 +1,24 @@
-Download
-# Create a folder
-$ mkdir actions-runner && cd actions-runner# Download the latest runner package
-$ curl -o actions-runner-linux-arm-2.338.2.tar.gz -L https://github.com/actions/runner/releases/download/v2.338.2/actions-runner-linux-arm-2.338.2.tar.gz# Optional: Validate the hash
-$ echo "9677d6171f2c60040efc9111c4e7dd34fdd714cd7b24b171a7925eba7d09c5fa  actions-runner-linux-arm-2.338.2.tar.gz" | shasum -a 256 -c# Extract the installer
-$ tar xzf ./actions-runner-linux-arm-2.338.2.tar.gz
-Configure
-# Create the runner and start the configuration experience
-$ ./config.sh --url https://github.com/igor1fontes-Panda/ia-admin-adjunta --token CCWSEPHX24WAQ7FRZ46DRM3LALTUK# Last step, run it!
-$ ./run.sh
-Using your self-hosted runner
-# Use this YAML in your workflow file for each job
-runs-on: self-hosted
-For additional details about configuring, running, or shutting down the runner, please check out our product docs.
+name: Copilot setup steps
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
