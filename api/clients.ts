@@ -8,7 +8,6 @@ import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
 import { db, isDbConfigured } from "../db";
 import { clients } from "../db/schema";
-import { auth } from "../server/auth";
 import {
   apiSchemas,
   badRequest,
@@ -27,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isDbConfigured || !db) return dbUnavailable(res);
 
   try {
-    const user = await getSessionUser(req, auth);
+    const user = await getSessionUser(req);
     if (!user) return unauthorized(res);
 
     if (req.method === "GET") {

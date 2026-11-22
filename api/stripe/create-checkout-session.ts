@@ -10,7 +10,7 @@ const PRICE_IDS: Record<string, string | undefined> = {
 function checkoutOrigin(): string | null {
   const candidates = [
     process.env.PUBLIC_SITE_URL,
-    process.env.BETTER_AUTH_URL,
+    process.env.SITE_URL,
     process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
   ];

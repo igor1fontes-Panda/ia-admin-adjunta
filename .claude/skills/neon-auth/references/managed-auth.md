@@ -1,3 +1,5 @@
+> **Repository override (21/11/2026):** IA Admin Adjunta is a Vite SPA using `@neon/auth` with `BetterAuthReactAdapter({ fetchOptions: { credentials: "include" } })`. Its Vercel API verifies EdDSA JWTs using `NEON_AUTH_BASE_URL` and JWKS. Do not apply the legacy `@neondatabase/auth` / Next.js adapter examples below to this repository. Drizzle maps business data only; Neon Managed Auth owns `neon_auth`.
+
 # Managed Better Auth: implement login
 
 Enabling `auth: true` is not implementing login. Follow the matching live quickstart, then verify sign-up, sign-in, sign-out, session, and a protected route.

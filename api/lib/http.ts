@@ -26,40 +26,70 @@ export interface VercelResponse {
   getHeader(name: string): string | number | string[] | undefined;
   flushHeaders?(): void;
 }
-import type { Auth } from "../../server/auth";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ADMIN_EMAIL, isAdminEmail } from "../../shared/admin";
 
 export { ADMIN_EMAIL, isAdminEmail };
 
 export type AuthUser = { id: string; email: string; name: string };
 
-/** Returns the signed-in user for this request, or null.
- * `auth` may be null when DATABASE_URL is not configured (null-safe server).
- * Identity sources, in order: self-hosted Better Auth session cookie, then
- * an additive Clerk session JWT (Bearer) when CLERK_SECRET_KEY is set.
- * Both integrations load lazily: serverless functions must not crash at cold
- * start if a package's export map resolves oddly in the runtime — a failed
- * load degrades to "no session" (401) instead of FUNCTION_INVOCATION_FAILED. */
-export async function getSessionUser(req: VercelRequest, auth: Auth | null): Promise<AuthUser | null> {
-  if (auth) {
-    try {
-      const { fromNodeHeaders } = await import("better-auth/node");
-      const session = await auth.api.getSession({
-        // Vercel lambda headers are a plain object — convert for Better Auth.
-        headers: fromNodeHeaders(req.headers),
-      });
-      if (session?.user) {
-        if (!isAdminEmail(session.user.email)) return null;
-        return { id: session.user.id, email: session.user.email, name: session.user.name };
-      }
-    } catch {
-      // fall through to Clerk bearer verification
-    }
-  }
+/**
+ * Verify Neon Managed Better Auth access tokens before granting API access.
+ * The browser SDK sends the short-lived session JWT as a Bearer token.
+ * No database-backed Better Auth instance or Drizzle auth schema is used.
+ */
+let cachedJwksUrl: string | null = null;
+let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function authorizationHeader(headers: VercelRequest["headers"]): string | null {
+  const entry = Object.entries(headers).find(([key]) => key.toLowerCase() === "authorization");
+  const value = entry?.[1];
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+function neonJwks(): { keys: ReturnType<typeof createRemoteJWKSet>; issuer: string } | null {
+  const baseUrl = process.env.NEON_AUTH_BASE_URL?.trim();
+  if (!baseUrl) return null;
+
   try {
-    const { verifyClerkUser } = await import("../../server/clerk");
-    const clerkUser = await verifyClerkUser(req);
-    return clerkUser && isAdminEmail(clerkUser.email) ? clerkUser : null;
+    const parsedBaseUrl = new URL(baseUrl);
+    if (parsedBaseUrl.protocol !== "https:" && parsedBaseUrl.hostname !== "localhost") return null;
+    const issuer = parsedBaseUrl.origin;
+    const jwksUrl =
+      process.env.NEON_AUTH_JWKS_URL?.trim() ||
+      `${baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl}/.well-known/jwks.json`;
+    if (jwksUrl !== cachedJwksUrl || !cachedJwks) {
+      cachedJwks = createRemoteJWKSet(new URL(jwksUrl));
+      cachedJwksUrl = jwksUrl;
+    }
+    return { keys: cachedJwks, issuer };
+  } catch {
+    return null;
+  }
+}
+
+export async function getSessionUser(req: VercelRequest): Promise<AuthUser | null> {
+  const authorization = authorizationHeader(req.headers);
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const configuration = neonJwks();
+  if (!configuration) return null;
+
+  try {
+    const { payload } = await jwtVerify(match[1].trim(), configuration.keys, {
+      algorithms: ["EdDSA"],
+      issuer: configuration.issuer,
+      audience: configuration.issuer,
+    });
+    if (typeof payload.sub !== "string" || typeof payload.email !== "string" || !isAdminEmail(payload.email)) {
+      return null;
+    }
+    return {
+      id: payload.sub,
+      email: payload.email,
+      name: typeof payload.name === "string" ? payload.name : payload.email,
+    };
   } catch {
     return null;
   }
