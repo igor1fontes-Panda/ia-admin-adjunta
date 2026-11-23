@@ -31,9 +31,34 @@ describe("serverless cold-start null-safety", () => {
       const dbMod = await import("./db/index");
       expect(dbMod.isDbConfigured).toBe(true);
       expect(dbMod.db).not.toBeNull();
+      expect(dbMod.readDb).toBe(dbMod.db);
+      expect(dbMod.isReadOnlyDbConfigured).toBe(false);
     } finally {
       delete process.env.DATABASE_URL;
       if (savedReadOnly) process.env.NEON_READONLY_DATABASE_URL = savedReadOnly;
+    }
+  });
+
+  it("routes reads to the configured replica without replacing the primary client", async () => {
+    vi.resetModules();
+    const keys = ["DATABASE_URL", "NEON_READONLY_DATABASE_URL"] as const;
+    const saved = new Map(keys.map((key) => [key, process.env[key]]));
+    process.env.DATABASE_URL = "postgresql://primary:secret@localhost:5432/primary";
+    process.env.NEON_READONLY_DATABASE_URL = "postgresql://replica:secret@localhost:5432/replica";
+
+    try {
+      const dbMod = await import("./db/index");
+      expect(dbMod.isDbConfigured).toBe(true);
+      expect(dbMod.isReadOnlyDbConfigured).toBe(true);
+      expect(dbMod.db).not.toBeNull();
+      expect(dbMod.readOnlyDb).not.toBeNull();
+      expect(dbMod.readDb).toBe(dbMod.readOnlyDb);
+      expect(dbMod.readDb).not.toBe(dbMod.db);
+    } finally {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
     }
   });
 
