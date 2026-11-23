@@ -6,7 +6,7 @@
  */
 import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
-import { db, isDbConfigured } from "../db";
+import { db, isDbConfigured, readDb } from "../db";
 import { deliveryStatus, orders } from "../db/schema";
 import { auth } from "../server/auth";
 import {
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) return unauthorized(res);
 
     if (req.method === "GET") {
-      const rows = await db.select().from(orders).orderBy(desc(orders.created_at)).limit(200);
+      const rows = await readDb!.select().from(orders).orderBy(desc(orders.created_at)).limit(200);
       return res.status(200).json(rows);
     }
 
