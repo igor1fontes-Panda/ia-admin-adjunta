@@ -9,7 +9,7 @@
  */
 import type { VercelRequest, VercelResponse } from "./lib/http";
 import { desc, eq } from "drizzle-orm";
-import { db, isDbConfigured } from "../db";
+import { db, isDbConfigured, readDb } from "../db";
 import { leads } from "../db/schema";
 import { auth } from "../server/auth";
 import {
@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === "GET") {
       const user = await getSessionUser(req, auth);
       if (!user) return unauthorized(res);
-      const rows = await db.select().from(leads).orderBy(desc(leads.created_at)).limit(200);
+      const rows = await readDb!.select().from(leads).orderBy(desc(leads.created_at)).limit(200);
       return res.status(200).json(rows);
     }
 
