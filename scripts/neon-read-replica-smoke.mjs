@@ -39,10 +39,19 @@ async function counts(sql) {
 }
 
 try {
-  const [mode] = await replica`SHOW transaction_read_only`;
-  if (String(mode?.transaction_read_only).toLowerCase() !== "on") {
+  const [mode] = await replica`SELECT
+    current_user AS role_name,
+    current_setting('transaction_read_only') AS transaction_read_only,
+    has_table_privilege(current_user, 'public.clients', 'SELECT') AS can_select_clients,
+    has_table_privilege(current_user, 'public.clients', 'INSERT') AS can_insert_clients`;
+  if (
+    mode?.role_name !== "app_reporting_ro" ||
+    String(mode?.transaction_read_only).toLowerCase() !== "on" ||
+    mode?.can_select_clients !== true ||
+    mode?.can_insert_clients !== false
+  ) {
     throw new Error(
-      "The configured read endpoint did not report transaction_read_only=on.",
+      "The replica must use app_reporting_ro with SELECT-only privileges.",
     );
   }
 
