@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Check for Vercel credentials
         id: creds
@@ -45,7 +45,7 @@ jobs:
             echo "::notice::Vercel deploy skipped — add repo secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID to enable. (Vercel's native GitHub integration may already be deploying your pushes.)"
           fi
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         if: steps.creds.outputs.ready == 'true'
         with:
           node-version: 22
