@@ -28,14 +28,17 @@ const tables = [
 ];
 
 async function counts(sql) {
-  const [row] = await sql`SELECT
-    (SELECT count(*)::int FROM public.activity_log) AS activity_log,
-    (SELECT count(*)::int FROM public.agent_memory) AS agent_memory,
-    (SELECT count(*)::int FROM public.clients) AS clients,
-    (SELECT count(*)::int FROM public.delivery_status) AS delivery_status,
-    (SELECT count(*)::int FROM public.leads) AS leads,
-    (SELECT count(*)::int FROM public.orders) AS orders`;
-  return row;
+  const results = await Promise.all([
+    sql`SELECT count(*)::int AS count FROM public.activity_log`,
+    sql`SELECT count(*)::int AS count FROM public.agent_memory`,
+    sql`SELECT count(*)::int AS count FROM public.clients`,
+    sql`SELECT count(*)::int AS count FROM public.delivery_status`,
+    sql`SELECT count(*)::int AS count FROM public.leads`,
+    sql`SELECT count(*)::int AS count FROM public.orders`,
+  ]);
+  return Object.fromEntries(
+    tables.map((table, index) => [table, results[index][0].count]),
+  );
 }
 
 try {
