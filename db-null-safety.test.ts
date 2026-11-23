@@ -24,6 +24,8 @@ describe("serverless cold-start null-safety", () => {
 
   it("constructs real clients when DATABASE_URL is present", async () => {
     vi.resetModules();
+    const savedReadOnly = process.env.NEON_READONLY_DATABASE_URL;
+    delete process.env.NEON_READONLY_DATABASE_URL;
     process.env.DATABASE_URL = "postgresql://u:p@localhost:5432/testdb";
     try {
       const dbMod = await import("./db/index");
@@ -31,6 +33,7 @@ describe("serverless cold-start null-safety", () => {
       expect(dbMod.db).not.toBeNull();
     } finally {
       delete process.env.DATABASE_URL;
+      if (savedReadOnly) process.env.NEON_READONLY_DATABASE_URL = savedReadOnly;
     }
   });
 
