@@ -19,10 +19,13 @@ const replica = neon(readOnlyUrl);
 const tables = ["activity_log", "agent_memory", "clients", "delivery_status", "leads", "orders"];
 
 async function counts(sql) {
-  const expressions = tables.map((table) =>
-    `(SELECT count(*)::int FROM public."${table}") AS "${table}"`,
-  );
-  const [row] = await sql(`SELECT ${expressions.join(", ")}`);
+  const [row] = await sql`SELECT
+    (SELECT count(*)::int FROM public.activity_log) AS activity_log,
+    (SELECT count(*)::int FROM public.agent_memory) AS agent_memory,
+    (SELECT count(*)::int FROM public.clients) AS clients,
+    (SELECT count(*)::int FROM public.delivery_status) AS delivery_status,
+    (SELECT count(*)::int FROM public.leads) AS leads,
+    (SELECT count(*)::int FROM public.orders) AS orders`;
   return row;
 }
 
