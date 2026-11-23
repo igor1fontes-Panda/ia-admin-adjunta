@@ -7,9 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
-  deployments: write
 
 concurrency:
   group: preview-environment-${{ github.event.pull_request.number || github.ref }}
@@ -19,12 +16,46 @@ jobs:
   preview:
     name: Manage preview environment
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
-      - name: Preview environment controller
-        uses: cloudposse/github-action-preview-environment-controller@f45303de8d8f6f29895ffb87332468c48b05592b
-        with:
-          env-label: |
-            preview: deploy
-          labels: "[]"
-          open: ${{ github.event.action != 'closed' }}
+      - name: Resolve preview environment actions
+        id: preview
+        env:
+          PR_OPEN: ${{ github.event.action != 'closed' }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+
+          const environmentLabels = { preview: 'deploy' };
+          const parsedLabels = JSON.parse(process.env.PR_LABELS || '[]');
+          const labels = Array.isArray(parsedLabels) ? parsedLabels : [];
+          const isOpen = process.env.PR_OPEN === 'true';
+          const entries = Object.entries(environmentLabels);
+
+          const deploy = isOpen
+            ? entries.filter(([, label]) => labels.includes(label)).map(([environment]) => environment)
+            : [];
+          const destroy = entries
+            .filter(([, label]) => isOpen ? !labels.includes(label) : labels.includes(label))
+            .map(([environment]) => environment);
+
+          const output = [
+            `deploy_envs=${JSON.stringify(deploy)}`,
+            `destroy_envs=${JSON.stringify(destroy)}`,
+          ].join('\\n') + '\\n';
+
+          appendFileSync(process.env.GITHUB_OUTPUT, output);
+          appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            [
+              '### Preview environment decision',
+              '',
+              `- Pull request open: ${isOpen}`,
+              `- Labels: ${labels.join(', ') || '(none)'}`,
+              `- Environments to deploy: ${deploy.join(', ') || '(none)'}`,
+              `- Environments to destroy: ${destroy.join(', ') || '(none)'}`,
+              '',
+            ].join('\\n'),
+          );
+          NODE
