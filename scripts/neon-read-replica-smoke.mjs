@@ -45,13 +45,19 @@ try {
     throw new Error(`Primary/replica row-count mismatch: ${mismatches.join(", ")}`);
   }
 
-  console.log(JSON.stringify({
-    ok: true,
-    readOnly: mode.transaction_read_only,
-    replicaLatencyMs,
-    comparedTables: tables.length,
-    counts: replicaCounts,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        readOnly: mode.transaction_read_only,
+        replicaLatencyMs,
+        comparedTables: tables.length,
+        counts: replicaCounts,
+      },
+      null,
+      2,
+    ),
+  );
 } catch (error) {
   console.error("Read-only replica smoke test failed:", error instanceof Error ? error.message : error);
   process.exitCode = 1;
