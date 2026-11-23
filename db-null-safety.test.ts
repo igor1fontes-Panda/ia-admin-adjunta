@@ -5,8 +5,10 @@ describe("serverless cold-start null-safety", () => {
     vi.resetModules();
     const savedUrl = process.env.DATABASE_URL;
     const savedNeon = process.env.NEON_DATABASE_URL;
+    const savedReadOnly = process.env.NEON_READONLY_DATABASE_URL;
     delete process.env.DATABASE_URL;
     delete process.env.NEON_DATABASE_URL;
+    delete process.env.NEON_READONLY_DATABASE_URL;
     try {
       const dbMod = await import("./db/index");
       const authMod = await import("./server/auth");
@@ -16,6 +18,7 @@ describe("serverless cold-start null-safety", () => {
     } finally {
       if (savedUrl) process.env.DATABASE_URL = savedUrl;
       if (savedNeon) process.env.NEON_DATABASE_URL = savedNeon;
+      if (savedReadOnly) process.env.NEON_READONLY_DATABASE_URL = savedReadOnly;
     }
   });
 
@@ -33,7 +36,7 @@ describe("serverless cold-start null-safety", () => {
 
   it("resolves the serverless auth handler under Node ESM without database credentials", async () => {
     vi.resetModules();
-    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL", "VITE_NEON_AUTH_URL"] as const;
+    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL", "NEON_READONLY_DATABASE_URL", "VITE_NEON_AUTH_URL"] as const;
     const saved = new Map(envKeys.map((key) => [key, process.env[key]]));
     for (const key of envKeys) delete process.env[key];
 
