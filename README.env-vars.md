@@ -15,6 +15,7 @@ Every variable the repo reads is listed below.
 | `SUPABASE_PUBLISHABLE_KEY_2` / `SUPABASE_PUBLISHABLE_KEY`                        | server      | server-side publishable key for `@supabase/server`                                       |
 | `SUPABASE_JWKS_URL`                                                              | server      | JWKS endpoint for Supabase JWT validation                                                |
 | `DATABASE_URL` / `NEON_DATABASE_URL`                                             | server      | **Neon pooled connection string — primary store** (`scripts/bot-lib.mjs`, health checks) |
+| `NEON_READONLY_DATABASE_URL`                                                     | server      | optional read-only Neon endpoint for reporting/analytics SELECTs; never used for writes; when configured, query failures do not fall back to primary |
 | `NEON_DATABASE_URL_UNPOOLED`                                                     | server      | unpooled Neon connection string (queries that need direct connections)                   |
 | `BETTER_AUTH_SECRET` / `AUTH_SECRET`                                             | server      | Better Auth session signing secret (both names accepted)                                 |
 | `BETTER_AUTH_URL`                                                                | server      | base URL Better Auth infers its routes from (overrides the `SITE_URL`-derived value)     |
