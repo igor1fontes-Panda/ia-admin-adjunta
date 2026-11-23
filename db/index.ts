@@ -31,4 +31,22 @@ export const sql = isDbConfigured ? neon(connectionString) : null;
  * the type to non-null for the rest of the handler. */
 export const db = sql ? drizzle(sql, { schema }) : null;
 
+/**
+ * Optional read-only Neon compute. When configured, reporting SELECTs use
+ * this connection exclusively; a connection/query failure is surfaced and
+ * is never retried against the primary. When absent, legacy environments
+ * explicitly continue using the primary until the replica is provisioned.
+ */
+const readOnlyConnectionString = process.env.NEON_READONLY_DATABASE_URL || "";
+export const isReadOnlyDbConfigured = readOnlyConnectionString.length > 0;
+export const readOnlySql = isReadOnlyDbConfigured ? neon(readOnlyConnectionString) : null;
+export const readOnlyDb = readOnlySql ? drizzle(readOnlySql, { schema }) : null;
+
+if (!isReadOnlyDbConfigured) {
+  console.warn("[db] NEON_READONLY_DATABASE_URL is not set; read queries use the primary (legacy mode).");
+}
+
+/** Read path: replica when configured, otherwise explicit legacy primary mode. */
+export const readDb = readOnlyDb ?? db;
+
 export { schema };
