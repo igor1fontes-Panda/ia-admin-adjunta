@@ -20,11 +20,47 @@ jobs:
     name: Manage preview environment
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      labels_env: ${{ steps.controller.outputs.labels_env }}
+      deploy_envs: ${{ steps.controller.outputs.deploy_envs }}
+      destroy_envs: ${{ steps.controller.outputs.destroy_envs }}
     steps:
-      - name: Preview environment controller
-        uses: cloudposse/github-action-preview-environment-controller@f45303de8d8f6f29895ffb87332468c48b05592b
-        with:
-          env-label: |
-            preview: deploy
-          labels: "[]"
-          open: ${{ github.event.action != 'closed' }}
+      # Preserve the controller outputs without downloading an upstream
+      # composite action that contains unpinned transitive dependencies.
+      - name: Calculate preview environment actions
+        id: controller
+        shell: bash
+        env:
+          ENV_LABELS: '{"preview":"deploy"}'
+          LABELS: '[]'
+          OPEN: ${{ github.event.action != 'closed' }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const envLabels = JSON.parse(process.env.ENV_LABELS);
+          const labels = JSON.parse(process.env.LABELS);
+          const isOpen = process.env.OPEN === 'true';
+
+          const entries = Object.entries(envLabels);
+          const deploy = isOpen
+            ? entries.filter(([, label]) => labels.includes(label)).map(([env]) => env)
+            : [];
+          const destroy = isOpen
+            ? entries.filter(([, label]) => !labels.includes(label)).map(([env]) => env)
+            : entries.filter(([, label]) => labels.includes(label)).map(([env]) => env);
+          const labelsEnv = Object.fromEntries(
+            entries.map(([env, label]) => [label, env])
+          );
+
+          const outputs = [
+            ['labels_env', JSON.stringify(labelsEnv)],
+            ['deploy_envs', JSON.stringify(deploy)],
+            ['destroy_envs', JSON.stringify(destroy)],
+          ];
+
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n'
+          );
+          NODE
