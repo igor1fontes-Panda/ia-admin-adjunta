@@ -15,7 +15,6 @@ Every variable the repo reads is listed below.
 | `SUPABASE_PUBLISHABLE_KEY_2` / `SUPABASE_PUBLISHABLE_KEY`                        | server      | server-side publishable key for `@supabase/server`                                       |
 | `SUPABASE_JWKS_URL`                                                              | server      | JWKS endpoint for Supabase JWT validation                                                |
 | `DATABASE_URL` / `NEON_DATABASE_URL`                                             | server      | **Neon pooled connection string — primary store** (`scripts/bot-lib.mjs`, health checks) |
-| `NEON_READONLY_DATABASE_URL`                                                     | server      | optional read-only Neon endpoint for reporting/analytics SELECTs; never used for writes; when configured, query failures do not fall back to primary |
 | `NEON_DATABASE_URL_UNPOOLED`                                                     | server      | unpooled Neon connection string (queries that need direct connections)                   |
 | `BETTER_AUTH_SECRET` / `AUTH_SECRET`                                             | server      | Better Auth session signing secret (both names accepted)                                 |
 | `BETTER_AUTH_URL`                                                                | server      | base URL Better Auth infers its routes from (overrides the `SITE_URL`-derived value)     |
@@ -41,7 +40,7 @@ Every variable the repo reads is listed below.
 | `AUTH_SMOKE_PASSWORD`                                                            | scripts     | password used by `scripts/auth-smoke.mjs` (random per run when unset)                    |
 | `AUTH_SMOKE_URL`                                                                 | scripts     | base URL override for the auth smoke (default `http://localhost:3000`)                   |
 
-CI-only values (`SUPABASE_ACCESS_TOKEN`, `GITHUB_TOKEN`, repo `vars.*`) are set as
+`NEON_READONLY_DATABASE_URL` is an optional server-only connection to a Neon read-only compute. When configured, authenticated reporting/list SELECTs use it exclusively; query failures are returned without retrying on the primary. If absent, legacy environments continue using the primary and emit a server warning. Never expose this variable through a `VITE_*` name.\n\nCI-only values (`SUPABASE_ACCESS_TOKEN`, `GITHUB_TOKEN`, repo `vars.*`) are set as
 GitHub Actions secrets/variables, never in `.env` files. Server-only values must
 never appear in `VITE_*`/browser-exposed names; CI greps the client bundle for
 server secret names and fails the build if found.
