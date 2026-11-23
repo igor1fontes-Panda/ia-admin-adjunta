@@ -49,9 +49,7 @@ jobs:
           const destroy = isOpen
             ? entries.filter(([, label]) => !labels.includes(label)).map(([env]) => env)
             : entries.filter(([, label]) => labels.includes(label)).map(([env]) => env);
-          const labelsEnv = Object.fromEntries(
-            entries.map(([env, label]) => [label, env])
-          );
+          const labelsEnv = Object.fromEntries(entries.map(([env, label]) => [label, env]));
 
           const outputs = [
             ['labels_env', JSON.stringify(labelsEnv)],
@@ -59,8 +57,5 @@ jobs:
             ['destroy_envs', JSON.stringify(destroy)],
           ];
 
-          fs.appendFileSync(
-            process.env.GITHUB_OUTPUT,
-            outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n'
-          );
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
           NODE
