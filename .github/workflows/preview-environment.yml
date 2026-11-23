@@ -43,7 +43,7 @@ jobs:
           const output = [
             `deploy_envs=${JSON.stringify(deploy)}`,
             `destroy_envs=${JSON.stringify(destroy)}`,
-          ].join('\\n') + '\\n';
+          ].join('\n') + '\n';
 
           appendFileSync(process.env.GITHUB_OUTPUT, output);
           appendFileSync(
@@ -56,6 +56,6 @@ jobs:
               `- Environments to deploy: ${deploy.join(', ') || '(none)'}`,
               `- Environments to destroy: ${destroy.join(', ') || '(none)'}`,
               '',
-            ].join('\\n'),
+            ].join('\n'),
           );
           NODE
