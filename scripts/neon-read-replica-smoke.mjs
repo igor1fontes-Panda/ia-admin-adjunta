@@ -45,13 +45,13 @@ try {
   const [mode] = await replica`SELECT
     current_user AS role_name,
     current_setting('transaction_read_only') AS transaction_read_only,
-    has_table_privilege(current_user, 'public.clients', 'SELECT') AS can_select_clients,
-    has_table_privilege(current_user, 'public.clients', 'INSERT') AS can_insert_clients`;
+    has_table_privilege(current_user, 'public.clients', 'SELECT') AS can_read,
+    has_table_privilege(current_user, 'public.clients', 'INSERT') AS can_write`;
   if (
     mode?.role_name !== "app_reporting_ro" ||
     String(mode?.transaction_read_only).toLowerCase() !== "on" ||
-    mode?.can_select_clients !== true ||
-    mode?.can_insert_clients !== false
+    mode?.can_read !== true ||
+    mode?.can_write !== false
   ) {
     throw new Error(
       "The replica must use app_reporting_ro with SELECT-only privileges.",
