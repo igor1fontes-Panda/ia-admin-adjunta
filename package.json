@@ -85,7 +85,7 @@
     "jsdom": "^31.0.1",
     "lightningcss": "^1.33.0",
     "prettier": "^3.9.9",
-    "supabase": "^3.1.0",
+    "supabase": "^3.2.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
