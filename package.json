@@ -19,7 +19,7 @@
     "lint": "eslint src",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc -b --noEmit",
     "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
     "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",
     "bot:growth": "node --env-file-if-exists=.env.local scripts/growth-marketing.mjs",
@@ -86,8 +86,9 @@
     "lightningcss": "^1.33.0",
     "prettier": "^3.9.9",
     "supabase": "^3.2.0",
-    "typescript": "^6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.70.0",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "@typescript/native": "npm:typescript@^7.0.2"
   }
 }
