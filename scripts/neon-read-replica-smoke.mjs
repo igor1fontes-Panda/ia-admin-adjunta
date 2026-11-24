@@ -16,14 +16,7 @@ if (!primaryUrl || !readOnlyUrl) {
 
 const primary = neon(primaryUrl);
 const replica = neon(readOnlyUrl);
-const tables = [
-  "activity_log",
-  "agent_memory",
-  "clients",
-  "delivery_status",
-  "leads",
-  "orders",
-];
+const tables = ["activity_log", "agent_memory", "clients", "delivery_status", "leads", "orders"];
 
 async function counts(sql) {
   const results = await Promise.all([
@@ -76,11 +69,6 @@ try {
     ),
   );
 } catch (error) {
-  console.error(
-    [
-      "Read-only replica smoke test failed:",
-      error instanceof Error ? error.message : error,
-    ].join(" "),
-  );
+  console.error(["Read-only replica smoke test failed:", error instanceof Error ? error.message : error].join(" "));
   process.exitCode = 1;
 }
