@@ -1,0 +1,29 @@
+name: Temporary formatter inspection
+
+on:
+  push:
+    branches:
+      - fix/prettier-format-two-files
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Format target files and print exact output
+        run: |
+          npx prettier --write .github/workflows/preview-environment.yml scripts/neon-read-replica-smoke.mjs
+          echo '--- YAML START ---'
+          cat .github/workflows/preview-environment.yml
+          echo '--- YAML END ---'
+          echo '--- JS START ---'
+          cat scripts/neon-read-replica-smoke.mjs
+          echo '--- JS END ---'
