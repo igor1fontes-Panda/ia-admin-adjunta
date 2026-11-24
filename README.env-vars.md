@@ -40,7 +40,7 @@ Every variable the repo reads is listed below.
 | `AUTH_SMOKE_PASSWORD`                                                            | scripts     | password used by `scripts/auth-smoke.mjs` (random per run when unset)                    |
 | `AUTH_SMOKE_URL`                                                                 | scripts     | base URL override for the auth smoke (default `http://localhost:3000`)                   |
 
-CI-only values (`SUPABASE_ACCESS_TOKEN`, `GITHUB_TOKEN`, repo `vars.*`) are set as
+`NEON_READONLY_DATABASE_URL` (server-only) is an optional Neon read-only compute connection. When set, reporting/list `SELECT` queries use it; replica failures are returned without retrying against the primary. If unset, legacy environments use the primary and log a warning. Never expose this variable through a `VITE_*` name.\n\nCI-only values (`SUPABASE_ACCESS_TOKEN`, `GITHUB_TOKEN`, repo `vars.*`) are set as
 GitHub Actions secrets/variables, never in `.env` files. Server-only values must
 never appear in `VITE_*`/browser-exposed names; CI greps the client bundle for
 server secret names and fails the build if found.

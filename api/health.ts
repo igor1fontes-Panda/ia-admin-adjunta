@@ -14,6 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
   const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || "";
   const authReady = Boolean(process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET);
+  const readOnlyConnectionString = process.env.NEON_READONLY_DATABASE_URL || "";
 
   let dbOk = false;
   let dbError: string | null = null;
@@ -27,10 +28,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const ok = dbOk && authReady;
+  let readReplicaOk: boolean | null = null;
+  let readReplicaError: string | null = null;
+  if (readOnlyConnectionString) {
+    try {
+      const readOnlyQuery = neon(readOnlyConnectionString);
+      await readOnlyQuery`select 1`;
+      readReplicaOk = true;
+    } catch {
+      readReplicaOk = false;
+      readReplicaError = "read_replica_unavailable";
+    }
+  }
+
+  const ok = dbOk && authReady && readReplicaOk !== false;
   return res.status(ok ? 200 : 503).json({
     ok,
     database: { configured: Boolean(connectionString), connected: dbOk, error: dbError },
+    readReplica: {
+      configured: Boolean(readOnlyConnectionString),
+      connected: readReplicaOk,
+      error: readReplicaError,
+    },
     auth: { configured: authReady, provider: "better-auth" },
     checkedAt: new Date().toISOString(),
   });

@@ -5,8 +5,10 @@ describe("serverless cold-start null-safety", () => {
     vi.resetModules();
     const savedUrl = process.env.DATABASE_URL;
     const savedNeon = process.env.NEON_DATABASE_URL;
+    const savedReadOnly = process.env.NEON_READONLY_DATABASE_URL;
     delete process.env.DATABASE_URL;
     delete process.env.NEON_DATABASE_URL;
+    delete process.env.NEON_READONLY_DATABASE_URL;
     try {
       const dbMod = await import("./db/index");
       const authMod = await import("./server/auth");
@@ -16,24 +18,53 @@ describe("serverless cold-start null-safety", () => {
     } finally {
       if (savedUrl) process.env.DATABASE_URL = savedUrl;
       if (savedNeon) process.env.NEON_DATABASE_URL = savedNeon;
+      if (savedReadOnly) process.env.NEON_READONLY_DATABASE_URL = savedReadOnly;
     }
   });
 
   it("constructs real clients when DATABASE_URL is present", async () => {
     vi.resetModules();
+    const savedReadOnly = process.env.NEON_READONLY_DATABASE_URL;
+    delete process.env.NEON_READONLY_DATABASE_URL;
     process.env.DATABASE_URL = "postgresql://u:p@localhost:5432/testdb";
     try {
       const dbMod = await import("./db/index");
       expect(dbMod.isDbConfigured).toBe(true);
       expect(dbMod.db).not.toBeNull();
+      expect(dbMod.readDb).toBe(dbMod.db);
+      expect(dbMod.isReadOnlyDbConfigured).toBe(false);
     } finally {
       delete process.env.DATABASE_URL;
+      if (savedReadOnly) process.env.NEON_READONLY_DATABASE_URL = savedReadOnly;
+    }
+  });
+
+  it("routes reads to the configured replica without replacing the primary client", async () => {
+    vi.resetModules();
+    const keys = ["DATABASE_URL", "NEON_READONLY_DATABASE_URL"] as const;
+    const saved = new Map(keys.map((key) => [key, process.env[key]]));
+    process.env.DATABASE_URL = "postgresql://primary:secret@localhost:5432/primary";
+    process.env.NEON_READONLY_DATABASE_URL = "postgresql://replica:secret@localhost:5432/replica";
+
+    try {
+      const dbMod = await import("./db/index");
+      expect(dbMod.isDbConfigured).toBe(true);
+      expect(dbMod.isReadOnlyDbConfigured).toBe(true);
+      expect(dbMod.db).not.toBeNull();
+      expect(dbMod.readOnlyDb).not.toBeNull();
+      expect(dbMod.readDb).toBe(dbMod.readOnlyDb);
+      expect(dbMod.readDb).not.toBe(dbMod.db);
+    } finally {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
     }
   });
 
   it("resolves the serverless auth handler under Node ESM without database credentials", async () => {
     vi.resetModules();
-    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL", "VITE_NEON_AUTH_URL"] as const;
+    const envKeys = ["DATABASE_URL", "NEON_DATABASE_URL", "NEON_READONLY_DATABASE_URL", "VITE_NEON_AUTH_URL"] as const;
     const saved = new Map(envKeys.map((key) => [key, process.env[key]]));
     for (const key of envKeys) delete process.env[key];
 
