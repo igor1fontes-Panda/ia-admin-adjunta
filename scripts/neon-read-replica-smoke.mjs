@@ -76,6 +76,11 @@ try {
     ),
   );
 } catch (error) {
-  console.error("Read-only replica smoke test failed:", error instanceof Error ? error.message : error);
+  console.error(
+    [
+      "Read-only replica smoke test failed:",
+      error instanceof Error ? error.message : error,
+    ].join(" "),
+  );
   process.exitCode = 1;
 }

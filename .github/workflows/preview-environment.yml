@@ -2,7 +2,13 @@ name: Preview environment controller
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+      - labeled
+      - unlabeled
   workflow_dispatch:
 
 permissions:
@@ -57,5 +63,8 @@ jobs:
             ['destroy_envs', JSON.stringify(destroy)],
           ];
 
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n',
+          );
           NODE
