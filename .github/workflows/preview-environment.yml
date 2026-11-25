@@ -38,7 +38,7 @@ jobs:
         shell: bash
         env:
           ENV_LABELS: '{"preview":"deploy"}'
-          LABELS: '[]'
+          LABELS: "[]"
           OPEN: ${{ github.event.action != 'closed' }}
         run: |
           node <<'NODE'
