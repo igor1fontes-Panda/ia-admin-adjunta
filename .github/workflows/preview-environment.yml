@@ -21,10 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Preview environment controller
-        uses: cloudposse/github-action-preview-environment-controller@f45303de8d8f6f29895ffb87332468c48b05592b
+        uses: ./.github/actions/preview-environment-controller
         with:
           env-label: |
             preview: deploy
-          labels: "[]"
+          labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           open: ${{ github.event.action != 'closed' }}
