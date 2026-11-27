@@ -1,0 +1,78 @@
+name: Internal preview environment controller
+description: >
+  Local, dependency-free implementation of the Cloud Posse preview
+  environment controller. Upstream provenance:
+  cloudposse/github-action-preview-environment-controller
+  commit f45303de8d8f6f29895ffb87332468c48b05592b.
+
+inputs:
+  env-label:
+    description: YAML map of environment names to required PR labels.
+    required: true
+  labels:
+    description: JSON array of labels currently present on the PR.
+    required: true
+  open:
+    description: Whether the pull request is open.
+    required: true
+
+outputs:
+  labels_env:
+    description: JSON map of labels to environment names.
+    value: ${{ steps.calculate.outputs.labels_env }}
+  deploy_envs:
+    description: JSON array of environments to deploy.
+    value: ${{ steps.calculate.outputs.deploy_envs }}
+  destroy_envs:
+    description: JSON array of environments to destroy.
+    value: ${{ steps.calculate.outputs.destroy_envs }}
+
+runs:
+  using: composite
+  steps:
+    - id: calculate
+      shell: bash
+      env:
+        ENV_LABEL: ${{ inputs.env-label }}
+        PR_LABELS: ${{ inputs.labels }}
+        PR_OPEN: ${{ inputs.open }}
+      run: |
+        set -euo pipefail
+        node <<'NODE'
+        const fs = require('node:fs');
+
+        const envMap = require('node:yaml').parse(process.env.ENV_LABEL);
+        const labels = JSON.parse(process.env.PR_LABELS);
+        const isOpen = process.env.PR_OPEN === 'true';
+
+        if (!envMap || typeof envMap !== 'object' || Array.isArray(envMap)) {
+          throw new Error('env-label must be a YAML mapping');
+        }
+        if (!Array.isArray(labels) || !labels.every((label) => typeof label === 'string')) {
+          throw new Error('labels must be a JSON array of strings');
+        }
+        if (!['true', 'false'].includes(process.env.PR_OPEN)) {
+          throw new Error('open must be true or false');
+        }
+
+        const entries = Object.entries(envMap);
+        if (!entries.every(([environment, label]) =>
+          typeof environment === 'string' && typeof label === 'string')) {
+          throw new Error('environment names and labels must be strings');
+        }
+
+        const labelsEnv = Object.fromEntries(entries.map(([environment, label]) => [label, environment]));
+        const deploy = isOpen
+          ? entries.filter(([, label]) => labels.includes(label)).map(([environment]) => environment)
+          : [];
+        const destroy = isOpen
+          ? entries.filter(([, label]) => !labels.includes(label)).map(([environment]) => environment)
+          : entries.filter(([, label]) => labels.includes(label)).map(([environment]) => environment);
+
+        const outputs = [
+          ['labels_env', JSON.stringify(labelsEnv)],
+          ['deploy_envs', JSON.stringify(deploy)],
+          ['destroy_envs', JSON.stringify(destroy)],
+        ];
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, outputs.map(([key, value]) => `${key}=${value}`).join('\\n') + '\\n');
+        NODE
