@@ -18,7 +18,9 @@ type CorpusFixture = {
   provenance: string;
   cases: Array<{
     id: string;
-    input: Record<string, unknown>;
+    input?: Record<string, unknown>;
+    query?: string;
+    stage?: string;
     expected: Record<string, unknown>;
     rationale?: string;
     documents?: Array<{ id: string }>;
@@ -28,11 +30,7 @@ type CorpusFixture = {
 };
 
 function loadFixture(name: string): CorpusFixture {
-  const path = resolve(
-    process.cwd(),
-    "tests/ecc-reference/fixtures",
-    `${name}.json`,
-  );
+  const path = resolve(process.cwd(), "tests/ecc-reference/fixtures", `${name}.json`);
   return JSON.parse(readFileSync(path, "utf8")) as CorpusFixture;
 }
 
@@ -55,7 +53,7 @@ describe("ECC engineering reference corpus", () => {
 
       for (const testCase of fixture.cases) {
         expect(testCase.id).toMatch(/^[A-Z]+-\d{3}$/);
-        expect(testCase.input).toBeTypeOf("object");
+        expect(testCase.input ?? testCase.query ?? testCase.stage).toBeTruthy();
         expect(testCase.expected).toBeTypeOf("object");
       }
     },
