@@ -34,7 +34,8 @@
     "e2e": "bun scripts/e2e-gauntlet.mjs",
     "auth:smoke": "node --env-file-if-exists=.env.local scripts/auth-smoke.mjs",
     "bot:insight": "python3 ai_engine.py",
-    "db:read-replica-smoke": "node scripts/neon-read-replica-smoke.mjs"
+    "db:read-replica-smoke": "node scripts/neon-read-replica-smoke.mjs",
+    "test:supabase:legacy-bots": "node scripts/supabase-legacy-bot-smoke.mjs"
   },
   "overrides": {
     "esbuild": "^0.25.12"
