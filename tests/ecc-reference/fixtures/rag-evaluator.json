@@ -7,25 +7,12 @@
       "id": "RAG-001",
       "query": "How is an expired administrative session rejected?",
       "documents": [
-        {
-          "id": "auth-session-tests",
-          "relevance": 3
-        },
-        {
-          "id": "marketing-overview",
-          "relevance": 0
-        },
-        {
-          "id": "api-auth-middleware",
-          "relevance": 2
-        }
+        { "id": "auth-session-tests", "relevance": 3 },
+        { "id": "marketing-overview", "relevance": 0 },
+        { "id": "api-auth-middleware", "relevance": 2 }
       ],
       "expected": {
-        "rankedDocumentIds": [
-          "auth-session-tests",
-          "api-auth-middleware",
-          "marketing-overview"
-        ],
+        "rankedDocumentIds": ["auth-session-tests", "api-auth-middleware", "marketing-overview"],
         "topRelevant": true
       },
       "rationale": "Tests and enforcement code should outrank unrelated product copy."
@@ -34,25 +21,12 @@
       "id": "RAG-002",
       "query": "Which smoke test verifies replica SELECT-only permissions?",
       "documents": [
-        {
-          "id": "neon-replica-smoke",
-          "relevance": 3
-        },
-        {
-          "id": "frontend-theme",
-          "relevance": 0
-        },
-        {
-          "id": "database-operations-doc",
-          "relevance": 2
-        }
+        { "id": "neon-replica-smoke", "relevance": 3 },
+        { "id": "frontend-theme", "relevance": 0 },
+        { "id": "database-operations-doc", "relevance": 2 }
       ],
       "expected": {
-        "rankedDocumentIds": [
-          "neon-replica-smoke",
-          "database-operations-doc",
-          "frontend-theme"
-        ],
+        "rankedDocumentIds": ["neon-replica-smoke", "database-operations-doc", "frontend-theme"],
         "topRelevant": true
       },
       "rationale": "Exact operational evidence should rank above broad or unrelated documentation."
@@ -61,25 +35,12 @@
       "id": "RAG-003",
       "query": "Does this repository prove Claude and Codex adapter compatibility?",
       "documents": [
-        {
-          "id": "adapter-handshake-report",
-          "relevance": 3
-        },
-        {
-          "id": "harness-claims-without-tests",
-          "relevance": 0
-        },
-        {
-          "id": "adapter-contract",
-          "relevance": 2
-        }
+        { "id": "adapter-handshake-report", "relevance": 3 },
+        { "id": "harness-claims-without-tests", "relevance": 0 },
+        { "id": "adapter-contract", "relevance": 2 }
       ],
       "expected": {
-        "rankedDocumentIds": [
-          "adapter-handshake-report",
-          "adapter-contract",
-          "harness-claims-without-tests"
-        ],
+        "rankedDocumentIds": ["adapter-handshake-report", "adapter-contract", "harness-claims-without-tests"],
         "topRelevant": true
       },
       "rationale": "A verified handshake is stronger evidence than an unsupported compatibility claim."

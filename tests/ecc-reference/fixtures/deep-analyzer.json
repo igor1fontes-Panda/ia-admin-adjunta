@@ -7,10 +7,7 @@
       "id": "AN-001",
       "input": {
         "change": "API handler trusts a client-supplied role field",
-        "signals": [
-          "authorization",
-          "client-controlled-claim"
-        ]
+        "signals": ["authorization", "client-controlled-claim"]
       },
       "expected": {
         "classification": "security-authorization",
@@ -24,10 +21,7 @@
       "id": "AN-002",
       "input": {
         "change": "Read-only reporting endpoint executes SELECT statements only and verifies a read-only role",
-        "signals": [
-          "database",
-          "read-only"
-        ]
+        "signals": ["database", "read-only"]
       },
       "expected": {
         "classification": "database-read-only",
@@ -41,10 +35,7 @@
       "id": "AN-003",
       "input": {
         "change": "A helper has an unused parameter but no observable behavior change",
-        "signals": [
-          "static-analysis",
-          "unused-parameter"
-        ]
+        "signals": ["static-analysis", "unused-parameter"]
       },
       "expected": {
         "classification": "maintainability",

@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const fixtureNames = [
   "deep-analyzer",
   "rag-evaluator",
-  "pr-salvage",
+  "stale-pr-review-thread-reopen-flow",
   "discussion-triage",
   "harness-compatibility",
   "security-evidence",
@@ -27,11 +28,12 @@ type CorpusFixture = {
 };
 
 function loadFixture(name: string): CorpusFixture {
-  const raw = readFileSync(
-    new URL(`./fixtures/${name}.json`, import.meta.url),
-    "utf8",
+  const path = resolve(
+    process.cwd(),
+    "tests/ecc-reference/fixtures",
+    `${name}.json`,
   );
-  return JSON.parse(raw) as CorpusFixture;
+  return JSON.parse(readFileSync(path, "utf8")) as CorpusFixture;
 }
 
 describe("ECC engineering reference corpus", () => {
@@ -39,22 +41,25 @@ describe("ECC engineering reference corpus", () => {
     expect(fixtureNames).toHaveLength(7);
   });
 
-  it.each(fixtureNames)("%s fixture has stable, non-empty golden cases", (name) => {
-    const fixture = loadFixture(name);
-    expect(fixture.schemaVersion).toBe(1);
-    expect(fixture.area).toBeTruthy();
-    expect(fixture.provenance).toBeTruthy();
-    expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
+  it.each(fixtureNames)(
+    "%s fixture has stable, non-empty golden cases",
+    (name) => {
+      const fixture = loadFixture(name);
+      expect(fixture.schemaVersion).toBe(1);
+      expect(fixture.area).toBeTruthy();
+      expect(fixture.provenance).toBeTruthy();
+      expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
 
-    const ids = fixture.cases.map((testCase) => testCase.id);
-    expect(new Set(ids).size).toBe(ids.length);
+      const ids = fixture.cases.map((testCase) => testCase.id);
+      expect(new Set(ids).size).toBe(ids.length);
 
-    for (const testCase of fixture.cases) {
-      expect(testCase.id).toMatch(/^[A-Z]+-\d{3}$/);
-      expect(testCase.input).toBeTypeOf("object");
-      expect(testCase.expected).toBeTypeOf("object");
-    }
-  });
+      for (const testCase of fixture.cases) {
+        expect(testCase.id).toMatch(/^[A-Z]+-\d{3}$/);
+        expect(testCase.input).toBeTypeOf("object");
+        expect(testCase.expected).toBeTypeOf("object");
+      }
+    },
+  );
 
   it("keeps RAG expected rankings deterministic and complete", () => {
     const fixture = loadFixture("rag-evaluator");
@@ -67,7 +72,7 @@ describe("ECC engineering reference corpus", () => {
   });
 
   it("never authorizes automatic PR merges from salvage fixtures", () => {
-    const fixture = loadFixture("pr-salvage");
+    const fixture = loadFixture("stale-pr-review-thread-reopen-flow");
     for (const testCase of fixture.cases) {
       expect(testCase.expected.mayAutoMerge).toBe(false);
     }
