@@ -18,20 +18,27 @@ The script refuses the known production project ref `aebdqztoolszdzfbdlbp` and c
 npm run test:supabase:legacy-bots
 ```
 
-The smoke test exercises the service-role operations used by the legacy bot layer:
+The smoke test exercises the service-role operations used by the legacy bot
+layer:
 
-| Bot/data path | Operations exercised |
-| --- | --- |
-| Generic bot DB helper | SELECT, INSERT, UPDATE, DELETE cleanup |
-| Lead workflows | Read and insert/update `leads` |
-| Operations manager | Read and insert `clients`, `orders`, `activity_log`, `delivery_status` |
-| Error handler | Read and update `delivery_status` |
-| Agent memory | Read and upsert `agent_memory` |
+- **Generic bot DB helper:** SELECT, INSERT, UPDATE and DELETE cleanup.
+- **Lead workflows:** read and insert/update `leads`.
+- **Operations manager:** read and insert `clients`, `orders`,
+  `activity_log` and `delivery_status`.
+- **Error handler:** read and update `delivery_status`.
+- **Agent memory:** read and upsert `agent_memory`.
 
-It creates uniquely named disposable records and removes them in a `finally` cleanup. It does not test the Hume Storage bucket; that is a separate Storage API workflow and is not affected by the table-grant migration.
+It creates uniquely named disposable records and removes them in a `finally`
+cleanup. It does not test the Hume Storage bucket. That is a separate Storage
+API workflow and is not affected by the table-grant migration.
 
 ## What this does not prove
 
-A successful run proves the tested service-role CRUD paths work on that isolated branch. It does not prove that the migration is safe for production or that anonymous/authenticated user flows are preserved. The SQL contract test in `supabase/tests/0006_lock_legacy_supabase_data_api.sql` separately asserts the role grants and RLS state. The dashboard's current same-origin Neon API path must also remain covered by the normal app CI.
+A successful run proves the tested service-role CRUD paths work on that isolated
+branch. It does not prove that the migration is safe for production or that
+anonymous/authenticated user flows are preserved. The SQL contract test in
+`supabase/tests/0006_lock_legacy_supabase_data_api.sql` separately asserts the
+role grants and RLS state. The dashboard's current same-origin Neon API path
+must also remain covered by the normal app CI.
 
 Do not run this script with production credentials. Do not apply migrations to production as part of this test.
