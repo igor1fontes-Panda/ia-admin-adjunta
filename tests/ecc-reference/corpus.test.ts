@@ -20,6 +20,8 @@ type CorpusFixture = {
     input: Record<string, unknown>;
     expected: Record<string, unknown>;
     rationale?: string;
+    documents?: Array<{ id: string }>;
+    syntheticLog?: string;
   }>;
   [key: string]: unknown;
 };
