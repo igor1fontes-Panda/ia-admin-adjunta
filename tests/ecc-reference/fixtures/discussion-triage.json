@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "area": "discussion-triage",
+  "provenance": "synthetic-public-discussion-cases",
+  "cases": [
+    {
+      "id": "DISC-001",
+      "input": {
+        "question": "Where is the documented build command?",
+        "replies": 0,
+        "containsActionRequest": false
+      },
+      "expected": {
+        "classification": "informational",
+        "responseState": "no-response",
+        "priority": "low"
+      },
+      "rationale": "An unanswered informational question is not equivalent to a defect report."
+    },
+    {
+      "id": "DISC-002",
+      "input": {
+        "question": "How do I run the unit tests?",
+        "replies": 1,
+        "acceptedAnswer": true,
+        "containsActionRequest": false
+      },
+      "expected": {
+        "classification": "answered",
+        "responseState": "answered",
+        "priority": "low"
+      },
+      "rationale": "An accepted answer should prevent duplicate triage work."
+    },
+    {
+      "id": "DISC-003",
+      "input": {
+        "question": "The protected API accepts an expired session",
+        "replies": 0,
+        "containsActionRequest": true,
+        "securitySignal": true
+      },
+      "expected": {
+        "classification": "action-required",
+        "responseState": "no-response",
+        "priority": "high"
+      },
+      "rationale": "A potentially security-relevant report requires human investigation, not an informational label."
+    }
+  ]
+}

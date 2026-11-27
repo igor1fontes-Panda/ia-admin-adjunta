@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "area": "security-evidence",
+  "provenance": "synthetic-policy-cases",
+  "cases": [
+    {
+      "id": "SEC-001",
+      "input": {
+        "artifact": "client-bundle",
+        "finding": "server-secret-pattern",
+        "synthetic": true
+      },
+      "expected": {
+        "decision": "fail",
+        "control": "secret-exposure-prevention"
+      },
+      "rationale": "A server secret detected in a client artifact must fail the security gate."
+    },
+    {
+      "id": "SEC-002",
+      "input": {
+        "artifact": "api-route",
+        "finding": "missing-admin-authorization",
+        "synthetic": true
+      },
+      "expected": {
+        "decision": "fail",
+        "control": "server-side-authorization"
+      },
+      "rationale": "Administrative access must be enforced server-side."
+    },
+    {
+      "id": "SEC-003",
+      "input": {
+        "artifact": "dependency-report",
+        "finding": "no-known-vulnerability-in-scan-scope",
+        "synthetic": true
+      },
+      "expected": {
+        "decision": "pass-with-scope",
+        "control": "dependency-audit"
+      },
+      "rationale": "A clean scan is only a scoped result and must not be represented as proof of overall security."
+    }
+  ],
+  "externalArtifacts": {
+    "status": "pending-not-generated",
+    "required": [
+      "CycloneDX or SPDX SBOM generated from the exact candidate lockfile",
+      "SARIF report from a named scanner and exact workflow run",
+      "Dependency audit output with tool and database timestamp",
+      "AgentShield evidence pack only if that scanner is actually used"
+    ],
+    "rule": "Do not create placeholder reports or claim scanner execution without source artifacts."
+  }
+}

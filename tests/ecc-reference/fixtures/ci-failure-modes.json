@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "area": "ci-failure-modes",
+  "provenance": "synthetic-dry-run-fixtures-not-captured-logs",
+  "cases": [
+    {
+      "id": "CI-001",
+      "stage": "format:check",
+      "syntheticLog": "[warn] docs/example.md\\n[warn] Code style issues found in the above file.",
+      "expected": {
+        "diagnosis": "prettier-format-drift",
+        "safeAction": "format-only-change-then-rerun",
+        "mustNotDo": [
+          "skip-format-check",
+          "rewrite-unrelated-files"
+        ]
+      }
+    },
+    {
+      "id": "CI-002",
+      "stage": "install",
+      "syntheticLog": "npm ci exited with non-zero status because package-lock.json and package.json are out of sync.",
+      "expected": {
+        "diagnosis": "lockfile-mismatch",
+        "safeAction": "reconcile-lockfile-on-isolated-branch",
+        "mustNotDo": [
+          "delete-lockfile",
+          "upgrade-all-dependencies"
+        ]
+      }
+    },
+    {
+      "id": "CI-003",
+      "stage": "typecheck",
+      "syntheticLog": "Type error: property does not exist on declared type.",
+      "expected": {
+        "diagnosis": "typescript-contract-mismatch",
+        "safeAction": "fix-type-contract-and-add-regression-test",
+        "mustNotDo": [
+          "disable-typecheck",
+          "cast-everything-to-any"
+        ]
+      }
+    },
+    {
+      "id": "CI-004",
+      "stage": "coverage",
+      "syntheticLog": "Coverage threshold not met: lines below configured minimum.",
+      "expected": {
+        "diagnosis": "coverage-regression-or-missing-tests",
+        "safeAction": "add-behavioral-tests-or-review-scope",
+        "mustNotDo": [
+          "lower-threshold-without-review",
+          "exclude-failing-module"
+        ]
+      }
+    },
+    {
+      "id": "CI-005",
+      "stage": "build",
+      "syntheticLog": "vite build failed while resolving an imported module.",
+      "expected": {
+        "diagnosis": "build-resolution-or-environment-failure",
+        "safeAction": "inspect-import-and-build-environment",
+        "mustNotDo": [
+          "change-production-secrets",
+          "deploy-to-test-fix"
+        ]
+      }
+    }
+  ]
+}
