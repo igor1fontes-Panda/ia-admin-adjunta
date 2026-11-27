@@ -1,8 +1,10 @@
 # ADR-0001 — Reconciliation of authentication and AIEOS stabilization
 
-- **Status:** Proposed for review
-- **Date:** 2026-11-27
-- **Scope:** Repository architecture and engineering workflow only
+**Status:** Proposed for review
+
+**Date:** 2026-11-27
+
+**Scope:** Repository architecture and engineering workflow only
 
 ## Context
 
