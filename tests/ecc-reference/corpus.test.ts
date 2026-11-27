@@ -39,9 +39,7 @@ describe("ECC engineering reference corpus", () => {
     expect(fixtureNames).toHaveLength(7);
   });
 
-  it.each(fixtureNames)(
-    "%s fixture has stable, non-empty golden cases",
-    (name) => {
+  it.each(fixtureNames)("%s fixture has stable, non-empty golden cases", (name) => {
       const fixture = loadFixture(name);
       expect(fixture.schemaVersion).toBe(1);
       expect(fixture.area).toBeTruthy();
@@ -56,8 +54,7 @@ describe("ECC engineering reference corpus", () => {
         expect(testCase.input ?? testCase.query ?? testCase.stage).toBeTruthy();
         expect(testCase.expected).toBeTypeOf("object");
       }
-    },
-  );
+  });
 
   it("keeps RAG expected rankings deterministic and complete", () => {
     const fixture = loadFixture("rag-evaluator");
