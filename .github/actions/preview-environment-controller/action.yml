@@ -42,21 +42,18 @@ runs:
         const fs = require('node:fs');
 
         const envMap = Object.fromEntries(
-  process.env.ENV_LABEL.split(/\\r?\\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const separator = line.indexOf(':');
-      if (separator <= 0) throw new Error(`Invalid env-label mapping: ${line}`);
-      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
-    }),
-);
+          process.env.ENV_LABEL.split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const separator = line.indexOf(':');
+              if (separator <= 0) throw new Error('Invalid env-label mapping: ' + line);
+              return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+            }),
+        );
         const labels = JSON.parse(process.env.PR_LABELS);
         const isOpen = process.env.PR_OPEN === 'true';
 
-        if (!envMap || typeof envMap !== 'object' || Array.isArray(envMap)) {
-          throw new Error('env-label must be a YAML mapping');
-        }
         if (!Array.isArray(labels) || !labels.every((label) => typeof label === 'string')) {
           throw new Error('labels must be a JSON array of strings');
         }
@@ -66,8 +63,8 @@ runs:
 
         const entries = Object.entries(envMap);
         if (!entries.every(([environment, label]) =>
-          typeof environment === 'string' && typeof label === 'string')) {
-          throw new Error('environment names and labels must be strings');
+          typeof environment === 'string' && typeof label === 'string' && label.length > 0)) {
+          throw new Error('environment names and labels must be non-empty strings');
         }
 
         const labelsEnv = Object.fromEntries(entries.map(([environment, label]) => [label, environment]));
@@ -83,5 +80,5 @@ runs:
           ['deploy_envs', JSON.stringify(deploy)],
           ['destroy_envs', JSON.stringify(destroy)],
         ];
-        fs.appendFileSync(process.env.GITHUB_OUTPUT, outputs.map(([key, value]) => `${key}=${value}`).join('\\n') + '\\n');
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, outputs.map(([key, value]) => key + '=' + value).join('\n') + '\n');
         NODE
