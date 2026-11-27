@@ -40,20 +40,20 @@ describe("ECC engineering reference corpus", () => {
   });
 
   it.each(fixtureNames)("%s fixture has stable, non-empty golden cases", (name) => {
-      const fixture = loadFixture(name);
-      expect(fixture.schemaVersion).toBe(1);
-      expect(fixture.area).toBeTruthy();
-      expect(fixture.provenance).toBeTruthy();
-      expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
+    const fixture = loadFixture(name);
+    expect(fixture.schemaVersion).toBe(1);
+    expect(fixture.area).toBeTruthy();
+    expect(fixture.provenance).toBeTruthy();
+    expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
 
-      const ids = fixture.cases.map((testCase) => testCase.id);
-      expect(new Set(ids).size).toBe(ids.length);
+    const ids = fixture.cases.map((testCase) => testCase.id);
+    expect(new Set(ids).size).toBe(ids.length);
 
-      for (const testCase of fixture.cases) {
-        expect(testCase.id).toMatch(/^[A-Z]+-\d{3}$/);
-        expect(testCase.input ?? testCase.query ?? testCase.stage).toBeTruthy();
-        expect(testCase.expected).toBeTypeOf("object");
-      }
+    for (const testCase of fixture.cases) {
+      expect(testCase.id).toMatch(/^[A-Z]+-\d{3}$/);
+      expect(testCase.input ?? testCase.query ?? testCase.stage).toBeTruthy();
+      expect(testCase.expected).toBeTypeOf("object");
+    }
   });
 
   it("keeps RAG expected rankings deterministic and complete", () => {
