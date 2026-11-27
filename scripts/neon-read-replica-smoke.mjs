@@ -36,9 +36,7 @@ async function counts(sql) {
     sql`SELECT count(*)::int AS count FROM public.leads`,
     sql`SELECT count(*)::int AS count FROM public.orders`,
   ]);
-  return Object.fromEntries(
-    tables.map((table, index) => [table, results[index][0].count]),
-  );
+  return Object.fromEntries(tables.map((table, index) => [table, results[index][0].count]));
 }
 
 try {
@@ -53,27 +51,20 @@ try {
     mode?.can_read !== true ||
     mode?.can_write !== false
   ) {
-    throw new Error(
-      "The replica must use app_reporting_ro with SELECT-only privileges.",
-    );
+    throw new Error("The replica must use app_reporting_ro with SELECT-only privileges.");
   }
 
   const startedAt = performance.now();
   await replica`SELECT 1`;
-  const replicaLatencyMs =
-    Math.round((performance.now() - startedAt) * 100) / 100;
+  const replicaLatencyMs = Math.round((performance.now() - startedAt) * 100) / 100;
 
   const [primaryCounts, replicaCounts] = await Promise.all([
     counts(primary),
     counts(replica),
   ]);
-  const mismatches = tables.filter(
-    (table) => primaryCounts[table] !== replicaCounts[table],
-  );
+  const mismatches = tables.filter((table) => primaryCounts[table] !== replicaCounts[table]);
   if (mismatches.length) {
-    throw new Error(
-      `Primary/replica row-count mismatch: ${mismatches.join(", ")}`,
-    );
+    throw new Error(`Primary/replica row-count mismatch: ${mismatches.join(", ")}`);
   }
 
   console.log(
@@ -91,10 +82,7 @@ try {
   );
 } catch (error) {
   console.error(
-    [
-      "Read-only replica smoke test failed:",
-      error instanceof Error ? error.message : error,
-    ].join(" "),
+    ["Read-only replica smoke test failed:", error instanceof Error ? error.message : error].join(" "),
   );
   process.exitCode = 1;
 }
