@@ -13,6 +13,12 @@ The existing Supabase migrations 0001 and 0002 grant broad `authenticated` acces
 - `supabase/migrations/0006_lock_legacy_supabase_data_api.sql`: candidate restriction.
 - `supabase/tests/0006_lock_legacy_supabase_data_api.sql`: privilege contract test.
 
+## Remote-state evidence captured 2026-11-27
+
+A read-only query against the connected Supabase project found only five of the six expected business tables: `activity_log`, `agent_memory`, `clients`, `leads`, and `orders`. `delivery_status` is absent. The remote migration history also remains inconsistent with the repository migration sequence. Therefore this candidate migration depends on the missing `0005_delivery_qa.sql` being safely reconciled/applied first in an isolated environment. The candidate must not be applied to the current remote project as-is.
+
+The same read-only privilege query confirmed `anon` and `authenticated` currently have table privileges (including SELECT/INSERT/UPDATE/DELETE) on those five tables, while `service_role` also has those privileges. This corroborates the need for a least-privilege correction, but does not itself prove that every privilege is exploitable through RLS; RLS policies also apply to non-bypass roles.
+
 ## Required pre-merge checks
 
 1. Enumerate active GitHub Actions and external bot deployments using the Supabase service-role key.
