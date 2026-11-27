@@ -41,7 +41,16 @@ runs:
         node <<'NODE'
         const fs = require('node:fs');
 
-        const envMap = require('node:yaml').parse(process.env.ENV_LABEL);
+        const envMap = Object.fromEntries(
+  process.env.ENV_LABEL.split(/\\r?\\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf(':');
+      if (separator <= 0) throw new Error(`Invalid env-label mapping: ${line}`);
+      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+    }),
+);
         const labels = JSON.parse(process.env.PR_LABELS);
         const isOpen = process.env.PR_OPEN === 'true';
 
