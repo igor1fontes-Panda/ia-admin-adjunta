@@ -1,72 +1,69 @@
-name: Preview environment controller
-description: Locally maintained, SHA-pinned copy of the Cloud Posse preview environment controller.
+name: Internal preview environment controller
+description: >
+  Local, dependency-free implementation of the Cloud Posse preview
+  environment controller. Upstream provenance:
+  cloudposse/github-action-preview-environment-controller
+  commit f45303de8d8f6f29895ffb87332468c48b05592b.
+
 inputs:
   env-label:
-    description: "YAML formatted {environment}: {label} map"
+    description: YAML map of environment names to required PR labels.
     required: true
-    default: |
-      preview: deploy
   labels:
-    description: Existing PR labels
+    description: JSON array of labels currently present on the PR.
     required: true
-    default: "[]"
   open:
+    description: Whether the pull request is open.
     required: true
-    description: "Is PR open?"
-    default: "true"
+
 outputs:
   labels_env:
-    description: "JSON formatted {label}: {environment} map"
-    value: ${{ steps.yaml2json.outputs.output }}
+    description: JSON map of labels to environment names.
+    value: ${{ steps.calculate.outputs.labels_env }}
   deploy_envs:
-    description: "Environments that need to be deployed"
-    value: ${{ steps.deploy_envs.outputs.output }}
+    description: JSON array of environments to deploy.
+    value: ${{ steps.calculate.outputs.deploy_envs }}
   destroy_envs:
-    description: "Environments that need to be destroyed"
-    value: ${{ steps.destroy_envs.outputs.output }}
+    description: JSON array of environments to destroy.
+    value: ${{ steps.calculate.outputs.destroy_envs }}
+
 runs:
   using: composite
   steps:
-    - uses: 1arp/create-a-file-action@c4627bfb2b7012f0f26a9b04d663deb86a0bd21f
-      with:
-        path: ./
-        file: labels_env.yaml
-        content: ${{ inputs.env-label }}
-
-    - uses: fabasoad/data-format-converter-action@64006df7988ff8c87b38e53fcaf5843d4fe340cc
-      id: yaml2json
-      with:
-        input: labels_env.yaml
-        from: yaml
-        to: json
-
-    - id: pattern
+    - id: calculate
       shell: bash
+      env:
+        ENV_LABEL: ${{ inputs.env-label }}
+        PR_LABELS: ${{ inputs.labels }}
+        PR_OPEN: ${{ inputs.open }}
       run: |
-        if [ "${{ inputs.open }}" == "true" ]; then
-          echo "deploy=with_entries(select(.value | IN({0}[]))) | keys" >> "$GITHUB_OUTPUT"
-          echo "destroy=with_entries(select(.value | IN({0}[]) | not )) | keys" >> "$GITHUB_OUTPUT"
-        else
-          echo "deploy=[]" >> "$GITHUB_OUTPUT"
-          echo "destroy=with_entries(select(.value | IN({0}[]))) | keys" >> "$GITHUB_OUTPUT"
-        fi
+        set -euo pipefail
+        ruby <<'RUBY'
+        require 'yaml'
+        require 'json'
 
-    - name: Install jq 1.6
-      uses: dcarbone/install-jq-action@8867ddb4788346d7c22b72ea2e2ffe4d514c7bcb
-      with:
-        version: 1.6
-        force: "true"
+        env_map = YAML.safe_load(ENV.fetch('ENV_LABEL'), permitted_classes: [], aliases: false)
+        labels = JSON.parse(ENV.fetch('PR_LABELS'))
+        raise 'env-label must be a YAML mapping' unless env_map.is_a?(Hash)
+        raise 'labels must be a JSON array of strings' unless labels.is_a?(Array) && labels.all? { |v| v.is_a?(String) }
+        raise 'open must be true or false' unless %w[true false].include?(ENV.fetch('PR_OPEN'))
 
-    - uses: cloudposse/github-action-jq@aff18a1f2e845b56fcfe995b01a558836dc2025b
-      id: deploy_envs
-      with:
-        compact: true
-        input: ${{ steps.yaml2json.outputs.output }}
-        script: ${{ format(steps.pattern.outputs.deploy, inputs.labels) }}
+        labels_env = {}
+        deploy = []
+        destroy = []
+        env_map.each do |environment, required_label|
+          raise 'environment names and labels must be strings' unless environment.is_a?(String) && required_label.is_a?(String)
+          labels_env[required_label] = environment
+          if ENV.fetch('PR_OPEN') == 'true' && labels.include?(required_label)
+            deploy << environment
+          else
+            destroy << environment
+          end
+        end
 
-    - uses: cloudposse/github-action-jq@aff18a1f2e845b56fcfe995b01a558836dc2025b
-      id: destroy_envs
-      with:
-        compact: true
-        input: ${{ steps.yaml2json.outputs.output }}
-        script: ${{ format(steps.pattern.outputs.destroy, inputs.labels) }}
+        File.open(ENV.fetch('GITHUB_OUTPUT'), 'a') do |output|
+          output.puts "labels_env=#{JSON.generate(labels_env)}"
+          output.puts "deploy_envs=#{JSON.generate(deploy)}"
+          output.puts "destroy_envs=#{JSON.generate(destroy)}"
+        end
+        RUBY
