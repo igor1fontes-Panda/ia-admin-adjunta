@@ -23,11 +23,15 @@ if (!url || !key || !projectRef) {
   );
 }
 if (projectRef === productionRef) {
-  throw new Error("Refusing to run a write smoke test against the production project.");
+  throw new Error(
+    "Refusing to run a write smoke test against the production project.",
+  );
 }
 const parsedUrl = new URL(url);
 if (parsedUrl.hostname !== `${projectRef}.supabase.co`) {
-  throw new Error("SUPABASE_TEST_URL host does not match SUPABASE_TEST_PROJECT_REF.");
+  throw new Error(
+    "SUPABASE_TEST_URL host does not match SUPABASE_TEST_PROJECT_REF.",
+  );
 }
 
 const supabase = createClient(url, key, {
