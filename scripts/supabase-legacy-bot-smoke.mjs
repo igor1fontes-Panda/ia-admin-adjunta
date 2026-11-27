@@ -18,20 +18,14 @@ const projectRef = process.env.SUPABASE_TEST_PROJECT_REF || "";
 const productionRef = "aebdqztoolszdzfbdlbp";
 
 if (!url || !key || !projectRef) {
-  throw new Error(
-    "Set SUPABASE_TEST_URL, SUPABASE_TEST_SERVICE_KEY and SUPABASE_TEST_PROJECT_REF.",
-  );
+  throw new Error("Set SUPABASE_TEST_URL, SUPABASE_TEST_SERVICE_KEY and SUPABASE_TEST_PROJECT_REF.");
 }
 if (projectRef === productionRef) {
-  throw new Error(
-    "Refusing to run a write smoke test against the production project.",
-  );
+  throw new Error("Refusing to run a write smoke test against the production project.");
 }
 const parsedUrl = new URL(url);
 if (parsedUrl.hostname !== `${projectRef}.supabase.co`) {
-  throw new Error(
-    "SUPABASE_TEST_URL host does not match SUPABASE_TEST_PROJECT_REF.",
-  );
+  throw new Error("SUPABASE_TEST_URL host does not match SUPABASE_TEST_PROJECT_REF.");
 }
 
 const supabase = createClient(url, key, {
@@ -55,21 +49,12 @@ async function checked(label, query) {
 
 async function cleanup() {
   const operations = [
-    created.delivery &&
-      supabase.from("delivery_status").delete().eq("id", created.delivery.id),
-    created.order &&
-      supabase.from("orders").delete().eq("id", created.order.id),
-    created.lead &&
-      supabase.from("leads").delete().eq("id", created.lead.id),
-    created.activity &&
-      supabase.from("activity_log").delete().eq("id", created.activity.id),
-    supabase
-      .from("agent_memory")
-      .delete()
-      .eq("agent", "error_handler")
-      .eq("key", created.memoryKey),
-    created.client &&
-      supabase.from("clients").delete().eq("id", created.client.id),
+    created.delivery && supabase.from("delivery_status").delete().eq("id", created.delivery.id),
+    created.order && supabase.from("orders").delete().eq("id", created.order.id),
+    created.lead && supabase.from("leads").delete().eq("id", created.lead.id),
+    created.activity && supabase.from("activity_log").delete().eq("id", created.activity.id),
+    supabase.from("agent_memory").delete().eq("agent", "error_handler").eq("key", created.memoryKey),
+    created.client && supabase.from("clients").delete().eq("id", created.client.id),
   ].filter(Boolean);
   const results = await Promise.all(operations);
   const failed = results.find((result) => result.error);
@@ -78,24 +63,10 @@ async function cleanup() {
 
 try {
   // Reads exercise the table access patterns used by the bot helpers.
-  const tables = [
-    "leads",
-    "clients",
-    "orders",
-    "activity_log",
-    "agent_memory",
-    "delivery_status",
-  ];
+  const tables = ["leads", "clients", "orders", "activity_log", "agent_memory", "delivery_status"];
   for (const table of tables) {
     const orderColumn = table === "agent_memory" ? "updated_at" : "created_at";
-    await checked(
-      `read ${table}`,
-      supabase
-        .from(table)
-        .select("*")
-        .order(orderColumn, { ascending: false })
-        .limit(1),
-    );
+    await checked(`read ${table}`, supabase.from(table).select("*").order(orderColumn, { ascending: false }).limit(1));
   }
 
   created.client = await checked(
@@ -180,12 +151,7 @@ try {
 
   const leadUpdate = await checked(
     "update lead",
-    supabase
-      .from("leads")
-      .update({ score: 55 })
-      .eq("id", created.lead.id)
-      .select()
-      .single(),
+    supabase.from("leads").update({ score: 55 }).eq("id", created.lead.id).select().single(),
   );
   if (leadUpdate.id !== created.lead.id) {
     throw new Error("Lead update returned the wrong row.");
