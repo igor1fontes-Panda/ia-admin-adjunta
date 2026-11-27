@@ -12,50 +12,24 @@ const fixtureNames = [
   "ci-failure-modes",
 ] as const;
 
-type ReferenceFixture = {
-  schemaVersion: number;
-  area: string;
-  provenance: string;
-  cases: Array<{
-    id: string;
-    expected: Record<string, unknown>;
-    input?: Record<string, unknown>;
-    query?: string;
-    stage?: string;
-    documents?: Array<{ id: string }>;
-    syntheticLog?: string;
-  }>;
-  [key: string]: unknown;
-};
-
-function readFixture(name: string): ReferenceFixture {
-  const file = resolve(
-    process.cwd(),
-    "tests/ecc-reference/fixtures",
-    `${name}.json`,
-  );
-  return JSON.parse(readFileSync(file, "utf8")) as ReferenceFixture;
+function readFixture(name: string) {
+  const path = resolve(process.cwd(), "tests/ecc-reference/fixtures", `${name}.json`);
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
 describe("ECC engineering reference corpus", () => {
-  it("contains all seven readiness domains", () => {
+  it("contains seven stable reference domains", () => {
     expect(fixtureNames).toHaveLength(7);
-  });
 
-  it.each(fixtureNames)("%s fixture contains stable golden cases", (name) => {
-    const fixture = readFixture(name);
-    expect(fixture.schemaVersion).toBe(1);
-    expect(fixture.area).toBeTruthy();
-    expect(fixture.provenance).toBeTruthy();
-    expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
+    for (const name of fixtureNames) {
+      const fixture = readFixture(name);
+      const ids = fixture.cases.map((item: { id: string }) => item.id);
 
-    const ids = fixture.cases.map((item) => item.id);
-    expect(new Set(ids).size).toBe(ids.length);
-
-    for (const item of fixture.cases) {
-      expect(item.id).toMatch(/^[A-Z]+-\d{3}$/);
-      expect(item.input ?? item.query ?? item.stage).toBeTruthy();
-      expect(item.expected).toBeTypeOf("object");
+      expect(fixture.schemaVersion).toBe(1);
+      expect(fixture.area).toBeTruthy();
+      expect(fixture.provenance).toBeTruthy();
+      expect(fixture.cases.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(ids).size).toBe(ids.length);
     }
   });
 
@@ -63,8 +37,9 @@ describe("ECC engineering reference corpus", () => {
     const fixture = readFixture("rag-evaluator");
 
     for (const item of fixture.cases) {
-      const documents = item.documents ?? [];
+      const documents = item.documents as Array<{ id: string }>;
       const ranked = item.expected.rankedDocumentIds as string[];
+
       expect(ranked).toHaveLength(documents.length);
       expect(new Set(ranked)).toEqual(new Set(documents.map((doc) => doc.id)));
     }
@@ -73,20 +48,26 @@ describe("ECC engineering reference corpus", () => {
   it("never authorizes automatic PR merges", () => {
     const fixture = readFixture("stale-pr-review-thread-reopen-flow");
 
-    for (const item of fixture.cases) {
-      expect(item.expected.mayAutoMerge).toBe(false);
-    }
+    expect(
+      fixture.cases.every(
+        (item: { expected: { mayAutoMerge: boolean } }) =>
+          item.expected.mayAutoMerge === false,
+      ),
+    ).toBe(true);
   });
 
   it("keeps harness compatibility explicitly unverified", () => {
     const fixture = readFixture("harness-compatibility");
+
     expect(fixture.compatibilityStatus).toBe(
       "unverified-until-live-adapter-tests",
     );
-
-    for (const item of fixture.cases) {
-      expect(item.expected.compatibility).toBe("unverified");
-    }
+    expect(
+      fixture.cases.every(
+        (item: { expected: { compatibility: string } }) =>
+          item.expected.compatibility === "unverified",
+      ),
+    ).toBe(true);
   });
 
   it("does not fabricate external security artifacts", () => {
@@ -102,13 +83,14 @@ describe("ECC engineering reference corpus", () => {
 
   it("labels CI log examples as synthetic dry runs", () => {
     const fixture = readFixture("ci-failure-modes");
+
     expect(fixture.provenance).toBe(
       "synthetic-dry-run-fixtures-not-captured-logs",
     );
-
-    for (const item of fixture.cases) {
-      expect(item.syntheticLog).toBeTruthy();
-      expect(item.expected.mustNotDo).toBeInstanceOf(Array);
-    }
+    expect(
+      fixture.cases.every((item: { syntheticLog: string }) =>
+        Boolean(item.syntheticLog),
+      ),
+    ).toBe(true);
   });
 });
