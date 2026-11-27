@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "area": "harness-compatibility",
+  "provenance": "synthetic-adapter-contract-cases",
+  "compatibilityStatus": "unverified-until-live-adapter-tests",
+  "harnesses": ["claude", "codex", "opencode", "zed", "dmux", "agent-surfaces"],
+  "cases": [
+    {
+      "id": "HAR-001",
+      "input": { "harness": "claude", "operation": "tool-call", "approvalRequired": true },
+      "expected": { "contract": "preserve-human-approval", "compatibility": "unverified" }
+    },
+    {
+      "id": "HAR-002",
+      "input": { "harness": "codex", "operation": "tool-call", "approvalRequired": true },
+      "expected": { "contract": "preserve-human-approval", "compatibility": "unverified" }
+    },
+    {
+      "id": "HAR-003",
+      "input": { "harness": "opencode", "operation": "streaming-response", "approvalRequired": false },
+      "expected": { "contract": "stream-or-return-explicit-unsupported", "compatibility": "unverified" }
+    },
+    {
+      "id": "HAR-004",
+      "input": { "harness": "zed", "operation": "context-transfer", "approvalRequired": false },
+      "expected": { "contract": "preserve-context-boundaries", "compatibility": "unverified" }
+    },
+    {
+      "id": "HAR-005",
+      "input": { "harness": "dmux", "operation": "parallel-agent-handoff", "approvalRequired": true },
+      "expected": { "contract": "isolate-agent-state-and-require-approval", "compatibility": "unverified" }
+    },
+    {
+      "id": "HAR-006",
+      "input": { "harness": "agent-surfaces", "operation": "capability-discovery", "approvalRequired": false },
+      "expected": { "contract": "report-only-verified-capabilities", "compatibility": "unverified" }
+    }
+  ]
+}
