@@ -31,40 +31,14 @@ jobs:
       deploy_envs: ${{ steps.controller.outputs.deploy_envs }}
       destroy_envs: ${{ steps.controller.outputs.destroy_envs }}
     steps:
-      # Preserve the controller outputs without downloading an upstream
-      # composite action that contains unpinned transitive dependencies.
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Calculate preview environment actions
         id: controller
-        shell: bash
-        env:
-          ENV_LABELS: '{"preview":"deploy"}'
-          LABELS: '[]'
-          OPEN: ${{ github.event.action != 'closed' }}
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-
-          const envLabels = JSON.parse(process.env.ENV_LABELS);
-          const labels = JSON.parse(process.env.LABELS);
-          const isOpen = process.env.OPEN === 'true';
-
-          const entries = Object.entries(envLabels);
-          const deploy = isOpen
-            ? entries.filter(([, label]) => labels.includes(label)).map(([env]) => env)
-            : [];
-          const destroy = isOpen
-            ? entries.filter(([, label]) => !labels.includes(label)).map(([env]) => env)
-            : entries.filter(([, label]) => labels.includes(label)).map(([env]) => env);
-          const labelsEnv = Object.fromEntries(entries.map(([env, label]) => [label, env]));
-
-          const outputs = [
-            ['labels_env', JSON.stringify(labelsEnv)],
-            ['deploy_envs', JSON.stringify(deploy)],
-            ['destroy_envs', JSON.stringify(destroy)],
-          ];
-
-          fs.appendFileSync(
-            process.env.GITHUB_OUTPUT,
-            outputs.map(([key, value]) => `${key}=${value}`).join('\n') + '\n',
-          );
-          NODE
+        uses: ./.github/actions/preview-environment-controller
+        with:
+          env-label: |
+            preview: deploy
+          labels: ${{ github.event_name == 'pull_request' && toJSON(github.event.pull_request.labels.*.name) || '[]' }}
+          open: ${{ github.event_name == 'workflow_dispatch' || github.event.action != 'closed' }}

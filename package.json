@@ -19,7 +19,7 @@
     "lint": "eslint src",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "node ./node_modules/@typescript/native/bin/tsc -b --noEmit",
     "bot:leads": "node --env-file-if-exists=.env.local scripts/lead-hunter.mjs",
     "bot:error-handler": "node --env-file-if-exists=.env.local scripts/error-handler.mjs",
     "bot:growth": "node --env-file-if-exists=.env.local scripts/growth-marketing.mjs",
@@ -42,16 +42,16 @@
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.5",
     "@clerk/backend": "^3.18.1",
-    "@clerk/react": "^6.16.1",
-    "@google/genai": "^2.23.0",
+    "@clerk/react": "^6.19.5",
+    "@google/genai": "^3.6.1",
     "@neondatabase/serverless": "^1.1.0",
     "@supabase/server": "^1.7.0",
-    "@supabase/supabase-js": "^2.45.1",
+    "@supabase/supabase-js": "^2.119.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.7.0",
-    "better-auth": "^1.7.5",
+    "better-auth": "^1.7.27",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^13.4.0",
     "lucide-react": "^1.47.0",
@@ -85,9 +85,10 @@
     "jsdom": "^31.0.1",
     "lightningcss": "^1.33.0",
     "prettier": "^3.9.9",
-    "supabase": "^3.1.0",
-    "typescript": "^6.0.3",
+    "supabase": "^3.2.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.70.0",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "@typescript/native": "npm:typescript@^7.0.2"
   }
 }
