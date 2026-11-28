@@ -10,22 +10,13 @@ const primaryUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
 const readOnlyUrl = process.env.NEON_READONLY_DATABASE_URL;
 
 if (!primaryUrl || !readOnlyUrl) {
-  console.error(
-    "Set DATABASE_URL (or NEON_DATABASE_URL) and NEON_READONLY_DATABASE_URL.",
-  );
+  console.error("Set DATABASE_URL (or NEON_DATABASE_URL) and NEON_READONLY_DATABASE_URL.");
   process.exit(2);
 }
 
 const primary = neon(primaryUrl);
 const replica = neon(readOnlyUrl);
-const tables = [
-  "activity_log",
-  "agent_memory",
-  "clients",
-  "delivery_status",
-  "leads",
-  "orders",
-];
+const tables = ["activity_log", "agent_memory", "clients", "delivery_status", "leads", "orders"];
 
 async function counts(sql) {
   const results = await Promise.all([
@@ -36,9 +27,7 @@ async function counts(sql) {
     sql`SELECT count(*)::int AS count FROM public.leads`,
     sql`SELECT count(*)::int AS count FROM public.orders`,
   ]);
-  return Object.fromEntries(
-    tables.map((table, index) => [table, results[index][0].count]),
-  );
+  return Object.fromEntries(tables.map((table, index) => [table, results[index][0].count]));
 }
 
 try {
@@ -53,27 +42,17 @@ try {
     mode?.can_read !== true ||
     mode?.can_write !== false
   ) {
-    throw new Error(
-      "The replica must use app_reporting_ro with SELECT-only privileges.",
-    );
+    throw new Error("The replica must use app_reporting_ro with SELECT-only privileges.");
   }
 
   const startedAt = performance.now();
   await replica`SELECT 1`;
-  const replicaLatencyMs =
-    Math.round((performance.now() - startedAt) * 100) / 100;
+  const replicaLatencyMs = Math.round((performance.now() - startedAt) * 100) / 100;
 
-  const [primaryCounts, replicaCounts] = await Promise.all([
-    counts(primary),
-    counts(replica),
-  ]);
-  const mismatches = tables.filter(
-    (table) => primaryCounts[table] !== replicaCounts[table],
-  );
+  const [primaryCounts, replicaCounts] = await Promise.all([counts(primary), counts(replica)]);
+  const mismatches = tables.filter((table) => primaryCounts[table] !== replicaCounts[table]);
   if (mismatches.length) {
-    throw new Error(
-      `Primary/replica row-count mismatch: ${mismatches.join(", ")}`,
-    );
+    throw new Error(`Primary/replica row-count mismatch: ${mismatches.join(", ")}`);
   }
 
   console.log(
@@ -90,8 +69,11 @@ try {
     ),
   );
 } catch (error) {
-  const message =
-    error instanceof Error ? error.message : String(error);
-  console.error(["Read-only replica smoke test failed:", message].join(" "));
+  console.error(
+    [
+      "Read-only replica smoke test failed:",
+      error instanceof Error ? error.message : error,
+    ].join(" "),
+  );
   process.exitCode = 1;
 }
