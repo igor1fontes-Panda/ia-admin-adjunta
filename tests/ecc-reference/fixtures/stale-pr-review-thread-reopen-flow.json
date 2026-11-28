@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "area": "pr-salvage-review",
+  "provenance": "synthetic-reference-cases",
+  "cases": [
+    {
+      "id": "PR-001",
+      "input": {
+        "state": "open",
+        "updatedDaysAgo": 45,
+        "checks": "unknown",
+        "reviewThreads": "none"
+      },
+      "expected": {
+        "classification": "stale-candidate",
+        "nextAction": "inspect-before-close",
+        "mayAutoMerge": false
+      },
+      "rationale": "Staleness alone does not establish that a PR is safe to close or merge."
+    },
+    {
+      "id": "PR-002",
+      "input": {
+        "state": "open",
+        "updatedDaysAgo": 2,
+        "checks": "passing",
+        "reviewThreads": "unresolved-request-changes"
+      },
+      "expected": {
+        "classification": "review-blocked",
+        "nextAction": "resolve-review-feedback",
+        "mayAutoMerge": false
+      },
+      "rationale": "Unresolved change requests block automatic salvage or merge."
+    },
+    {
+      "id": "PR-003",
+      "input": {
+        "state": "closed",
+        "merged": false,
+        "authorUpdated": true,
+        "requestedReopen": true
+      },
+      "expected": {
+        "classification": "reopen-candidate",
+        "nextAction": "human-review-and-reopen",
+        "mayAutoMerge": false
+      },
+      "rationale": "A reopen request requires review of current base, branch state, and checks."
+    }
+  ]
+}

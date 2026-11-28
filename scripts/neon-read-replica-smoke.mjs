@@ -69,7 +69,11 @@ try {
     ),
   );
 } catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error("Read-only replica smoke test failed:", message);
+  console.error(
+    [
+      "Read-only replica smoke test failed:",
+      error instanceof Error ? error.message : error,
+    ].join(" "),
+  );
   process.exitCode = 1;
 }
