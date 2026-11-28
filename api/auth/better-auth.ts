@@ -27,7 +27,7 @@
  *    when the database is not configured.
  */
 import type { VercelRequest, VercelResponse } from "../lib/http";
-import { ADMIN_EMAIL } from "../../shared/admin";
+import { ADMIN_EMAIL } from "../../shared/admin.ts";
 
 export const config = { runtime: "nodejs" };
 
